@@ -10,23 +10,24 @@ export function buildPrompt(text: string, agentName: string | null): string {
   return UNIFIED_SYSTEM_PROMPT.replace(/\{\{agentName\}\}/g, name).replace(/\{\{text\}\}/g, text);
 }
 
+/**
+ * Build the system prompt for AI reasoning.
+ * @param agentName - The agent name (e.g. "Whisperi")
+ * @param customDictionary - Words the model should recognize
+ * @param language - Preferred language code
+ * @param customPrompt - Optional custom prompt override (from tauri-plugin-store)
+ */
 export function getSystemPrompt(
   agentName: string | null,
   customDictionary?: string[],
-  language?: string
+  language?: string,
+  customPrompt?: string,
 ): string {
   const name = agentName?.trim() || "Assistant";
 
   let promptTemplate = UNIFIED_SYSTEM_PROMPT;
-  if (typeof window !== "undefined" && window.localStorage) {
-    const customPrompt = window.localStorage.getItem("customUnifiedPrompt");
-    if (customPrompt) {
-      try {
-        promptTemplate = JSON.parse(customPrompt);
-      } catch {
-        // Use default if parsing fails
-      }
-    }
+  if (customPrompt) {
+    promptTemplate = customPrompt;
   }
 
   let prompt = promptTemplate.replace(/\{\{agentName\}\}/g, name);

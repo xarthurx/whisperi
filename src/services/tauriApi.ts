@@ -150,3 +150,47 @@ export async function getAllSettings(): Promise<Record<string, unknown>> {
 export async function getModelRegistry(): Promise<unknown> {
   return invoke("get_model_registry");
 }
+
+// --- Settings convenience helpers ---
+
+// Agent name
+const DEFAULT_AGENT_NAME = "Whisperi";
+
+export async function getAgentName(): Promise<string> {
+  const name = await getSetting<string>("agentName");
+  return name || DEFAULT_AGENT_NAME;
+}
+
+export async function setAgentName(name: string): Promise<void> {
+  return setSetting("agentName", name);
+}
+
+// API keys (stored in tauri-plugin-store settings.json)
+const API_KEY_MAP: Record<string, string> = {
+  openai: "openaiApiKey",
+  anthropic: "anthropicApiKey",
+  gemini: "geminiApiKey",
+  groq: "groqApiKey",
+  mistral: "mistralApiKey",
+};
+
+export async function getApiKey(provider: string): Promise<string> {
+  const key = API_KEY_MAP[provider] ?? `${provider}ApiKey`;
+  const value = await getSetting<string>(key);
+  return value || "";
+}
+
+export async function setApiKey(provider: string, apiKey: string): Promise<void> {
+  const key = API_KEY_MAP[provider] ?? `${provider}ApiKey`;
+  return setSetting(key, apiKey);
+}
+
+// Custom dictionary
+export async function getCustomDictionary(): Promise<string[]> {
+  const dict = await getSetting<string[]>("customDictionary");
+  return dict || [];
+}
+
+export async function setCustomDictionary(words: string[]): Promise<void> {
+  return setSetting("customDictionary", words);
+}
