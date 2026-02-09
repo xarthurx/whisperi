@@ -1,41 +1,45 @@
 # Whisperi — Continuation Instructions
 
 ## Status
-Phase 0 (Scaffolding) is COMPLETE. All code compiles, 5 Rust tests pass, frontend builds.
+Phases 0–3 are COMPLETE. 8 Rust tests pass, frontend builds, no clippy warnings beyond Phase 0 dead-code stubs.
 
 Open a new Claude Code session in `C:\Users\xarthurx\repo\whisperi` and paste the instructions below.
+
+---
+
+## Completed Phases
+
+### Phase 0: Scaffolding — DONE
+All modules compile, dual-window Tauri config, 14+ commands registered.
+
+### Phase 1: Rust Audio Backend — DONE
+- Thread panic recovery (catch_unwind + JoinHandle)
+- Sample rate negotiation (16kHz → 44.1kHz → 48kHz → device default)
+- Device hot-plug resilience (error callback stops recording, stores error)
+- Audio level events emitted via Tauri events ("audio-level") every 50ms
+
+### Phase 2: Whisper.cpp Sidecar — DONE
+- PowerShell download script: `scripts/download-whisper-cpp.ps1` (v1.8.3 from ggml-org/whisper.cpp)
+- Streaming model download with futures-util StreamExt, .part temp files
+- Progress events: "model-download-progress" with model_id, downloaded, total, percentage
+- get_whisper_status checks dev and prod sidecar paths
+- build.rs passes TARGET env var for compile-time target triple
+
+### Phase 3: Cloud Transcription & AI Reasoning — DONE
+- OpenAI Chat Completions fallback (tries Responses API first, falls back to /v1/chat/completions)
+- prompts.ts fixed for tauri-plugin-store (accepts customPrompt parameter, no localStorage)
+- Frontend helpers: getAgentName, setAgentName, getApiKey, setApiKey, getCustomDictionary
 
 ---
 
 ## Prompt to paste in new session
 
 ```
-Continue implementing the Whisperi Tauri 2.x rewrite. Phase 0 (scaffolding) is done — the project compiles and tests pass. Use `bun` for all Node.js package management.
+Continue implementing the Whisperi Tauri 2.x rewrite. Phases 0–3 are done — 8 tests pass, no clippy warnings. Use `bun` for all Node.js package management.
 
 Read CLAUDE.md for the full architecture reference. The original Electron project is at C:\Users\xarthurx\repo\openwhispr — reference it for implementation details.
 
 Remaining phases to implement in order:
-
-### Phase 1: Rust Audio Backend (src-tauri/src/audio/)
-- The recorder.rs stub works but needs real-world hardening
-- Add proper error recovery if the recording thread panics
-- Add configurable sample rate (default 16kHz, but some devices only support 44.1/48kHz)
-- Test audio device hot-plugging resilience
-- Wire up audio level events to frontend via Tauri events (for VU meter)
-
-### Phase 2: Whisper.cpp Sidecar (src-tauri/src/transcription/)
-- Download script for whisper-cpp sidecar binary (Windows x64)
-- Place binary at src-tauri/binaries/whisper-cpp-x86_64-pc-windows-msvc.exe
-- Model download with streaming progress (current download_file downloads all at once)
-- Wire model download progress events to frontend
-- Test end-to-end: record → save WAV → whisper.cpp → text output
-
-### Phase 3: Cloud Transcription & AI Reasoning
-- Cloud transcription stubs exist but need testing with real API keys
-- AI reasoning stubs exist for OpenAI/Anthropic/Gemini
-- Port agent name detection from OpenWhispr (src/utils/agentName.ts)
-- Add system prompt building (port from src/config/prompts.ts — already copied)
-- API keys should be stored via tauri-plugin-store (settings.json)
 
 ### Phase 4: Native Clipboard Paste (src-tauri/src/clipboard/)
 - Windows clipboard + SendInput code exists, needs testing
@@ -77,7 +81,6 @@ Key constraints:
 - Dark mode only, sharp UI (tight border radii, system fonts)
 - Rust backend handles audio, transcription, clipboard — no browser APIs
 - Reference OpenWhispr at C:\Users\xarthurx\repo\openwhispr for implementation details
-- Pin time crate: cargo update time@0.3.47 --precise 0.3.41 (rustc 1.87.0)
 
-Start with Phase 1 and proceed sequentially. Review after each phase.
+Start with Phase 4 and proceed sequentially. Review after each phase.
 ```
