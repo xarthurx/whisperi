@@ -56,6 +56,8 @@ pub fn run() {
             commands::settings::set_setting,
             commands::settings::get_all_settings,
             commands::models::get_model_registry,
+            commands::clipboard::paste_text,
+            commands::clipboard::read_clipboard,
         ])
         .run(tauri::generate_context!())
         .expect("error while running whisperi");

@@ -133,6 +133,15 @@ export async function processReasoning(
   });
 }
 
+// Clipboard
+export async function pasteText(text: string): Promise<void> {
+  return invoke("paste_text", { text });
+}
+
+export async function readClipboard(): Promise<string> {
+  return invoke("read_clipboard");
+}
+
 // Settings
 export async function getSetting<T = unknown>(key: string): Promise<T | null> {
   return invoke("get_setting", { key });
