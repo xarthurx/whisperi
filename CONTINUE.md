@@ -1,7 +1,7 @@
 # Whisperi — Continuation Instructions
 
 ## Status
-Phases 0–3 are COMPLETE. 8 Rust tests pass, frontend builds, no clippy warnings beyond Phase 0 dead-code stubs.
+Phases 0–4 are COMPLETE. 8 Rust tests pass, frontend builds, no clippy warnings beyond Phase 0 dead-code stubs.
 
 Open a new Claude Code session in `C:\Users\xarthurx\repo\whisperi` and paste the instructions below.
 
@@ -30,22 +30,23 @@ All modules compile, dual-window Tauri config, 14+ commands registered.
 - prompts.ts fixed for tauri-plugin-store (accepts customPrompt parameter, no localStorage)
 - Frontend helpers: getAgentName, setAgentName, getApiKey, setApiKey, getCustomDictionary
 
+### Phase 4: Native Clipboard Paste — DONE
+- Clipboard save/restore: saves original, pastes, restores after 80ms
+- Terminal detection via Win32 GetClassNameA (9 terminal class names)
+- Auto Ctrl+Shift+V for terminals, Ctrl+V for regular apps
+- read_clipboard() for reading current contents
+- Wired as Tauri commands: paste_text, read_clipboard
+
 ---
 
 ## Prompt to paste in new session
 
 ```
-Continue implementing the Whisperi Tauri 2.x rewrite. Phases 0–3 are done — 8 tests pass, no clippy warnings. Use `bun` for all Node.js package management.
+Continue implementing the Whisperi Tauri 2.x rewrite. Phases 0–4 are done — 8 tests pass, no clippy warnings. Use `bun` for all Node.js package management.
 
 Read CLAUDE.md for the full architecture reference. The original Electron project is at C:\Users\xarthurx\repo\openwhispr — reference it for implementation details.
 
 Remaining phases to implement in order:
-
-### Phase 4: Native Clipboard Paste (src-tauri/src/clipboard/)
-- Windows clipboard + SendInput code exists, needs testing
-- Add terminal detection (check if focused window is a terminal → use Ctrl+Shift+V)
-- Add clipboard restore (save original clipboard, paste, restore)
-- Wire up as a Tauri command: `paste_text(text: String)`
 
 ### Phase 5: Database & Settings
 - Database init and schema exist, need Tauri commands for CRUD
@@ -82,5 +83,5 @@ Key constraints:
 - Rust backend handles audio, transcription, clipboard — no browser APIs
 - Reference OpenWhispr at C:\Users\xarthurx\repo\openwhispr for implementation details
 
-Start with Phase 4 and proceed sequentially. Review after each phase.
+Start with Phase 5 and proceed sequentially. Review after each phase.
 ```
