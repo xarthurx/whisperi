@@ -20,8 +20,26 @@
     "core:tray:allow-set-tooltip",
     "core:menu:default",
     "shell:default",
-    "shell:allow-execute",
-    "shell:allow-spawn",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "whisper-cpp",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "whisper-cpp",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    },
     "shell:allow-open",
     "global-shortcut:default",
     "global-shortcut:allow-register",

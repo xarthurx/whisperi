@@ -1,101 +1,41 @@
-# Whisperi Technical Reference
+# Whisperi
 
-## Overview
+Tauri 2.x desktop dictation app. Whisper.cpp for local STT, multi-cloud transcription + AI reasoning.
 
-Whisperi is a Tauri 2.x desktop dictation application — a ground-up rewrite of OpenWhispr (Electron). It uses whisper.cpp for local speech-to-text and supports multi-cloud transcription and AI reasoning.
+See [CHANGELOG.md](CHANGELOG.md) for history, [CONTINUE.md](CONTINUE.md) for phase details.
+
+## Dev Commands
+
+```bash
+bun install              # install deps
+bun run tauri dev        # dev mode (Vite + Tauri)
+bun run tauri build      # production build
+bun run typecheck        # TypeScript check
+cd src-tauri && cargo test   # Rust tests
+cd src-tauri && cargo clippy # lint
+```
 
 ## Architecture
 
-### Backend (Rust — `src-tauri/`)
+**Backend** (Rust, `src-tauri/src/`): `audio/` `transcription/` `reasoning/` `clipboard/` `database/` `models/` `commands/`
 
-| Module | Purpose |
-|--------|---------|
-| `audio/recorder.rs` | cpal-based audio recording, WAV encoding, device enumeration |
-| `transcription/whisper.rs` | whisper.cpp sidecar management, local transcription |
-| `transcription/cloud.rs` | OpenAI/Groq/Mistral cloud transcription via reqwest |
-| `reasoning/openai.rs` | OpenAI Responses API integration |
-| `reasoning/anthropic.rs` | Anthropic Messages API integration |
-| `reasoning/gemini.rs` | Google Gemini API integration |
-| `clipboard/mod.rs` | Windows SendInput paste, clipboard via Win32 API |
-| `database/mod.rs` | SQLite via rusqlite, transcription history |
-| `models/mod.rs` | Model download management |
-| `commands/*.rs` | Tauri command handlers (frontend ↔ backend bridge) |
+**Frontend** (React+TS, `src/`): `App.tsx` (dual-view router) | `components/` | `hooks/` | `services/tauriApi.ts` | `config/` | `models/`
 
-### Frontend (React + TypeScript — `src/`)
+## Key Constraints
 
-| File | Purpose |
-|------|---------|
-| `App.tsx` | Dual-view: dictation overlay + settings panel |
-| `services/tauriApi.ts` | Typed wrappers around `invoke()` |
-| `config/` | Prompts, constants, language registry (reused from OpenWhispr) |
-| `models/` | Model registry data (reused from OpenWhispr) |
-| `utils/` | Shared utilities |
-| `components/ui/` | shadcn/ui components |
-
-### Key Design Decisions
-
-1. **cpal Stream is !Send** — recording runs on a dedicated thread, shared state via `Arc<Mutex<>>` + `AtomicBool`
-2. **No FFmpeg** — cpal records PCM → hound encodes WAV → whisper.cpp consumes directly
-3. **Dark mode only** — sharp, minimal UI with tight border radii
-4. **System font** — Segoe UI on Windows, system defaults elsewhere
-5. **Dual window** — main overlay (transparent, always-on-top) + settings (normal, hidden by default)
+- **cpal Stream is !Send** — recording runs on dedicated thread, state shared via `Arc<Mutex<>>` + `AtomicBool`
+- **Dual window** — 120x120 transparent overlay (always-on-top) + 900x680 settings (hidden by default)
+- **Dark mode only** — no light theme, system font (Segoe UI)
+- **Tauri 2.x sidecar scope** — goes in `capabilities/default.json`, NOT in `plugins.shell`
+- **System tray** — built programmatically in `lib.rs` (no `trayIcon` in tauri.conf.json)
+- **Package manager** — bun (not npm/yarn)
 
 ## Tech Stack
 
-- **Desktop**: Tauri 2.10+
-- **Frontend**: React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui
-- **Backend**: Rust, cpal, hound, reqwest, rusqlite
-- **Package manager**: bun
-- **Whisper**: whisper.cpp sidecar binary
+Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, Rust, cpal, hound, reqwest, rusqlite
 
-## Development
+## Data
 
-```bash
-# Install deps
-bun install
-
-# Dev mode (starts Vite + Tauri)
-bun run tauri dev
-
-# Build
-bun run tauri build
-
-# Rust tests
-cd src-tauri && cargo test
-
-# TypeScript typecheck
-bun run typecheck
-```
-
-## Plugin Configuration
-
-Tauri plugins configured in `lib.rs` and `capabilities/default.json`:
-- `global-shortcut` — hotkeys (tap + push-to-talk)
-- `shell` — whisper.cpp sidecar execution
-- `store` — settings persistence (JSON)
-- `notification` — system notifications
-- `opener` — open URLs/system settings
-- `log` — debug logging
-- `single-instance` — prevent duplicate launches
-- `window-state` — remember window position/size
-- `dialog` — file/message dialogs
-
-## Whisper Models
-
-Stored in `~/.cache/whisperi/whisper-models/`. Same GGML format as OpenWhispr.
-
-## Database
-
-SQLite at `{app_data}/whisperi.db`. Same schema as OpenWhispr:
-```sql
-CREATE TABLE transcriptions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  original_text TEXT NOT NULL,
-  processed_text TEXT,
-  is_processed BOOLEAN DEFAULT 0,
-  processing_method TEXT DEFAULT 'none',
-  agent_name TEXT,
-  error TEXT
-);
-```
+- Whisper models: `~/.cache/whisperi/whisper-models/`
+- Settings: tauri-plugin-store (`settings.json`)
+- Database: SQLite at `{app_data}/whisperi.db`

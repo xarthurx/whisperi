@@ -1,3 +1,3 @@
 pub mod recorder;
 
-pub use recorder::{AudioDevice, AudioError, AudioRecorder, LevelEmitterHandles, RecordingState};
+pub use recorder::{AudioDevice, AudioRecorder, RecordingState};

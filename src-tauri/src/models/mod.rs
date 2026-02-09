@@ -55,14 +55,6 @@ pub struct ModelRegistry {
     pub transcription_providers: Vec<TranscriptionProvider>,
 }
 
-/// Get the whisper models directory
-pub fn whisper_models_dir() -> Result<PathBuf> {
-    let cache_dir = dirs::cache_dir().ok_or_else(|| anyhow::anyhow!("No cache directory"))?;
-    let path = cache_dir.join("whisperi").join("whisper-models");
-    std::fs::create_dir_all(&path)?;
-    Ok(path)
-}
-
 /// Download a file with streaming progress reporting.
 /// Calls `on_progress(downloaded_bytes, total_bytes)` periodically during download.
 pub async fn download_file(

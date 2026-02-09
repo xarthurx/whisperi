@@ -37,6 +37,7 @@ import {
   type WhisperModelStatus,
   clearTranscriptions,
 } from "@/services/tauriApi";
+import modelRegistry from "@/models/modelRegistryData.json";
 
 type Section =
   | "general"
@@ -334,9 +335,31 @@ function TranscriptionSection({ settings, update, toast }: SectionProps) {
           <ProviderTabs
             providers={TRANSCRIPTION_PROVIDERS}
             selectedId={settings.cloudTranscriptionProvider}
-            onSelect={(id) => update("cloudTranscriptionProvider", id)}
+            onSelect={(id) => {
+              update("cloudTranscriptionProvider", id);
+              // Auto-select the first model for the new provider
+              const provider = modelRegistry.transcriptionProviders.find((p) => p.id === id);
+              if (provider?.models[0]) {
+                update("cloudTranscriptionModel", provider.models[0].id);
+              }
+            }}
           />
-          <div className="mt-3">
+          <div className="mt-3 space-y-3">
+            <SettingsRow label="Model">
+              <select
+                value={settings.cloudTranscriptionModel}
+                onChange={(e) => update("cloudTranscriptionModel", e.target.value)}
+                className="w-56 h-8 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
+              >
+                {modelRegistry.transcriptionProviders
+                  .find((p) => p.id === settings.cloudTranscriptionProvider)
+                  ?.models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+              </select>
+            </SettingsRow>
             <ApiKeyInput
               apiKey={
                 settings.cloudTranscriptionProvider === "openai"
@@ -387,15 +410,31 @@ function AIModelsSection({ settings, update }: SectionProps) {
           <ProviderTabs
             providers={REASONING_PROVIDERS}
             selectedId={settings.reasoningProvider}
-            onSelect={(id) => update("reasoningProvider", id)}
+            onSelect={(id) => {
+              update("reasoningProvider", id);
+              // Auto-select the first model for the new provider
+              const provider = modelRegistry.cloudProviders.find((p) => p.id === id);
+              if (provider?.models[0]) {
+                update("reasoningModel", provider.models[0].id);
+              }
+            }}
           />
           <div className="mt-3 space-y-3">
-            <Input
-              value={settings.reasoningModel}
-              onChange={(e) => update("reasoningModel", e.target.value)}
-              placeholder="e.g. gpt-4o-mini"
-              className="h-8 text-sm"
-            />
+            <SettingsRow label="Model">
+              <select
+                value={settings.reasoningModel}
+                onChange={(e) => update("reasoningModel", e.target.value)}
+                className="w-56 h-8 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
+              >
+                {modelRegistry.cloudProviders
+                  .find((p) => p.id === settings.reasoningProvider)
+                  ?.models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+              </select>
+            </SettingsRow>
             <ApiKeyInput
               apiKey={
                 settings.reasoningProvider === "openai"
