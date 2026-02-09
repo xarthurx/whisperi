@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: oklch(0.62 0.22 260);
+  --color-primary-foreground: oklch(0.99 0 0);
+  --color-secondary: oklch(0.18 0.005 270);
+  --color-secondary-foreground: oklch(0.92 0 0);
+  --color-muted: oklch(0.13 0.005 270);
+  --color-muted-foreground: oklch(0.55 0 0);
+  --color-accent: oklch(0.68 0.2 285);
+  --color-accent-foreground: oklch(0.99 0 0);
+  --color-destructive: oklch(0.6 0.25 25);
+  --color-destructive-foreground: oklch(0.99 0 0);
+  --color-border: oklch(0.23 0.005 270);
+  --color-input: oklch(0.12 0.005 270);
+  --color-ring: oklch(0.62 0.22 260);
+  --color-background: oklch(0.1 0.005 270);
+  --color-foreground: oklch(0.95 0 0);
+  --color-card: oklch(0.15 0.008 270);
+  --color-card-foreground: oklch(0.95 0 0);
+  --color-popover: oklch(0.17 0.008 270);
+  --color-popover-foreground: oklch(0.95 0 0);
+  --color-success: oklch(0.7 0.18 145);
+  --color-success-foreground: oklch(0.99 0 0);
+  --color-warning: oklch(0.75 0.15 70);
+  --color-warning-foreground: oklch(0.15 0 0);
+
+  --color-surface-0: oklch(0.1 0.005 270);
+  --color-surface-1: oklch(0.13 0.006 270);
+  --color-surface-2: oklch(0.155 0.008 270);
+  --color-surface-3: oklch(0.18 0.01 270);
+  --color-surface-raised: oklch(0.2 0.012 270);
+
+  --color-border-subtle: oklch(0.2 0.004 270);
+  --color-border-hover: oklch(0.28 0.01 270);
+  --color-border-active: oklch(0.45 0.15 260);
+}
+
+:root {
+  --font-family-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --radius: 0.125rem;
+  --radius-sm: 0.0625rem;
+  --radius-md: 0.125rem;
+  --radius-lg: 0.1875rem;
+  --radius-xl: 0.25rem;
+
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.25);
+  --shadow-card-hover: 0 2px 8px oklch(0 0 0 / 0.35);
+  --shadow-elevated: 0 8px 24px oklch(0 0 0 / 0.4);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html,
+  body {
+    min-height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  /* Transparent background for dictation overlay window */
+  body:has(.dictation-window) {
+    background: transparent;
+  }
+
+  body:has(.dictation-window) #root {
+    background: transparent;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
+}
