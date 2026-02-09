@@ -7,6 +7,8 @@ mod reasoning;
 mod transcription;
 
 use tauri::Manager;
+use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::tray::TrayIconBuilder;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,7 +18,11 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus main window when a second instance is launched
             if let Some(window) = app.get_webview_window("main") {
@@ -37,6 +43,45 @@ pub fn run() {
             if let Some(settings_window) = app.get_webview_window("settings") {
                 let _ = settings_window.hide();
             }
+
+            // System tray
+            let show = MenuItemBuilder::with_id("show", "Show Whisperi").build(app)?;
+            let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
+            let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+
+            let menu = MenuBuilder::new(app)
+                .item(&show)
+                .separator()
+                .item(&settings)
+                .separator()
+                .item(&quit)
+                .build()?;
+
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("Whisperi")
+                .menu(&menu)
+                .on_menu_event(move |app, event| {
+                    match event.id().as_ref() {
+                        "show" => {
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                        "settings" => {
+                            if let Some(w) = app.get_webview_window("settings") {
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .build(app)?;
 
             Ok(())
         })
