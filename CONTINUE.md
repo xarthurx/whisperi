@@ -1,16 +1,14 @@
 # Whisperi — Continuation Instructions
 
 ## Status
-Phases 0–4 are COMPLETE. 8 Rust tests pass, frontend builds, no clippy warnings beyond Phase 0 dead-code stubs.
-
-Open a new Claude Code session in `C:\Users\xarthurx\repo\whisperi` and paste the instructions below.
+All phases (0–8) are COMPLETE. 8 Rust tests pass, frontend builds, no clippy warnings beyond dead-code stubs for future use.
 
 ---
 
 ## Completed Phases
 
 ### Phase 0: Scaffolding — DONE
-All modules compile, dual-window Tauri config, 14+ commands registered.
+All modules compile, dual-window Tauri config, 20+ commands registered.
 
 ### Phase 1: Rust Audio Backend — DONE
 - Thread panic recovery (catch_unwind + JoinHandle)
@@ -19,7 +17,7 @@ All modules compile, dual-window Tauri config, 14+ commands registered.
 - Audio level events emitted via Tauri events ("audio-level") every 50ms
 
 ### Phase 2: Whisper.cpp Sidecar — DONE
-- PowerShell download script: `scripts/download-whisper-cpp.ps1` (v1.8.3 from ggml-org/whisper.cpp)
+- PowerShell download script: `scripts/download-whisper-cpp.ps1` (v1.8.3)
 - Streaming model download with futures-util StreamExt, .part temp files
 - Progress events: "model-download-progress" with model_id, downloaded, total, percentage
 - get_whisper_status checks dev and prod sidecar paths
@@ -27,61 +25,56 @@ All modules compile, dual-window Tauri config, 14+ commands registered.
 
 ### Phase 3: Cloud Transcription & AI Reasoning — DONE
 - OpenAI Chat Completions fallback (tries Responses API first, falls back to /v1/chat/completions)
-- prompts.ts fixed for tauri-plugin-store (accepts customPrompt parameter, no localStorage)
+- prompts.ts fixed for tauri-plugin-store (accepts customPrompt parameter)
 - Frontend helpers: getAgentName, setAgentName, getApiKey, setApiKey, getCustomDictionary
 
 ### Phase 4: Native Clipboard Paste — DONE
 - Clipboard save/restore: saves original, pastes, restores after 80ms
 - Terminal detection via Win32 GetClassNameA (9 terminal class names)
 - Auto Ctrl+Shift+V for terminals, Ctrl+V for regular apps
-- read_clipboard() for reading current contents
-- Wired as Tauri commands: paste_text, read_clipboard
+- read_clipboard() + paste_text() wired as Tauri commands
+
+### Phase 5: Database & Settings — DONE
+- Database CRUD commands: save/get/delete/clear transcriptions
+- Settings via tauri-plugin-store: get/set/get_all already working
+
+### Phase 6: Frontend Adaptation — DONE
+- 15 shadcn/ui components + 7 custom UI components
+- Core hooks: useSettings, useHotkey, useAudioRecording
+- DictationOverlay: mic button, audio level viz, hotkey, window drag
+- SettingsPanel: General, Transcription, AI Models, Dictionary, Agent, Developer
+- Whisper model management with download progress
+- Cloud provider tabs with API key inputs
+
+### Phase 7: System Integration — DONE
+- System tray: Show, Settings, Quit menu items
+- Configured tauri-plugin-log with Info level
+- Single instance, window state, global shortcut configured
+
+### Phase 8: Build & Distribution — DONE
+- GitHub Actions CI: cargo test + clippy + bun typecheck + tauri build
+- NSIS installer config in tauri.conf.json
+- Whisper.cpp download script for CI
+- Upload NSIS installer artifacts
 
 ---
 
-## Prompt to paste in new session
+## Architecture Summary
 
-```
-Continue implementing the Whisperi Tauri 2.x rewrite. Phases 0–4 are done — 8 tests pass, no clippy warnings. Use `bun` for all Node.js package management.
+### Rust Backend (src-tauri/src/)
+- audio/ — cpal recording, WAV encoding, device enumeration
+- transcription/ — whisper.cpp sidecar, cloud (OpenAI/Groq/Mistral)
+- reasoning/ — OpenAI, Anthropic, Gemini API
+- clipboard/ — Win32 clipboard + SendInput paste
+- database/ — SQLite via rusqlite
+- models/ — Model download management
+- commands/ — Tauri command handlers (audio, transcription, reasoning, clipboard, database, settings, models)
 
-Read CLAUDE.md for the full architecture reference. The original Electron project is at C:\Users\xarthurx\repo\openwhispr — reference it for implementation details.
-
-Remaining phases to implement in order:
-
-### Phase 5: Database & Settings
-- Database init and schema exist, need Tauri commands for CRUD
-- Add commands: save_transcription, get_transcriptions, delete_transcription, clear_transcriptions
-- Settings via tauri-plugin-store already has get/set/get_all commands
-- Custom dictionary persistence (stored as JSON array in settings)
-
-### Phase 6: Frontend Adaptation
-- Port main dictation overlay (App.tsx) — recording state machine, window dragging
-- Port ControlPanel.tsx from OpenWhispr (remove onboarding, auth, Parakeet, local LLM)
-- Port SettingsPage.tsx (simplified — remove dropped features)
-- Port WhisperModelPicker.tsx, ReasoningModelSelector.tsx, TranscriptionModelPicker.tsx
-- Port hooks: useSettings.ts (use tauri-plugin-store), useHotkey.ts (use tauri global-shortcut)
-- Copy needed shadcn/ui components from OpenWhispr src/components/ui/
-- Custom window titlebar with Tauri's startDragging() API
-
-### Phase 7: System Integration
-- System tray: show/hide windows, settings, quit
-- Global hotkey: tap-to-talk + push-to-talk via tauri-plugin-global-shortcut
-- Single instance already configured
-- Window state persistence already configured
-- Debug logging via tauri-plugin-log
-
-### Phase 8: Build & Distribution
-- NSIS installer config (already in tauri.conf.json)
-- Whisper.cpp binary download script for CI
-- GitHub Actions workflow for cargo test + cargo clippy + bun build + cargo tauri build
-- Test portable exe mode
-
-Key constraints:
-- Use bun, not npm
-- Windows-first (macOS/Linux secondary)
-- Dark mode only, sharp UI (tight border radii, system fonts)
-- Rust backend handles audio, transcription, clipboard — no browser APIs
-- Reference OpenWhispr at C:\Users\xarthurx\repo\openwhispr for implementation details
-
-Start with Phase 5 and proceed sequentially. Review after each phase.
-```
+### Frontend (src/)
+- App.tsx — Dual-view router (overlay vs settings)
+- components/DictationOverlay.tsx — Recording state machine
+- components/SettingsPanel.tsx — Full settings UI
+- components/ui/ — 22 UI components (shadcn + custom)
+- hooks/ — useSettings, useAudioRecording, useHotkey
+- services/tauriApi.ts — Typed Tauri invoke wrappers
+- config/ — Prompts, constants, language registry
