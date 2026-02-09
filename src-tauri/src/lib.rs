@@ -58,6 +58,10 @@ pub fn run() {
             commands::models::get_model_registry,
             commands::clipboard::paste_text,
             commands::clipboard::read_clipboard,
+            commands::database::save_transcription,
+            commands::database::get_transcriptions,
+            commands::database::delete_transcription,
+            commands::database::clear_transcriptions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running whisperi");

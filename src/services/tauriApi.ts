@@ -133,6 +133,49 @@ export async function processReasoning(
   });
 }
 
+// Database
+export interface Transcription {
+  id: number;
+  timestamp: string;
+  original_text: string;
+  processed_text: string | null;
+  is_processed: boolean;
+  processing_method: string;
+  agent_name: string | null;
+  error: string | null;
+}
+
+export async function saveTranscription(
+  originalText: string,
+  processedText: string | null,
+  processingMethod: string,
+  agentName: string | null,
+  error: string | null,
+): Promise<number> {
+  return invoke("save_transcription", {
+    originalText,
+    processedText,
+    processingMethod,
+    agentName,
+    error,
+  });
+}
+
+export async function getTranscriptions(
+  limit: number,
+  offset: number,
+): Promise<Transcription[]> {
+  return invoke("get_transcriptions", { limit, offset });
+}
+
+export async function deleteTranscription(id: number): Promise<void> {
+  return invoke("delete_transcription", { id });
+}
+
+export async function clearTranscriptions(): Promise<void> {
+  return invoke("clear_transcriptions");
+}
+
 // Clipboard
 export async function pasteText(text: string): Promise<void> {
   return invoke("paste_text", { text });
