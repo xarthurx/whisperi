@@ -5795,6 +5795,7 @@ dependencies = [
  "anyhow",
  "cpal",
  "dirs",
+ "futures-util",
  "hound",
  "log",
  "reqwest 0.12.28",

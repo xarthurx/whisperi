@@ -1,6 +1,6 @@
 use crate::transcription;
 use serde::Serialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Serialize)]
 pub struct WhisperModelStatus {
@@ -21,7 +21,6 @@ pub async fn transcribe_local(
     language: Option<String>,
     dictionary: Vec<String>,
 ) -> Result<String, String> {
-    // Look up model file name from model ID
     let file_name = format!("ggml-{}.bin", model);
 
     transcription::whisper::transcribe(
@@ -88,17 +87,43 @@ pub async fn transcribe_cloud(
 
 #[tauri::command]
 pub fn list_whisper_models() -> Result<Vec<WhisperModelStatus>, String> {
-    // This will be populated from the model registry JSON in Phase 6
-    // For now return a hardcoded list matching the existing models
     let models_dir = transcription::whisper::models_dir().map_err(|e| e.to_string())?;
 
     let models = vec![
         ("tiny", "Tiny", "Fastest, lower quality", "75MB", 75, false),
-        ("base", "Base", "Good balance of speed and quality", "142MB", 142, true),
-        ("small", "Small", "Better quality, slower", "466MB", 466, false),
+        (
+            "base",
+            "Base",
+            "Good balance of speed and quality",
+            "142MB",
+            142,
+            true,
+        ),
+        (
+            "small",
+            "Small",
+            "Better quality, slower",
+            "466MB",
+            466,
+            false,
+        ),
         ("medium", "Medium", "High quality", "1.5GB", 1500, false),
-        ("large", "Large", "Best quality, slowest", "3GB", 3000, false),
-        ("turbo", "Turbo", "Fast with good quality", "1.6GB", 1600, false),
+        (
+            "large",
+            "Large",
+            "Best quality, slowest",
+            "3GB",
+            3000,
+            false,
+        ),
+        (
+            "turbo",
+            "Turbo",
+            "Fast with good quality",
+            "1.6GB",
+            1600,
+            false,
+        ),
     ];
 
     Ok(models
@@ -119,11 +144,16 @@ pub fn list_whisper_models() -> Result<Vec<WhisperModelStatus>, String> {
         .collect())
 }
 
-#[tauri::command]
-pub async fn download_whisper_model(
-    app: AppHandle,
+#[derive(Clone, Serialize)]
+struct ModelDownloadProgress {
     model_id: String,
-) -> Result<(), String> {
+    downloaded: u64,
+    total: u64,
+    percentage: u8,
+}
+
+#[tauri::command]
+pub async fn download_whisper_model(app: AppHandle, model_id: String) -> Result<(), String> {
     let file_name = format!("ggml-{}.bin", model_id);
     let url = format!(
         "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}",
@@ -133,16 +163,37 @@ pub async fn download_whisper_model(
         .map_err(|e| e.to_string())?
         .join(&file_name);
 
-    crate::models::download_file(&url, &dest, |downloaded, total| {
-        // Emit progress events to frontend
+    // Skip if already downloaded
+    if dest.exists() {
         let _ = tauri::Emitter::emit(
             &app,
             "model-download-progress",
-            serde_json::json!({
-                "model_id": model_id,
-                "downloaded": downloaded,
-                "total": total,
-            }),
+            ModelDownloadProgress {
+                model_id,
+                downloaded: 0,
+                total: 0,
+                percentage: 100,
+            },
+        );
+        return Ok(());
+    }
+
+    let model_id_clone = model_id.clone();
+    crate::models::download_file(&url, &dest, move |downloaded, total| {
+        let percentage = if total > 0 {
+            ((downloaded as f64 / total as f64) * 100.0).min(100.0) as u8
+        } else {
+            0
+        };
+        let _ = tauri::Emitter::emit(
+            &app,
+            "model-download-progress",
+            ModelDownloadProgress {
+                model_id: model_id_clone.clone(),
+                downloaded,
+                total,
+                percentage,
+            },
         );
     })
     .await
@@ -155,9 +206,36 @@ pub fn delete_whisper_model(model_id: String) -> Result<(), String> {
     transcription::whisper::delete_model(&file_name).map_err(|e| e.to_string())
 }
 
+/// Get the sidecar binary filename for the current platform.
+fn sidecar_binary_name() -> String {
+    let target = env!("TARGET");
+    if cfg!(target_os = "windows") {
+        format!("whisper-cpp-{}.exe", target)
+    } else {
+        format!("whisper-cpp-{}", target)
+    }
+}
+
 #[tauri::command]
-pub fn get_whisper_status() -> Result<bool, String> {
-    // Check if whisper-cpp sidecar binary exists
-    // This is a simplified check — the actual sidecar resolution happens at runtime
-    Ok(true)
+pub fn get_whisper_status(app: AppHandle) -> Result<bool, String> {
+    let binary_name = sidecar_binary_name();
+
+    // In dev mode, check src-tauri/binaries/
+    let dev_binary = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("binaries")
+        .join(&binary_name);
+
+    if dev_binary.exists() {
+        return Ok(true);
+    }
+
+    // In production, check the resource directory
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        let prod_binary = resource_dir.join(&binary_name);
+        if prod_binary.exists() {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }

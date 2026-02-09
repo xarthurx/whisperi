@@ -99,6 +99,21 @@ export async function getWhisperStatus(): Promise<boolean> {
   return invoke("get_whisper_status");
 }
 
+export interface ModelDownloadProgress {
+  model_id: string;
+  downloaded: number;
+  total: number;
+  percentage: number;
+}
+
+export async function onModelDownloadProgress(
+  callback: (progress: ModelDownloadProgress) => void,
+): Promise<UnlistenFn> {
+  return listen<ModelDownloadProgress>("model-download-progress", (event) => {
+    callback(event.payload);
+  });
+}
+
 // Reasoning
 export async function processReasoning(
   text: string,
