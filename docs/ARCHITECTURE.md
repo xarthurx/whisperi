@@ -322,8 +322,7 @@ whisperi/
 │   └── download-whisper-cpp.ps1       # Sidecar fetch script
 ├── docs/
 │   ├── ARCHITECTURE.md                # This file
-│   ├── CHANGELOG.md                   # Version history
-│   └── CONTINUE.md                    # Phase completion details
+│   └── CHANGELOG.md                   # Version history
 ├── .github/
 │   ├── README.md                      # GitHub repo readme
 │   └── workflows/ci.yml              # CI pipeline
