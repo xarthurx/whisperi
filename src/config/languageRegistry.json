@@ -8,7 +8,7 @@
       "whisper": false,
       "parakeet": false,
       "assemblyai": false,
-      "instruction": "LANGUAGE CONTEXT: The language preference is set to auto-detect. Detect the language of the transcribed text and respond entirely in that same language. Maintain consistent language throughout your response."
+      "instruction": "LANGUAGE CONTEXT: The language preference is set to auto-detect. Detect the language of the transcribed text and respond entirely in that same language. Use the punctuation conventions native to the detected language (e.g., Chinese text uses \u3002\uff0c\uff1f\uff01\u3001, Japanese uses \u3002\u3001\u300c\u300d, etc.). Maintain consistent language and punctuation style throughout your response."
     },
     {
       "code": "af",
@@ -84,7 +84,7 @@
       "whisper": true,
       "parakeet": false,
       "assemblyai": false,
-      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Chinese. The transcribed text will be in Chinese. You MUST respond entirely in Chinese while maintaining proper Chinese grammar and punctuation. Preserve any English technical terms as the user spoke them."
+      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Chinese. The transcribed text will be in Chinese. You MUST respond entirely in Chinese while maintaining proper Chinese grammar and punctuation.\n\nCRITICAL — Chinese punctuation rules (override English defaults above):\n- Use Chinese full-width punctuation, NOT English punctuation marks\n- Period: use \u3002 (not .)\n- Comma: use \uff0c (not ,)\n- Question mark: use \uff1f (not ?)\n- Exclamation mark: use \uff01 (not !)\n- Colon: use \uff1a (not :)\n- Semicolon: use \uff1b (not ;)\n- Quotation marks: use \u201c\u201d or \u300c\u300d (not \" \")\n- Parentheses: use \uff08\uff09 (not ())\n- Enumeration comma: use \u3001 for listing items\n- Ellipsis: use \u2026\u2026 (two ellipsis characters, not ...)\n- Book title marks: use \u300a\u300b for titles\n- Dash: use \u2014\u2014 (two em-dashes)\n- Do NOT add spaces between Chinese characters and punctuation\n- When mixing Chinese and English, use Chinese punctuation for the sentence, but keep English words/terms as-is\n- Verbal punctuation commands in Chinese (\u53e5\u53f7/\u9017\u53f7/\u95ee\u53f7/\u611f\u53f9\u53f7) should be converted to their Chinese symbols\n\nPreserve any English technical terms as the user spoke them."
     },
     {
       "code": "hr",
@@ -253,7 +253,7 @@
       "whisper": true,
       "parakeet": false,
       "assemblyai": false,
-      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Japanese. The transcribed text will be in Japanese. You MUST respond entirely in Japanese while maintaining proper Japanese grammar and punctuation. Preserve any English loanwords (katakana) or technical terms as the user spoke them."
+      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Japanese. The transcribed text will be in Japanese. You MUST respond entirely in Japanese while maintaining proper Japanese grammar and punctuation.\n\nCRITICAL — Japanese punctuation rules (override English defaults above):\n- Use Japanese full-width punctuation, NOT English punctuation marks\n- Period: use \u3002 (not .)\n- Comma: use \u3001 (not ,)\n- Question mark: use \uff1f\n- Exclamation mark: use \uff01\n- Quotation marks: use \u300c\u300d for primary, \u300e\u300f for nested\n- Parentheses: use \uff08\uff09\n- Ellipsis: use \u2026 or \u30fb\u30fb\u30fb\n- Middle dot: use \u30fb for separating foreign words\n- Do NOT add spaces between Japanese characters and punctuation\n\nPreserve any English loanwords (katakana) or technical terms as the user spoke them."
     },
     {
       "code": "kn",
@@ -278,7 +278,7 @@
       "whisper": true,
       "parakeet": false,
       "assemblyai": false,
-      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Korean. The transcribed text will be in Korean. You MUST respond entirely in Korean while maintaining proper Korean grammar and punctuation. Preserve any English loanwords or technical terms as the user spoke them."
+      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Korean. The transcribed text will be in Korean. You MUST respond entirely in Korean while maintaining proper Korean grammar and punctuation.\n\nCRITICAL — Korean punctuation rules (override English defaults above):\n- Period: use . (Korean uses standard period)\n- Comma: use , (Korean uses standard comma)\n- Question mark: use ?\n- Quotation marks: use \u201c\u201d or \u300c\u300d\n- Book title marks: use \u300a\u300b\n- Parentheses: use () or \uff08\uff09\n- Middle dot: use \u00b7 for separating items\n\nPreserve any English loanwords or technical terms as the user spoke them."
     },
     {
       "code": "lv",

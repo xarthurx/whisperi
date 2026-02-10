@@ -1,6 +1,18 @@
 # Whisperi
 
-A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application.
+A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like Claude Code and Codex.
+
+## Paste Anywhere — Including the CLI tools
+
+Most dictation apps on the market can only paste into standard GUI text fields. Whisperi uses native Win32 `SendInput` to simulate keystrokes, which means it can paste directly into **command-line interfaces and terminal emulators** — something most competitors cannot do.
+
+This makes Whisperi especially useful for developers who work with AI coding assistants in the terminal:
+
+- **Claude Code** — dictate prompts and instructions directly into the Claude Code CLI
+- **Codex CLI** — speak your coding requests instead of typing them
+- **Any terminal** — PowerShell, Windows Terminal, cmd.exe, WSL terminals
+
+No need to type out long prompts manually. Just press the hotkey, speak, and your words appear right in the terminal input.
 
 ## Why Cloud-First?
 
@@ -8,6 +20,7 @@ Whisperi primarily relies on cloud transcription services (OpenAI, Groq, Mistral
 
 ## Features
 
+- **Terminal Paste** — Paste transcribed text directly into CLI tools (Claude Code, Codex, terminals) via native keystroke simulation
 - **Cloud Transcription** — OpenAI, Groq, and Mistral with model selection
 - **AI Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, or Groq models to clean up grammar, punctuation, and formatting
 - **Auto-Paste** — Transcribed text is automatically copied to clipboard and pasted into the active window
@@ -63,10 +76,10 @@ bun run tauri build
 ### AI Enhancement
 | Provider | Models |
 |----------|--------|
-| OpenAI | GPT-5.2, GPT-5 Mini, GPT-4.1 |
-| Anthropic | Claude Sonnet 4.5, Claude Haiku 4.5, Claude Opus 4.5 |
-| Google Gemini | Gemini 3 Pro, Gemini 3 Flash |
-| Groq | Qwen3 32B, LLaMA 3.3 70B, Mixtral 8x7B |
+| OpenAI | GPT-5.2, GPT-5.2 Pro, GPT-5 Mini, GPT-5 Nano, GPT-4.1 family |
+| Anthropic | Claude Opus 4.6, Claude Sonnet 4.5, Claude Haiku 4.5 |
+| Google Gemini | Gemini 3 Pro, Gemini 3 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash |
+| Groq | LLaMA 4 Maverick, LLaMA 4 Scout, Qwen3 32B, GPT-OSS 120B/20B, LLaMA 3.3 70B |
 
 ## License
 

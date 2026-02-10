@@ -108,6 +108,7 @@
         {
           "id": "whisper-1",
           "name": "Whisper",
+          "params": "1.5B",
           "description": "Original Whisper model"
         }
       ]
@@ -120,6 +121,7 @@
         {
           "id": "whisper-large-v3-turbo",
           "name": "Whisper Large v3 Turbo",
+          "params": "809M",
           "description": "216x real-time speed"
         }
       ]
@@ -132,7 +134,8 @@
         {
           "id": "voxtral-mini-latest",
           "name": "Voxtral Mini",
-          "description": "Fast multilingual transcription"
+          "params": "3B",
+          "description": "Fast multilingual transcription, 13 languages"
         }
       ]
     }
@@ -148,6 +151,11 @@
           "description": "Latest flagship reasoning model"
         },
         {
+          "id": "gpt-5.2-pro",
+          "name": "GPT-5.2 Pro",
+          "description": "Harder thinking, best answers"
+        },
+        {
           "id": "gpt-5-mini",
           "name": "GPT-5 Mini",
           "description": "Fast and cost-efficient"
@@ -155,7 +163,7 @@
         {
           "id": "gpt-5-nano",
           "name": "GPT-5 Nano",
-          "description": "Ultra-fast, low latency"
+          "description": "Ultra-fast, lowest latency"
         },
         {
           "id": "gpt-4.1",
@@ -179,19 +187,19 @@
       "name": "Anthropic",
       "models": [
         {
+          "id": "claude-opus-4-6",
+          "name": "Claude Opus 4.6",
+          "description": "Most intelligent, coding and agents"
+        },
+        {
           "id": "claude-sonnet-4-5",
           "name": "Claude Sonnet 4.5",
-          "description": "Balanced performance"
+          "description": "Best speed-intelligence balance"
         },
         {
           "id": "claude-haiku-4-5",
           "name": "Claude Haiku 4.5",
-          "description": "Fast with near-frontier intelligence"
-        },
-        {
-          "id": "claude-opus-4-5",
-          "name": "Claude Opus 4.5",
-          "description": "Most capable Claude model"
+          "description": "Fastest, near-frontier intelligence"
         }
       ]
     },
@@ -202,16 +210,27 @@
         {
           "id": "gemini-3-pro-preview",
           "name": "Gemini 3 Pro",
-          "description": "Next-gen flagship model for complex reasoning"
+          "description": "Next-gen flagship for complex reasoning"
         },
         {
           "id": "gemini-3-flash-preview",
           "name": "Gemini 3 Flash",
-          "description": "Ultra-fast, high-capability next-gen model"
+          "description": "Ultra-fast next-gen model"
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "name": "Gemini 2.5 Pro",
+          "description": "Stable flagship with deep thinking"
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "name": "Gemini 2.5 Flash",
+          "description": "Stable fast model, 1M context"
         },
         {
           "id": "gemini-2.5-flash-lite",
           "name": "Gemini 2.5 Flash Lite",
+          "params": "0.8B",
           "description": "Lowest latency and cost"
         }
       ]
@@ -221,40 +240,47 @@
       "name": "Groq",
       "models": [
         {
+          "id": "meta-llama/llama-4-maverick-17b-128e-instruct",
+          "name": "LLaMA 4 Maverick",
+          "params": "400B MoE",
+          "description": "Latest Meta model, 17B active, 128 experts"
+        },
+        {
+          "id": "meta-llama/llama-4-scout-17b-16e-instruct",
+          "name": "LLaMA 4 Scout",
+          "params": "109B MoE",
+          "description": "Latest Meta model, 17B active, 16 experts"
+        },
+        {
           "id": "qwen/qwen3-32b",
           "name": "Qwen3 32B",
-          "description": "Powerful reasoning model, 131K context",
+          "params": "32B",
+          "description": "Powerful reasoning, 131K context",
           "disableThinking": true
         },
         {
           "id": "openai/gpt-oss-120b",
           "name": "GPT-OSS 120B",
-          "description": "OpenAI's open-source flagship, 500 T/sec"
+          "params": "117B MoE",
+          "description": "OpenAI open-source flagship, 5.1B active"
         },
         {
           "id": "openai/gpt-oss-20b",
           "name": "GPT-OSS 20B",
-          "description": "Fast open-source model, 1000 T/sec"
+          "params": "21B MoE",
+          "description": "Fast open-source model, 3.6B active"
         },
         {
           "id": "llama-3.3-70b-versatile",
           "name": "LLaMA 3.3 70B",
+          "params": "70B",
           "description": "Meta's versatile model, 280 T/sec"
         },
         {
           "id": "llama-3.1-8b-instant",
           "name": "LLaMA 3.1 8B",
+          "params": "8B",
           "description": "Ultra-fast 560 T/sec, 131K context"
-        },
-        {
-          "id": "mixtral-8x7b-32768",
-          "name": "Mixtral 8x7B",
-          "description": "32K context, mixture of experts"
-        },
-        {
-          "id": "gemma2-9b-it",
-          "name": "Gemma 2 9B",
-          "description": "Google's efficient model"
         }
       ]
     }

@@ -253,11 +253,19 @@ function TranscriptionSection({ settings, update }: SectionProps) {
                 .find((p) => p.id === settings.cloudTranscriptionProvider)
                 ?.models.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name}
+                    {m.name}{m.params ? ` (${m.params})` : ""}
                   </option>
                 ))}
             </select>
           </SettingsRow>
+          {(() => {
+            const selectedModel = modelRegistry.transcriptionProviders
+              .find((p) => p.id === settings.cloudTranscriptionProvider)
+              ?.models.find((m) => m.id === settings.cloudTranscriptionModel);
+            return selectedModel?.description ? (
+              <p className="text-xs text-muted-foreground -mt-1 ml-1">{selectedModel.description}</p>
+            ) : null;
+          })()}
           <ApiKeyInput
             apiKey={
               settings.cloudTranscriptionProvider === "openai"
@@ -329,11 +337,19 @@ function AIModelsSection({ settings, update }: SectionProps) {
                   .find((p) => p.id === settings.reasoningProvider)
                   ?.models.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name}
+                      {m.name}{m.params ? ` (${m.params})` : ""}
                     </option>
                   ))}
               </select>
             </SettingsRow>
+            {(() => {
+              const selectedModel = modelRegistry.cloudProviders
+                .find((p) => p.id === settings.reasoningProvider)
+                ?.models.find((m) => m.id === settings.reasoningModel);
+              return selectedModel?.description ? (
+                <p className="text-xs text-muted-foreground -mt-1 ml-1">{selectedModel.description}</p>
+              ) : null;
+            })()}
             <ApiKeyInput
               apiKey={
                 settings.reasoningProvider === "openai"
