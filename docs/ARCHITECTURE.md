@@ -320,7 +320,13 @@ whisperi/
 │
 ├── scripts/
 │   └── download-whisper-cpp.ps1       # Sidecar fetch script
-├── .github/workflows/ci.yml          # CI pipeline
+├── docs/
+│   ├── ARCHITECTURE.md                # This file
+│   ├── CHANGELOG.md                   # Version history
+│   └── CONTINUE.md                    # Phase completion details
+├── .github/
+│   ├── README.md                      # GitHub repo readme
+│   └── workflows/ci.yml              # CI pipeline
 ├── package.json                       # Frontend deps + scripts
-└── CHANGELOG.md                       # Version history
+└── CLAUDE.md                         # Claude Code project instructions
 ```

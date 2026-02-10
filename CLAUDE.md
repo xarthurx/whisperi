@@ -2,7 +2,7 @@
 
 Tauri 2.x desktop dictation app. Whisper.cpp for local STT, multi-cloud transcription + AI reasoning.
 
-See [CHANGELOG.md](CHANGELOG.md) for history, [CONTINUE.md](CONTINUE.md) for phase details.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full architecture, [docs/CHANGELOG.md](docs/CHANGELOG.md) for version history.
 
 ## Dev Commands
 
@@ -39,3 +39,10 @@ Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, Rust, cp
 - Whisper models: `~/.cache/whisperi/whisper-models/`
 - Settings: tauri-plugin-store (`settings.json`)
 - Database: SQLite at `{app_data}/whisperi.db`
+
+## Workflow Rules
+
+- **Before version bump or tag creation** — update `docs/CHANGELOG.md` first
+- **Before context compression** — re-read and update `docs/CHANGELOG.md` with any work done so far
+- **After context compression** — re-read this file (`CLAUDE.md`) to restore project context
+- **End of each conversation** — update any relevant markdown files (`docs/CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/CONTINUE.md`) to reflect changes made during the session

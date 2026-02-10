@@ -73,19 +73,23 @@ pub async fn complete(
     system_prompt: &str,
     user_text: &str,
     max_tokens: Option<u32>,
+    base_url: Option<&str>,
 ) -> Result<String> {
     let client = reqwest::Client::new();
+    let base = base_url.unwrap_or("https://api.openai.com/v1");
 
-    // Try Responses API first (newer models)
-    match complete_responses(&client, api_key, model, system_prompt, user_text, max_tokens).await {
-        Ok(text) => return Ok(text),
-        Err(e) => {
-            log::debug!("Responses API failed, falling back to Chat Completions: {}", e);
+    // Try Responses API first (newer models) — only for OpenAI
+    if base_url.is_none() {
+        match complete_responses(&client, api_key, model, system_prompt, user_text, max_tokens, base).await {
+            Ok(text) => return Ok(text),
+            Err(e) => {
+                log::debug!("Responses API failed, falling back to Chat Completions: {}", e);
+            }
         }
     }
 
     // Fall back to Chat Completions API
-    complete_chat(&client, api_key, model, system_prompt, user_text, max_tokens).await
+    complete_chat(&client, api_key, model, system_prompt, user_text, max_tokens, base).await
 }
 
 async fn complete_responses(
@@ -95,6 +99,7 @@ async fn complete_responses(
     system_prompt: &str,
     user_text: &str,
     max_tokens: Option<u32>,
+    base_url: &str,
 ) -> Result<String> {
     let request = ResponsesRequest {
         model: model.to_string(),
@@ -112,7 +117,7 @@ async fn complete_responses(
     };
 
     let response = client
-        .post("https://api.openai.com/v1/responses")
+        .post(format!("{}/responses", base_url))
         .bearer_auth(api_key)
         .json(&request)
         .send()
@@ -147,6 +152,7 @@ async fn complete_chat(
     system_prompt: &str,
     user_text: &str,
     max_tokens: Option<u32>,
+    base_url: &str,
 ) -> Result<String> {
     let request = ChatRequest {
         model: model.to_string(),
@@ -164,7 +170,7 @@ async fn complete_chat(
     };
 
     let response = client
-        .post("https://api.openai.com/v1/chat/completions")
+        .post(format!("{}/chat/completions", base_url))
         .bearer_auth(api_key)
         .json(&request)
         .send()

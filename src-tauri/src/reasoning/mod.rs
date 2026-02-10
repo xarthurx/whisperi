@@ -26,7 +26,13 @@ pub struct ReasoningResponse {
 pub async fn process(req: &ReasoningRequest) -> Result<ReasoningResponse> {
     let text = match req.provider.as_str() {
         "openai" => {
-            openai::complete(&req.api_key, &req.model, &req.system_prompt, &req.text, req.max_tokens).await?
+            openai::complete(&req.api_key, &req.model, &req.system_prompt, &req.text, req.max_tokens, None).await?
+        }
+        "groq" => {
+            openai::complete(
+                &req.api_key, &req.model, &req.system_prompt, &req.text,
+                req.max_tokens, Some("https://api.groq.com/openai/v1"),
+            ).await?
         }
         "anthropic" => {
             anthropic::complete(&req.api_key, &req.model, &req.system_prompt, &req.text, req.max_tokens).await?

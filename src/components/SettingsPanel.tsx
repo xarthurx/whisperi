@@ -29,7 +29,7 @@ import {
   clearTranscriptions,
 } from "@/services/tauriApi";
 import modelRegistry from "@/models/modelRegistryData.json";
-import { UNIFIED_SYSTEM_PROMPT } from "@/config/prompts";
+import { USER_VISIBLE_PROMPT } from "@/config/prompts";
 
 type Section =
   | "general"
@@ -380,10 +380,10 @@ function AIModelsSection({ settings, update }: SectionProps) {
         </SettingsSection>
       )}
 
-      <SettingsSection title="System Prompt" description="The instructions sent to the AI model. Select which prompt to use.">
-        <div className="space-y-3">
+      <SettingsSection title="System Prompt" description="Cleanup instructions sent to the AI model. Core behavior rules are applied automatically.">
+        <div className="flex flex-col flex-1 min-h-0">
           {/* Prompt tabs */}
-          <div className="relative flex p-0.5 rounded-md bg-surface-1">
+          <div className="relative flex p-0.5 rounded-md bg-surface-1 shrink-0">
             {(["default", "custom"] as const).map((tab) => {
               const isActive = tab === "custom" ? settings.useCustomPrompt : !settings.useCustomPrompt;
               return (
@@ -407,13 +407,12 @@ function AIModelsSection({ settings, update }: SectionProps) {
             <textarea
               value={settings.customSystemPrompt}
               onChange={(e) => update("customSystemPrompt", e.target.value)}
-              placeholder="Enter your custom system prompt here..."
-              rows={8}
-              className="w-full px-3.5 py-3 text-sm bg-surface-1 border border-border-subtle rounded-lg text-foreground placeholder:text-muted-foreground/40 resize-y min-h-[160px] focus:outline-none focus:ring-2 focus:ring-ring/10 focus:border-border-active"
+              placeholder="Enter your custom cleanup instructions here. Core behavior rules (agent activation, output format) are always applied automatically."
+              className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border-subtle rounded-lg text-foreground placeholder:text-muted-foreground/40 resize-y min-h-[160px] flex-1 focus:outline-none focus:ring-2 focus:ring-ring/10 focus:border-border-active"
             />
           ) : (
-            <div className="w-full px-3.5 py-3 text-sm bg-surface-1 border border-border-subtle rounded-lg text-muted-foreground/80 max-h-[240px] overflow-y-auto whitespace-pre-wrap leading-relaxed">
-              {UNIFIED_SYSTEM_PROMPT}
+            <div className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border-subtle rounded-lg text-muted-foreground/80 max-h-[50vh] overflow-y-auto whitespace-pre-wrap leading-relaxed">
+              {USER_VISIBLE_PROMPT}
             </div>
           )}
         </div>
