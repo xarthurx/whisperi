@@ -3,7 +3,6 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import {
   Settings,
   Mic,
-  Languages,
   Brain,
   BookOpen,
   Bot,
@@ -12,33 +11,25 @@ import {
   Minus,
   Plus,
   Trash2,
-  Download,
-  Check,
-  Clipboard,
 } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import ApiKeyInput from "@/components/ui/ApiKeyInput";
 import LanguageSelector from "@/components/ui/LanguageSelector";
-import { SettingsSection, SettingsRow, SettingsGroup } from "@/components/ui/SettingsSection";
+import { SettingsSection, SettingsRow } from "@/components/ui/SettingsSection";
 import { ProviderTabs, type ProviderTabItem } from "@/components/ui/ProviderTabs";
+import { HotkeyInput } from "@/components/ui/HotkeyInput";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
 import {
   listAudioDevices,
   type AudioDevice,
-  listWhisperModels,
-  downloadWhisperModel,
-  deleteWhisperModel,
-  getWhisperStatus,
-  onModelDownloadProgress,
-  type WhisperModelStatus,
   clearTranscriptions,
 } from "@/services/tauriApi";
 import modelRegistry from "@/models/modelRegistryData.json";
+import { UNIFIED_SYSTEM_PROMPT } from "@/config/prompts";
 
 type Section =
   | "general"
@@ -51,7 +42,7 @@ type Section =
 const SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "general", label: "General", icon: Settings },
   { id: "transcription", label: "Transcription", icon: Mic },
-  { id: "ai-models", label: "AI Models", icon: Brain },
+  { id: "ai-models", label: "Enhancement", icon: Brain },
   { id: "dictionary", label: "Dictionary", icon: BookOpen },
   { id: "agent", label: "Agent", icon: Bot },
   { id: "developer", label: "Developer", icon: Wrench },
@@ -87,7 +78,7 @@ function SettingsPanelInner() {
         data-tauri-drag-region
         className="h-8 flex items-center justify-between px-3 bg-surface-1 border-b border-border-subtle select-none shrink-0"
       >
-        <span className="text-xs font-medium text-muted-foreground">Whisperi Settings</span>
+        <span className="text-sm font-medium text-muted-foreground">Whisperi Settings</span>
         <div className="flex items-center gap-1">
           <button
             onClick={handleMinimize}
@@ -111,25 +102,25 @@ function SettingsPanelInner() {
             <button
               key={id}
               onClick={() => setSection(id)}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded text-xs font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded text-sm font-medium transition-colors ${
                 section === id
                   ? "bg-primary/15 text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-raised"
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
+              <Icon className="w-4 h-4" />
               {label}
             </button>
           ))}
         </nav>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-7 space-y-7">
           {section === "general" && (
             <GeneralSection settings={settings} update={update} />
           )}
           {section === "transcription" && (
-            <TranscriptionSection settings={settings} update={update} toast={toast} />
+            <TranscriptionSection settings={settings} update={update} />
           )}
           {section === "ai-models" && (
             <AIModelsSection settings={settings} update={update} />
@@ -166,7 +157,7 @@ function GeneralSection({ settings, update }: SectionProps) {
 
   return (
     <>
-      <SettingsSection title="Language" description="Preferred language for transcription">
+      <SettingsSection title="Language" description="Select 'Auto' for multi-language auto-detection. Choose a specific language to ensure output is always in that language.">
         <LanguageSelector
           value={settings.preferredLanguage}
           onChange={(v) => update("preferredLanguage", v)}
@@ -175,12 +166,10 @@ function GeneralSection({ settings, update }: SectionProps) {
       </SettingsSection>
 
       <SettingsSection title="Hotkey" description="Keyboard shortcut for dictation">
-        <div className="space-y-2">
-          <Input
+        <div className="space-y-3">
+          <HotkeyInput
             value={settings.dictationKey}
-            onChange={(e) => update("dictationKey", e.target.value)}
-            placeholder="e.g. CommandOrControl+Shift+Space"
-            className="w-72 h-8 text-sm"
+            onChange={(hotkey) => update("dictationKey", hotkey)}
           />
           <SettingsRow label="Activation mode">
             <div className="flex gap-2">
@@ -206,7 +195,7 @@ function GeneralSection({ settings, update }: SectionProps) {
         <select
           value={settings.selectedMicDeviceId}
           onChange={(e) => update("selectedMicDeviceId", e.target.value)}
-          className="w-72 h-8 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
+          className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
         >
           <option value="">System default</option>
           {devices.map((d) => (
@@ -231,179 +220,75 @@ function GeneralSection({ settings, update }: SectionProps) {
 
 function getTranscriptionProviders(settings: import("@/hooks/useSettings").Settings): ProviderTabItem[] {
   return [
-    { id: "openai", name: "OpenAI", recommended: true, hasKey: !!settings.openaiApiKey },
-    { id: "groq", name: "Groq", hasKey: !!settings.groqApiKey },
+    { id: "openai", name: "OpenAI", hasKey: !!settings.openaiApiKey },
+    { id: "groq", name: "Groq", recommended: true, hasKey: !!settings.groqApiKey },
     { id: "mistral", name: "Mistral", hasKey: !!settings.mistralApiKey },
   ];
 }
 
-function TranscriptionSection({ settings, update, toast }: SectionProps) {
-  const [whisperAvailable, setWhisperAvailable] = useState(false);
-  const [whisperModels, setWhisperModels] = useState<WhisperModelStatus[]>([]);
-  const [downloading, setDownloading] = useState<string | null>(null);
-  const [downloadProgress, setDownloadProgress] = useState(0);
-
-  useEffect(() => {
-    getWhisperStatus().then(setWhisperAvailable).catch(() => {});
-    listWhisperModels().then(setWhisperModels).catch(() => {});
-
-    let unlisten: (() => void) | undefined;
-    onModelDownloadProgress((p) => {
-      setDownloadProgress(p.percentage);
-      if (p.percentage >= 100) {
-        setDownloading(null);
-        listWhisperModels().then(setWhisperModels).catch(() => {});
-      }
-    }).then((fn) => { unlisten = fn; });
-
-    return () => { unlisten?.(); };
-  }, []);
-
-  const handleDownload = async (modelId: string) => {
-    setDownloading(modelId);
-    setDownloadProgress(0);
-    try {
-      await downloadWhisperModel(modelId);
-    } catch (e) {
-      toast?.({ title: "Download failed", description: String(e), variant: "destructive" });
-      setDownloading(null);
-    }
-  };
-
-  const handleDelete = async (modelId: string) => {
-    try {
-      await deleteWhisperModel(modelId);
-      setWhisperModels(await listWhisperModels());
-    } catch (e) {
-      toast?.({ title: "Delete failed", description: String(e), variant: "destructive" });
-    }
-  };
-
+function TranscriptionSection({ settings, update }: SectionProps) {
   return (
     <>
-      <SettingsSection title="Transcription Mode">
-        <SettingsRow label="Use local Whisper" description="Transcribe on-device with whisper.cpp">
-          <Toggle
-            checked={settings.useLocalWhisper}
-            onChange={(v) => update("useLocalWhisper", v)}
-            disabled={!whisperAvailable}
-          />
-        </SettingsRow>
-        {!whisperAvailable && (
-          <p className="text-[11px] text-warning">
-            whisper.cpp sidecar not found. Run <code className="text-xs">bun run download:whisper-cpp</code> to install.
-          </p>
-        )}
-      </SettingsSection>
-
-      {settings.useLocalWhisper ? (
-        <SettingsSection title="Whisper Models" description="Download and manage local models">
-          <div className="space-y-2">
-            {whisperModels.map((model) => (
-              <SettingsGroup key={model.id}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-medium text-foreground">{model.name}</span>
-                    <span className="text-[11px] text-muted-foreground ml-2">{model.size}</span>
-                    {model.recommended && <Badge variant="default" className="ml-2 text-[9px]">Recommended</Badge>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {model.downloaded ? (
-                      <>
-                        <Button
-                          variant={settings.whisperModel === model.id ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => update("whisperModel", model.id)}
-                          className="h-6 text-[11px]"
-                        >
-                          {settings.whisperModel === model.id ? (
-                            <><Check className="w-3 h-3" /> Selected</>
-                          ) : (
-                            "Select"
-                          )}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(model.id)} className="h-6 text-[11px]">
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </>
-                    ) : downloading === model.id ? (
-                      <div className="w-24">
-                        <Progress value={downloadProgress} className="h-1.5" />
-                        <span className="text-[10px] text-muted-foreground">{Math.round(downloadProgress)}%</span>
-                      </div>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={() => handleDownload(model.id)} className="h-6 text-[11px]">
-                        <Download className="w-3 h-3" /> Download
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </SettingsGroup>
-            ))}
-          </div>
-        </SettingsSection>
-      ) : (
-        <SettingsSection title="Cloud Provider" description="Choose a cloud transcription service">
-          <ProviderTabs
-            providers={getTranscriptionProviders(settings)}
-            selectedId={settings.cloudTranscriptionProvider}
-            onSelect={(id) => {
-              update("cloudTranscriptionProvider", id);
-              // Auto-select the first model for the new provider
-              const provider = modelRegistry.transcriptionProviders.find((p) => p.id === id);
-              if (provider?.models[0]) {
-                update("cloudTranscriptionModel", provider.models[0].id);
-              }
+      <SettingsSection title="Cloud Provider" description="Choose a cloud transcription service">
+        <ProviderTabs
+          providers={getTranscriptionProviders(settings)}
+          selectedId={settings.cloudTranscriptionProvider}
+          onSelect={(id) => {
+            update("cloudTranscriptionProvider", id);
+            // Auto-select the first model for the new provider
+            const provider = modelRegistry.transcriptionProviders.find((p) => p.id === id);
+            if (provider?.models[0]) {
+              update("cloudTranscriptionModel", provider.models[0].id);
+            }
+          }}
+        />
+        <div className="mt-3 space-y-3">
+          <SettingsRow label="Model">
+            <select
+              value={settings.cloudTranscriptionModel}
+              onChange={(e) => update("cloudTranscriptionModel", e.target.value)}
+              className="w-56 h-9 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
+            >
+              {modelRegistry.transcriptionProviders
+                .find((p) => p.id === settings.cloudTranscriptionProvider)
+                ?.models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+            </select>
+          </SettingsRow>
+          <ApiKeyInput
+            apiKey={
+              settings.cloudTranscriptionProvider === "openai"
+                ? settings.openaiApiKey
+                : settings.cloudTranscriptionProvider === "groq"
+                  ? settings.groqApiKey
+                  : settings.mistralApiKey
+            }
+            setApiKey={(key) => {
+              const p = settings.cloudTranscriptionProvider;
+              update(
+                p === "openai" ? "openaiApiKey" : p === "groq" ? "groqApiKey" : "mistralApiKey",
+                key
+              );
             }}
+            placeholder="sk-..."
+            label={`${settings.cloudTranscriptionProvider} API Key`}
+            helpText={`Enter your ${settings.cloudTranscriptionProvider} API key`}
           />
-          <div className="mt-3 space-y-3">
-            <SettingsRow label="Model">
-              <select
-                value={settings.cloudTranscriptionModel}
-                onChange={(e) => update("cloudTranscriptionModel", e.target.value)}
-                className="w-56 h-8 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
-              >
-                {modelRegistry.transcriptionProviders
-                  .find((p) => p.id === settings.cloudTranscriptionProvider)
-                  ?.models.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-              </select>
-            </SettingsRow>
-            <ApiKeyInput
-              apiKey={
-                settings.cloudTranscriptionProvider === "openai"
-                  ? settings.openaiApiKey
-                  : settings.cloudTranscriptionProvider === "groq"
-                    ? settings.groqApiKey
-                    : settings.mistralApiKey
-              }
-              setApiKey={(key) => {
-                const p = settings.cloudTranscriptionProvider;
-                update(
-                  p === "openai" ? "openaiApiKey" : p === "groq" ? "groqApiKey" : "mistralApiKey",
-                  key
-                );
-              }}
-              placeholder="sk-..."
-              label={`${settings.cloudTranscriptionProvider} API Key`}
-              helpText={`Enter your ${settings.cloudTranscriptionProvider} API key`}
-            />
-          </div>
-        </SettingsSection>
-      )}
+        </div>
+      </SettingsSection>
     </>
   );
 }
 
 function getReasoningProviders(settings: import("@/hooks/useSettings").Settings): ProviderTabItem[] {
   return [
-    { id: "openai", name: "OpenAI", recommended: true, hasKey: !!settings.openaiApiKey },
+    { id: "openai", name: "OpenAI", hasKey: !!settings.openaiApiKey },
     { id: "anthropic", name: "Anthropic", hasKey: !!settings.anthropicApiKey },
     { id: "gemini", name: "Gemini", hasKey: !!settings.geminiApiKey },
-    { id: "groq", name: "Groq", hasKey: !!settings.groqApiKey },
+    { id: "groq", name: "Groq", recommended: true, hasKey: !!settings.groqApiKey },
   ];
 }
 
@@ -438,7 +323,7 @@ function AIModelsSection({ settings, update }: SectionProps) {
               <select
                 value={settings.reasoningModel}
                 onChange={(e) => update("reasoningModel", e.target.value)}
-                className="w-56 h-8 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
+                className="w-56 h-9 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
               >
                 {modelRegistry.cloudProviders
                   .find((p) => p.id === settings.reasoningProvider)
@@ -478,19 +363,64 @@ function AIModelsSection({ settings, update }: SectionProps) {
           </div>
         </SettingsSection>
       )}
+
+      <SettingsSection title="System Prompt" description="The instructions sent to the AI model. Select which prompt to use.">
+        <div className="space-y-3">
+          {/* Prompt tabs */}
+          <div className="relative flex p-0.5 rounded-md bg-surface-1">
+            {(["default", "custom"] as const).map((tab) => {
+              const isActive = tab === "custom" ? settings.useCustomPrompt : !settings.useCustomPrompt;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => update("useCustomPrompt", tab === "custom")}
+                  className={`relative z-10 flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
+                    isActive
+                      ? "bg-primary/20 border border-primary/40 text-primary font-semibold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tab === "default" ? "Default Prompt" : "Custom Prompt"}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Prompt content */}
+          {settings.useCustomPrompt ? (
+            <textarea
+              value={settings.customSystemPrompt}
+              onChange={(e) => update("customSystemPrompt", e.target.value)}
+              placeholder="Enter your custom system prompt here..."
+              rows={8}
+              className="w-full px-3.5 py-3 text-sm bg-surface-1 border border-border-subtle rounded-lg text-foreground placeholder:text-muted-foreground/40 resize-y min-h-[160px] focus:outline-none focus:ring-2 focus:ring-ring/10 focus:border-border-active"
+            />
+          ) : (
+            <div className="w-full px-3.5 py-3 text-sm bg-surface-1 border border-border-subtle rounded-lg text-muted-foreground/80 max-h-[240px] overflow-y-auto whitespace-pre-wrap leading-relaxed">
+              {UNIFIED_SYSTEM_PROMPT}
+            </div>
+          )}
+        </div>
+      </SettingsSection>
     </>
   );
 }
 
 function DictionarySection({ settings, update }: SectionProps) {
   const [newWord, setNewWord] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState("");
 
   const addWord = () => {
     const word = newWord.trim();
-    if (word && !settings.customDictionary.includes(word)) {
-      update("customDictionary", [...settings.customDictionary, word]);
-      setNewWord("");
+    if (!word) return;
+    if (settings.customDictionary.includes(word)) {
+      setDuplicateWarning(`"${word}" is already in the dictionary`);
+      setTimeout(() => setDuplicateWarning(""), 3000);
+      return;
     }
+    setDuplicateWarning("");
+    update("customDictionary", [...settings.customDictionary, word]);
+    setNewWord("");
   };
 
   const removeWord = (word: string) => {
@@ -511,12 +441,15 @@ function DictionarySection({ settings, update }: SectionProps) {
           onChange={(e) => setNewWord(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addWord()}
           placeholder="Add a word..."
-          className="h-8 text-sm flex-1"
+          className="h-9 text-sm flex-1"
         />
         <Button variant="outline" size="sm" onClick={addWord} disabled={!newWord.trim()}>
           <Plus className="w-3 h-3" /> Add
         </Button>
       </div>
+        {duplicateWarning && (
+          <p className="text-xs text-warning mt-1">{duplicateWarning}</p>
+        )}
       {settings.customDictionary.length > 0 ? (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {settings.customDictionary.map((word) => (
@@ -532,7 +465,7 @@ function DictionarySection({ settings, update }: SectionProps) {
           ))}
         </div>
       ) : (
-        <p className="text-[11px] text-muted-foreground mt-2">
+        <p className="text-xs text-muted-foreground mt-2">
           No custom words added. Add names, technical terms, or brand names to improve accuracy.
         </p>
       )}
@@ -544,13 +477,13 @@ function AgentSection({ settings, update }: SectionProps) {
   return (
     <SettingsSection
       title="Agent Name"
-      description="The name used in AI-processed transcriptions when addressing the assistant"
+      description="When you say this name during dictation, the AI switches from transcription cleanup to conversational response mode — it will answer questions and follow instructions instead of just cleaning up your speech."
     >
       <Input
         value={settings.agentName}
         onChange={(e) => update("agentName", e.target.value)}
         placeholder="Whisperi"
-        className="w-48 h-8 text-sm"
+        className="w-48 h-9 text-sm"
       />
     </SettingsSection>
   );
@@ -575,7 +508,7 @@ function DeveloperSection({ toast }: { toast: (props: { title?: string; descript
       </SettingsSection>
 
       <SettingsSection title="About" description="Whisperi — Tauri 2.x dictation app">
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Built with Tauri, React, and whisper.cpp
         </p>
       </SettingsSection>

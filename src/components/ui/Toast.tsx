@@ -162,12 +162,12 @@ const ToastItem: React.FC<ToastState & { onClose?: () => void }> = ({
       <Icon className={cn("size-4 shrink-0 mt-0.5", config.iconClass)} />
       <div className="flex-1 min-w-0">
         {title && (
-          <div className={cn("text-[13px] font-medium leading-tight", config.titleClass)}>
+          <div className={cn("text-sm font-medium leading-tight", config.titleClass)}>
             {title}
           </div>
         )}
         {description && (
-          <div className={cn("text-[12px] leading-snug mt-0.5", config.descClass)}>
+          <div className={cn("text-[13px] leading-snug mt-0.5", config.descClass)}>
             {description}
           </div>
         )}

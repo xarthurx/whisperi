@@ -20,6 +20,18 @@ export function useHotkey({
 }: UseHotkeyOptions) {
   const registeredRef = useRef<string | null>(null);
 
+  // Store callbacks in refs so re-registration only happens when
+  // shortcut/activationMode/enabled change — not on every render.
+  const onToggleRef = useRef(onToggle);
+  const onPushStartRef = useRef(onPushStart);
+  const onPushEndRef = useRef(onPushEnd);
+  const activationModeRef = useRef(activationMode);
+
+  onToggleRef.current = onToggle;
+  onPushStartRef.current = onPushStart;
+  onPushEndRef.current = onPushEnd;
+  activationModeRef.current = activationMode;
+
   const cleanup = useCallback(async () => {
     if (registeredRef.current) {
       try {
@@ -45,17 +57,15 @@ export function useHotkey({
 
       try {
         await register(shortcut, (event) => {
-          if (activationMode === "tap") {
-            // Tap mode: toggle on key down only
+          if (activationModeRef.current === "tap") {
             if (event.state === "Pressed") {
-              onToggle();
+              onToggleRef.current();
             }
           } else {
-            // Push-to-talk: start on down, stop on up
             if (event.state === "Pressed") {
-              onPushStart?.();
+              onPushStartRef.current?.();
             } else if (event.state === "Released") {
-              onPushEnd?.();
+              onPushEndRef.current?.();
             }
           }
         });
@@ -72,5 +82,5 @@ export function useHotkey({
       cancelled = true;
       cleanup();
     };
-  }, [shortcut, activationMode, enabled, onToggle, onPushStart, onPushEnd, cleanup]);
+  }, [shortcut, enabled, cleanup]);
 }

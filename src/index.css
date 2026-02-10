@@ -26,10 +26,10 @@
   --color-warning-foreground: oklch(0.15 0 0);
 
   --color-surface-0: oklch(0.1 0.005 270);
-  --color-surface-1: oklch(0.13 0.006 270);
-  --color-surface-2: oklch(0.155 0.008 270);
-  --color-surface-3: oklch(0.18 0.01 270);
-  --color-surface-raised: oklch(0.2 0.012 270);
+  --color-surface-1: oklch(0.145 0.006 270);
+  --color-surface-2: oklch(0.19 0.008 270);
+  --color-surface-3: oklch(0.23 0.01 270);
+  --color-surface-raised: oklch(0.27 0.012 270);
 
   --color-border-subtle: oklch(0.2 0.004 270);
   --color-border-hover: oklch(0.28 0.01 270);
@@ -40,11 +40,11 @@
   --font-family-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto,
     "Helvetica Neue", Arial, sans-serif;
 
-  --radius: 0.125rem;
-  --radius-sm: 0.0625rem;
-  --radius-md: 0.125rem;
-  --radius-lg: 0.1875rem;
-  --radius-xl: 0.25rem;
+  --radius: 0.375rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
 
   --shadow-card: 0 1px 2px oklch(0 0 0 / 0.25);
   --shadow-card-hover: 0 2px 8px oklch(0 0 0 / 0.35);

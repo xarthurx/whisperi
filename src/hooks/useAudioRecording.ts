@@ -15,6 +15,7 @@ import {
   saveTranscription,
 } from "@/services/tauriApi";
 import { getSystemPrompt, getUserPrompt } from "@/config/prompts";
+import { playStartSound, playStopSound } from "@/utils/sounds";
 
 type RecordingPhase = "idle" | "recording" | "processing";
 
@@ -67,6 +68,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
     try {
       await apiStartRecording(deviceId);
       setPhase("recording");
+      playStartSound();
     } catch (e) {
       onToast?.({
         title: "Failed to start recording",
@@ -79,6 +81,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   const stop = useCallback(async () => {
     if (phase !== "recording") return;
     setPhase("processing");
+    playStopSound();
 
     try {
       const audioData = await apiStopRecording();
@@ -96,6 +99,8 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         reasoningModel,
         reasoningProvider,
         autoPaste,
+        useCustomPrompt,
+        customSystemPrompt,
         agentName,
       ] = await Promise.all([
         getSetting<boolean>("useLocalWhisper"),
@@ -108,6 +113,8 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         getSetting<string>("reasoningModel"),
         getSetting<string>("reasoningProvider"),
         getSetting<boolean>("autoPaste"),
+        getSetting<boolean>("useCustomPrompt"),
+        getSetting<string>("customSystemPrompt"),
         getAgentName(),
       ]);
 
@@ -144,11 +151,14 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
 
       // AI reasoning (post-processing)
       let finalText = rawText;
+      console.log("[Whisperi] Enhancement:", { useReasoning, reasoningProvider, reasoningModel });
       if (useReasoning && reasoningModel && reasoningProvider) {
         try {
           const rApiKey = await getApiKey(reasoningProvider);
+          console.log("[Whisperi] Reasoning API key present:", !!rApiKey);
           if (rApiKey) {
-            const systemPrompt = getSystemPrompt(agentName, dictionary, language ?? undefined);
+            const activePrompt = useCustomPrompt && customSystemPrompt ? customSystemPrompt : undefined;
+            const systemPrompt = getSystemPrompt(agentName, dictionary, language ?? undefined, activePrompt);
             const userPrompt = getUserPrompt(rawText);
             finalText = await processReasoning(
               userPrompt,

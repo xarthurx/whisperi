@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { Mic } from "lucide-react";
 import { useAudioRecording } from "@/hooks/useAudioRecording";
 import { useSettings } from "@/hooks/useSettings";
 import { useHotkey } from "@/hooks/useHotkey";
@@ -69,9 +70,16 @@ function DictationOverlayInner() {
       : "";
 
   return (
+    <>
+    <style>{`
+      @keyframes pulse-mic {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.15); opacity: 0.7; }
+      }
+    `}</style>
     <div
       data-drag-region
-      className="dictation-window flex flex-col items-center pt-8 h-screen"
+      className="dictation-window flex flex-col items-center pt-8 h-screen bg-background"
       onContextMenu={handleContextMenu}
     >
       {/* Button area */}
@@ -119,14 +127,17 @@ function DictationOverlayInner() {
             <div className="flex items-center justify-center">
               <LoadingDots />
             </div>
+          ) : isRecording ? (
+            <div className="flex items-center justify-center">
+              <Mic
+                className="w-7 h-7 text-destructive-foreground"
+                style={{ animation: "pulse-mic 1.2s ease-in-out infinite" }}
+              />
+            </div>
           ) : (
-            <div
-              className={`mx-auto transition-all duration-200 ${
-                isRecording
-                  ? "w-5 h-5 bg-destructive-foreground rounded-sm"
-                  : "w-6 h-6 bg-primary rounded-full"
-              }`}
-            />
+            <div className="flex items-center justify-center">
+              <Mic className="w-7 h-7 text-primary" />
+            </div>
           )}
         </button>
       </div>
@@ -138,6 +149,7 @@ function DictationOverlayInner() {
         </p>
       )}
     </div>
+    </>
   );
 }
 

@@ -23,6 +23,8 @@ export interface Settings {
   useReasoningModel: boolean;
   reasoningModel: string;
   reasoningProvider: string;
+  useCustomPrompt: boolean;
+  customSystemPrompt: string;
 
   // Hotkey
   dictationKey: string;
@@ -53,8 +55,10 @@ const DEFAULTS: Settings = {
   cloudTranscriptionModel: "gpt-4o-mini-transcribe",
   customDictionary: [],
   useReasoningModel: true,
-  reasoningModel: "",
+  reasoningModel: "gpt-5-mini",
   reasoningProvider: "openai",
+  useCustomPrompt: false,
+  customSystemPrompt: "",
   autoPaste: true,
   dictationKey: "",
   activationMode: "tap",
@@ -85,6 +89,8 @@ export function useSettings() {
         useReasoningModel,
         reasoningModel,
         reasoningProvider,
+        useCustomPrompt,
+        customSystemPrompt,
         autoPaste,
         dictationKey,
         activationMode,
@@ -105,6 +111,8 @@ export function useSettings() {
         getSetting<boolean>("useReasoningModel"),
         getSetting<string>("reasoningModel"),
         getSetting<string>("reasoningProvider"),
+        getSetting<boolean>("useCustomPrompt"),
+        getSetting<string>("customSystemPrompt"),
         getSetting<boolean>("autoPaste"),
         getSetting<string>("dictationKey"),
         getSetting<"tap" | "push">("activationMode"),
@@ -129,6 +137,8 @@ export function useSettings() {
         useReasoningModel: useReasoningModel ?? DEFAULTS.useReasoningModel,
         reasoningModel: reasoningModel ?? DEFAULTS.reasoningModel,
         reasoningProvider: reasoningProvider ?? DEFAULTS.reasoningProvider,
+        useCustomPrompt: useCustomPrompt ?? DEFAULTS.useCustomPrompt,
+        customSystemPrompt: customSystemPrompt ?? DEFAULTS.customSystemPrompt,
         autoPaste: autoPaste ?? DEFAULTS.autoPaste,
         dictationKey: dictationKey ?? DEFAULTS.dictationKey,
         activationMode: activationMode ?? DEFAULTS.activationMode,
@@ -154,6 +164,8 @@ export function useSettings() {
         { stored: useReasoningModel, key: "useReasoningModel" },
         { stored: reasoningModel, key: "reasoningModel" },
         { stored: reasoningProvider, key: "reasoningProvider" },
+        { stored: useCustomPrompt, key: "useCustomPrompt" },
+        { stored: customSystemPrompt, key: "customSystemPrompt" },
         { stored: autoPaste, key: "autoPaste" },
         { stored: activationMode, key: "activationMode" },
       ];

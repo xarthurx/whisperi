@@ -65,7 +65,7 @@ export function ProviderTabs({
       className="relative flex p-0.5 rounded-md bg-surface-1"
     >
       <div
-        className="absolute top-0.5 left-0 rounded-md bg-card border border-border-subtle shadow-sm transition-all duration-200 ease-out pointer-events-none"
+        className="absolute top-0.5 left-0 rounded-md bg-primary/20 border border-primary/40 shadow-sm transition-all duration-200 ease-out pointer-events-none"
         style={indicatorStyle}
       />
       {providers.map((provider) => {
@@ -75,8 +75,8 @@ export function ProviderTabs({
             key={provider.id}
             data-tab-button
             onClick={() => onSelect(provider.id)}
-            className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md font-medium text-xs transition-colors duration-150 ${
-              isSelected ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md font-medium text-sm transition-colors duration-150 ${
+              isSelected ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {renderIcon ? renderIcon(provider.id) : <ProviderIcon provider={provider.id} className="w-4 h-4" />}
@@ -84,8 +84,8 @@ export function ProviderTabs({
             {provider.hasKey && (
               <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" title="API key configured" />
             )}
-            {provider.recommended && !provider.hasKey && (
-              <span className="text-[9px] text-primary/70 font-medium">Recommended</span>
+            {provider.recommended && (
+              <span className="text-[11px] text-primary/70 font-medium">Recommended</span>
             )}
           </button>
         );

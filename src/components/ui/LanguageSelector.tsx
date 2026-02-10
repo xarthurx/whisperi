@@ -126,7 +126,7 @@ export default function LanguageSelector({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className={`group relative w-full flex items-center justify-between gap-2 h-7 px-2.5 text-left rounded text-xs font-medium border shadow-sm backdrop-blur-sm transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-1 ${
+        className={`group relative w-full flex items-center justify-between gap-2 h-8 px-2.5 text-left rounded text-sm font-medium border shadow-sm backdrop-blur-sm transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-1 ${
           isOpen
             ? "border-border-active bg-surface-2/90 shadow ring-1 ring-primary/20"
             : "border-border/70 bg-surface-1/80 hover:border-border-hover hover:bg-surface-2/70 hover:shadow active:scale-[0.985]"
@@ -169,7 +169,7 @@ export default function LanguageSelector({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Search..."
-                  className="w-full h-7 pl-7 pr-6 text-xs bg-transparent text-foreground border-0 focus:outline-none placeholder:text-muted-foreground/50"
+                  className="w-full h-8 pl-7 pr-6 text-sm bg-transparent text-foreground border-0 focus:outline-none placeholder:text-muted-foreground/50"
                 />
                 {searchQuery && (
                   <button
@@ -185,7 +185,7 @@ export default function LanguageSelector({
 
             <div className="max-h-48 overflow-y-auto px-1 pb-1">
               {filteredLanguages.length === 0 ? (
-                <div className="px-2.5 py-2 text-xs text-muted-foreground">No languages found</div>
+                <div className="px-2.5 py-2 text-sm text-muted-foreground">No languages found</div>
               ) : (
                 <div role="listbox" className="space-y-0.5 pt-1">
                   {filteredLanguages.map((language, index) => {
@@ -196,7 +196,7 @@ export default function LanguageSelector({
                         key={language.value}
                         type="button"
                         onClick={() => handleSelect(language.value)}
-                        className={`group w-full flex items-center justify-between gap-2 h-7 px-2.5 text-left text-xs font-medium rounded transition-all duration-150 ease-out ${
+                        className={`group w-full flex items-center justify-between gap-2 h-8 px-2.5 text-left text-sm font-medium rounded transition-all duration-150 ease-out ${
                           isSelected
                             ? "bg-primary/15 text-primary shadow-sm"
                             : isHighlighted
