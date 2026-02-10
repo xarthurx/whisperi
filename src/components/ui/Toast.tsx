@@ -101,7 +101,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <ToastContext.Provider value={{ toast, dismiss, toastCount: toasts.length }}>
       {children}
       {toasts.length > 0 && (
-        <div className="fixed z-50 flex flex-col gap-1.5 pointer-events-none bottom-5 right-5">
+        <div className="fixed z-50 flex flex-col items-center gap-1.5 pointer-events-none bottom-3 left-1/2 -translate-x-1/2">
           {toasts.map((t) => (
             <ToastItem key={t.id} {...t} onClose={() => dismiss(t.id)} />
           ))}
@@ -149,7 +149,7 @@ const ToastItem: React.FC<ToastState & { onClose?: () => void }> = ({
   return (
     <div
       className={cn(
-        "pointer-events-auto relative flex items-start gap-2.5 w-[320px]",
+        "pointer-events-auto relative flex items-start gap-2.5 w-[360px] max-w-[calc(100vw-1.5rem)]",
         "px-3 py-2.5 pr-8 overflow-hidden",
         "rounded border backdrop-blur-xl",
         "transition-all duration-200 ease-out",

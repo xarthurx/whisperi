@@ -14,6 +14,7 @@ import {
   Trash2,
   Download,
   Check,
+  Clipboard,
 } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { Button } from "@/components/ui/button";
@@ -215,15 +216,26 @@ function GeneralSection({ settings, update }: SectionProps) {
           ))}
         </select>
       </SettingsSection>
+
+      <SettingsSection title="Output" description="What happens after transcription">
+        <SettingsRow label="Auto-paste to clipboard" description="Copy transcribed text to clipboard and paste into the active window">
+          <Toggle
+            checked={settings.autoPaste}
+            onChange={(v) => update("autoPaste", v)}
+          />
+        </SettingsRow>
+      </SettingsSection>
     </>
   );
 }
 
-const TRANSCRIPTION_PROVIDERS: ProviderTabItem[] = [
-  { id: "openai", name: "OpenAI", recommended: true },
-  { id: "groq", name: "Groq" },
-  { id: "mistral", name: "Mistral" },
-];
+function getTranscriptionProviders(settings: import("@/hooks/useSettings").Settings): ProviderTabItem[] {
+  return [
+    { id: "openai", name: "OpenAI", recommended: true, hasKey: !!settings.openaiApiKey },
+    { id: "groq", name: "Groq", hasKey: !!settings.groqApiKey },
+    { id: "mistral", name: "Mistral", hasKey: !!settings.mistralApiKey },
+  ];
+}
 
 function TranscriptionSection({ settings, update, toast }: SectionProps) {
   const [whisperAvailable, setWhisperAvailable] = useState(false);
@@ -333,7 +345,7 @@ function TranscriptionSection({ settings, update, toast }: SectionProps) {
       ) : (
         <SettingsSection title="Cloud Provider" description="Choose a cloud transcription service">
           <ProviderTabs
-            providers={TRANSCRIPTION_PROVIDERS}
+            providers={getTranscriptionProviders(settings)}
             selectedId={settings.cloudTranscriptionProvider}
             onSelect={(id) => {
               update("cloudTranscriptionProvider", id);
@@ -386,12 +398,14 @@ function TranscriptionSection({ settings, update, toast }: SectionProps) {
   );
 }
 
-const REASONING_PROVIDERS: ProviderTabItem[] = [
-  { id: "openai", name: "OpenAI", recommended: true },
-  { id: "anthropic", name: "Anthropic" },
-  { id: "gemini", name: "Gemini" },
-  { id: "groq", name: "Groq" },
-];
+function getReasoningProviders(settings: import("@/hooks/useSettings").Settings): ProviderTabItem[] {
+  return [
+    { id: "openai", name: "OpenAI", recommended: true, hasKey: !!settings.openaiApiKey },
+    { id: "anthropic", name: "Anthropic", hasKey: !!settings.anthropicApiKey },
+    { id: "gemini", name: "Gemini", hasKey: !!settings.geminiApiKey },
+    { id: "groq", name: "Groq", hasKey: !!settings.groqApiKey },
+  ];
+}
 
 function AIModelsSection({ settings, update }: SectionProps) {
   return (
@@ -408,7 +422,7 @@ function AIModelsSection({ settings, update }: SectionProps) {
       {settings.useReasoningModel && (
         <SettingsSection title="AI Provider">
           <ProviderTabs
-            providers={REASONING_PROVIDERS}
+            providers={getReasoningProviders(settings)}
             selectedId={settings.reasoningProvider}
             onSelect={(id) => {
               update("reasoningProvider", id);

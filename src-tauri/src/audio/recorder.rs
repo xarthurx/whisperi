@@ -353,6 +353,27 @@ fn run_recording_thread(device: &cpal::Device, params: RecordingThreadParams) {
         SampleFormat::U16 => build_stream::<u16>(
             device, &config, Arc::clone(&samples), Arc::clone(&peak_level), channels, err_callback,
         ),
+        SampleFormat::I8 => build_stream::<i8>(
+            device, &config, Arc::clone(&samples), Arc::clone(&peak_level), channels, err_callback,
+        ),
+        SampleFormat::U8 => build_stream::<u8>(
+            device, &config, Arc::clone(&samples), Arc::clone(&peak_level), channels, err_callback,
+        ),
+        SampleFormat::I32 => build_stream::<i32>(
+            device, &config, Arc::clone(&samples), Arc::clone(&peak_level), channels, err_callback,
+        ),
+        SampleFormat::U32 => build_stream::<u32>(
+            device, &config, Arc::clone(&samples), Arc::clone(&peak_level), channels, err_callback,
+        ),
+        SampleFormat::I64 => build_stream::<i64>(
+            device, &config, Arc::clone(&samples), Arc::clone(&peak_level), channels, err_callback,
+        ),
+        SampleFormat::U64 => build_stream::<u64>(
+            device, &config, Arc::clone(&samples), Arc::clone(&peak_level), channels, err_callback,
+        ),
+        SampleFormat::F64 => build_stream::<f64>(
+            device, &config, Arc::clone(&samples), Arc::clone(&peak_level), channels, err_callback,
+        ),
         _ => {
             if let Ok(mut e) = recording_error.lock() {
                 *e = Some(format!("Unsupported sample format: {:?}", sample_format));

@@ -28,6 +28,9 @@ export interface Settings {
   dictationKey: string;
   activationMode: "tap" | "push";
 
+  // Output
+  autoPaste: boolean;
+
   // Microphone
   selectedMicDeviceId: string;
 
@@ -52,6 +55,7 @@ const DEFAULTS: Settings = {
   useReasoningModel: true,
   reasoningModel: "",
   reasoningProvider: "openai",
+  autoPaste: true,
   dictationKey: "",
   activationMode: "tap",
   selectedMicDeviceId: "",
@@ -81,6 +85,7 @@ export function useSettings() {
         useReasoningModel,
         reasoningModel,
         reasoningProvider,
+        autoPaste,
         dictationKey,
         activationMode,
         selectedMicDeviceId,
@@ -100,6 +105,7 @@ export function useSettings() {
         getSetting<boolean>("useReasoningModel"),
         getSetting<string>("reasoningModel"),
         getSetting<string>("reasoningProvider"),
+        getSetting<boolean>("autoPaste"),
         getSetting<string>("dictationKey"),
         getSetting<"tap" | "push">("activationMode"),
         getSetting<string>("selectedMicDeviceId"),
@@ -114,7 +120,7 @@ export function useSettings() {
 
       if (cancelled) return;
 
-      setSettings({
+      const resolved: Settings = {
         useLocalWhisper: useLocalWhisper ?? DEFAULTS.useLocalWhisper,
         whisperModel: whisperModel ?? DEFAULTS.whisperModel,
         preferredLanguage: preferredLanguage ?? DEFAULTS.preferredLanguage,
@@ -123,6 +129,7 @@ export function useSettings() {
         useReasoningModel: useReasoningModel ?? DEFAULTS.useReasoningModel,
         reasoningModel: reasoningModel ?? DEFAULTS.reasoningModel,
         reasoningProvider: reasoningProvider ?? DEFAULTS.reasoningProvider,
+        autoPaste: autoPaste ?? DEFAULTS.autoPaste,
         dictationKey: dictationKey ?? DEFAULTS.dictationKey,
         activationMode: activationMode ?? DEFAULTS.activationMode,
         selectedMicDeviceId: selectedMicDeviceId ?? DEFAULTS.selectedMicDeviceId,
@@ -133,7 +140,30 @@ export function useSettings() {
         geminiApiKey,
         groqApiKey,
         mistralApiKey,
-      });
+      };
+
+      // Persist defaults to store for keys that were missing, so the
+      // recording pipeline (which reads from the store independently)
+      // always sees the same values the UI shows.
+      const keysToCheck: { stored: unknown; key: keyof Settings }[] = [
+        { stored: useLocalWhisper, key: "useLocalWhisper" },
+        { stored: whisperModel, key: "whisperModel" },
+        { stored: preferredLanguage, key: "preferredLanguage" },
+        { stored: cloudTranscriptionProvider, key: "cloudTranscriptionProvider" },
+        { stored: cloudTranscriptionModel, key: "cloudTranscriptionModel" },
+        { stored: useReasoningModel, key: "useReasoningModel" },
+        { stored: reasoningModel, key: "reasoningModel" },
+        { stored: reasoningProvider, key: "reasoningProvider" },
+        { stored: autoPaste, key: "autoPaste" },
+        { stored: activationMode, key: "activationMode" },
+      ];
+      for (const { stored, key } of keysToCheck) {
+        if (stored == null) {
+          setSetting(key, resolved[key]);
+        }
+      }
+
+      setSettings(resolved);
       setLoaded(true);
     }
 

@@ -5,10 +5,7 @@ use anyhow::Result;
 pub fn paste_text(text: &str) -> Result<()> {
     #[cfg(target_os = "windows")]
     {
-        // Save original clipboard
-        let original = windows_clipboard::get_text().unwrap_or_default();
-
-        // Set new text
+        // Set new text on clipboard (it stays there for the user)
         windows_clipboard::set_text(text)?;
         std::thread::sleep(std::time::Duration::from_millis(10));
 
@@ -19,13 +16,6 @@ pub fn paste_text(text: &str) -> Result<()> {
         } else {
             windows_paste::send_ctrl_v()?;
         }
-
-        // Restore original clipboard after a short delay
-        let original_owned = original;
-        std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(80));
-            let _ = windows_clipboard::set_text(&original_owned);
-        });
 
         Ok(())
     }

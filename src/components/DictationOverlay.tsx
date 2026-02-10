@@ -61,65 +61,82 @@ function DictationOverlayInner() {
   // Audio level visualization — scale the button ring
   const levelScale = 1 + audioLevel * 0.3;
 
+  // Status text below button
+  const statusText = isProcessing
+    ? "Processing..."
+    : isRecording
+      ? "Recording — click to stop"
+      : "";
+
   return (
     <div
       data-drag-region
-      className="dictation-window flex items-center justify-center h-screen"
+      className="dictation-window flex flex-col items-center pt-8 h-screen"
       onContextMenu={handleContextMenu}
     >
-      {/* Outer glow ring for audio level */}
-      <div
-        className="absolute transition-transform duration-75"
-        style={{
-          width: "4.5rem",
-          height: "4.5rem",
-          borderRadius: "50%",
-          transform: `scale(${isRecording ? levelScale : 1})`,
-          background: isRecording
-            ? `radial-gradient(circle, oklch(0.6 0.25 25 / ${0.2 + audioLevel * 0.3}), transparent 70%)`
-            : "transparent",
-        }}
-      />
+      {/* Button area */}
+      <div className="relative flex items-center justify-center">
+        {/* Outer glow ring for audio level */}
+        <div
+          className="absolute transition-transform duration-75"
+          style={{
+            width: "4.5rem",
+            height: "4.5rem",
+            borderRadius: "50%",
+            transform: `scale(${isRecording ? levelScale : 1})`,
+            background: isRecording
+              ? `radial-gradient(circle, oklch(0.6 0.25 25 / ${0.2 + audioLevel * 0.3}), transparent 70%)`
+              : "transparent",
+          }}
+        />
 
-      {/* Main button */}
-      <button
-        onClick={() => {
-          if (phase === "idle") {
-            start(settings.selectedMicDeviceId || undefined);
-          } else if (phase === "recording") {
-            stop();
+        {/* Main button */}
+        <button
+          onClick={() => {
+            if (phase === "idle") {
+              start(settings.selectedMicDeviceId || undefined);
+            } else if (phase === "recording") {
+              stop();
+            }
+          }}
+          disabled={isProcessing}
+          className={`relative w-16 h-16 rounded-full border-2 transition-all duration-200 ${
+            isProcessing
+              ? "bg-surface-2 border-border-subtle cursor-wait"
+              : isRecording
+                ? "bg-destructive border-destructive shadow-lg shadow-destructive/30"
+                : "bg-surface-2 border-border-subtle hover:border-border-hover hover:bg-surface-3 active:scale-95"
+          }`}
+          aria-label={
+            isProcessing
+              ? "Processing..."
+              : isRecording
+                ? "Stop recording"
+                : "Start recording"
           }
-        }}
-        disabled={isProcessing}
-        className={`relative w-16 h-16 rounded-full border-2 transition-all duration-200 ${
-          isProcessing
-            ? "bg-surface-2 border-border-subtle cursor-wait"
-            : isRecording
-              ? "bg-destructive border-destructive shadow-lg shadow-destructive/30"
-              : "bg-surface-2 border-border-subtle hover:border-border-hover hover:bg-surface-3 active:scale-95"
-        }`}
-        aria-label={
-          isProcessing
-            ? "Processing..."
-            : isRecording
-              ? "Stop recording"
-              : "Start recording"
-        }
-      >
-        {isProcessing ? (
-          <div className="flex items-center justify-center">
-            <LoadingDots />
-          </div>
-        ) : (
-          <div
-            className={`mx-auto transition-all duration-200 ${
-              isRecording
-                ? "w-5 h-5 bg-destructive-foreground rounded-sm"
-                : "w-6 h-6 bg-primary rounded-full"
-            }`}
-          />
-        )}
-      </button>
+        >
+          {isProcessing ? (
+            <div className="flex items-center justify-center">
+              <LoadingDots />
+            </div>
+          ) : (
+            <div
+              className={`mx-auto transition-all duration-200 ${
+                isRecording
+                  ? "w-5 h-5 bg-destructive-foreground rounded-sm"
+                  : "w-6 h-6 bg-primary rounded-full"
+              }`}
+            />
+          )}
+        </button>
+      </div>
+
+      {/* Status text */}
+      {statusText && (
+        <p className="mt-3 text-[11px] text-muted-foreground/70 select-none">
+          {statusText}
+        </p>
+      )}
     </div>
   );
 }

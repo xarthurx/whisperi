@@ -21,6 +21,7 @@ pub fn run() {
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
+                .level_for("tao", log::LevelFilter::Error)
                 .build(),
         )
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -29,7 +30,11 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        .plugin(tauri_plugin_window_state::Builder::new().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_denylist(&["main"])
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize audio recording state

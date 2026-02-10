@@ -95,6 +95,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         useReasoning,
         reasoningModel,
         reasoningProvider,
+        autoPaste,
         agentName,
       ] = await Promise.all([
         getSetting<boolean>("useLocalWhisper"),
@@ -106,6 +107,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         getSetting<boolean>("useReasoningModel"),
         getSetting<string>("reasoningModel"),
         getSetting<string>("reasoningProvider"),
+        getSetting<boolean>("autoPaste"),
         getAgentName(),
       ]);
 
@@ -134,7 +136,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
           audioData,
           provider,
           apiKey,
-          cloudModel ?? "whisper-1",
+          cloudModel ?? "gpt-4o-mini-transcribe",
           language ?? undefined,
           dictionary
         );
@@ -163,8 +165,16 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
 
       setTranscript(finalText);
 
-      // Paste to focused app
-      await pasteText(finalText);
+      // Dev logging
+      console.log("[Whisperi] Raw transcription:", rawText);
+      if (finalText !== rawText) {
+        console.log("[Whisperi] AI-processed text:", finalText);
+      }
+
+      // Copy to clipboard and paste into focused app (if enabled)
+      if (autoPaste !== false) {
+        await pasteText(finalText);
+      }
 
       // Save to database
       await saveTranscription(

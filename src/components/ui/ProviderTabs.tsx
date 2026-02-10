@@ -5,6 +5,7 @@ export interface ProviderTabItem {
   id: string;
   name: string;
   recommended?: boolean;
+  hasKey?: boolean;
 }
 
 interface ProviderTabsProps {
@@ -80,7 +81,10 @@ export function ProviderTabs({
           >
             {renderIcon ? renderIcon(provider.id) : <ProviderIcon provider={provider.id} className="w-4 h-4" />}
             <span>{provider.name}</span>
-            {provider.recommended && (
+            {provider.hasKey && (
+              <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" title="API key configured" />
+            )}
+            {provider.recommended && !provider.hasKey && (
               <span className="text-[9px] text-primary/70 font-medium">Recommended</span>
             )}
           </button>
