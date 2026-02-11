@@ -59,7 +59,7 @@ function OverlayContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[160px] rounded-lg border border-border-subtle bg-surface-1 py-1 shadow-xl"
+      className="fixed z-50 min-w-[160px] rounded-lg border border-border-subtle bg-surface-1 py-1 shadow-xl pointer-events-auto"
       style={{ left: x, top: y }}
     >
       <button
@@ -146,22 +146,6 @@ function DictationOverlayInner() {
     enabled: loaded && !!settings.dictationKey && !hotkeyCapturing,
   });
 
-  // Window dragging — the entire overlay is draggable
-  useEffect(() => {
-    const el = document.querySelector("[data-drag-region]");
-    if (!el) return;
-
-    const handleMouseDown = async (e: Event) => {
-      const mouseEvent = e as MouseEvent;
-      // Don't drag on the button itself
-      if ((mouseEvent.target as HTMLElement).closest("button")) return;
-      await getCurrentWebviewWindow().startDragging();
-    };
-
-    el.addEventListener("mousedown", handleMouseDown);
-    return () => el.removeEventListener("mousedown", handleMouseDown);
-  }, []);
-
   // Right-click to open context menu
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -217,12 +201,10 @@ function DictationOverlayInner() {
       }
     `}</style>
     <div
-      data-drag-region
-      className="dictation-window flex flex-col items-center justify-center h-screen"
-      onContextMenu={handleContextMenu}
+      className="dictation-window flex flex-col items-center justify-center h-screen pointer-events-none"
     >
       {/* Button area */}
-      <div className="relative flex items-center justify-center">
+      <div className="relative flex items-center justify-center pointer-events-auto" onContextMenu={handleContextMenu}>
         {/* Outer glow ring for audio level */}
         <div
           className="absolute transition-transform duration-75"

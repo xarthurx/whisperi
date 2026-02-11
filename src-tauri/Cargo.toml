@@ -1,6 +1,6 @@
 [package]
 name = "whisperi"
-version = "0.2.3"
+version = "0.2.6"
 edition = "2021"
 description = "Fast desktop dictation powered by whisper.cpp"
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.6] - 2026-02-11
+
+### Overlay UX overhaul
+- Made surrounding overlay area fully transparent and click-through (`pointer-events-none`) — clicks pass to windows behind
+- Only the mic button is interactive (`pointer-events-auto`); drag to reposition, click to toggle recording
+- Removed background drag region — window repositioning is button-only
+- Shrunk overlay to 100×100px, overrode Windows minimum size constraint via `WM_GETMINMAXINFO` subclass (DPI-aware)
+- Window is now transparent with no shadow — appears as a floating mic button
+- Removed status text below button, centered button vertically
+
+### Hotkey capture guard
+- Global dictation hotkey is suspended while the HotkeyInput component in Settings is capturing a new shortcut
+- HotkeyInput emits `hotkey-capturing` event; overlay listens and disables hotkey accordingly
+
+### System tray improvements
+- "Show Whisperi" is now a `CheckMenuItem` that toggles overlay visibility (checked = visible)
+
 ## [0.2.5] - 2026-02-11
 
 ### Dead code cleanup

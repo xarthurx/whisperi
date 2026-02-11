@@ -5790,7 +5790,7 @@ dependencies = [
 
 [[package]]
 name = "whisperi"
-version = "0.2.3"
+version = "0.2.6"
 dependencies = [
  "anyhow",
  "cpal",
