@@ -38,5 +38,5 @@ export function getSystemPrompt(
 }
 
 export function getUserPrompt(text: string): string {
-  return text;
+  return `[TRANSCRIBED_SPEECH]: ${text}`;
 }
