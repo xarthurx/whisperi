@@ -21,15 +21,12 @@ See [Supported Providers](#supported-providers) for the full list of models and 
   <img src="assets/overlay-states.svg" alt="Overlay button states: Idle → Recording → Processing" width="700"/>
 </p>
 
-- **Terminal Paste** — Paste transcribed text directly into CLI tools (Claude Code, Codex, terminals) via native keystroke simulation
 - **Voice Transcription** — OpenAI, Groq, and Mistral with model selection
 - **Text Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, or Groq models to clean up grammar, punctuation, and formatting
-- **Auto-Paste** — Transcribed text is automatically copied to clipboard and pasted into the active window
+- **Auto-Paste** — Transcribed text is automatically pasted into the active window, including [CLI tools](#paste-anywhere--including-cli-tools)
 - **Custom Dictionary** — Add names, jargon, and technical terms to improve accuracy
 - **Agent Mode** — Say the agent name to switch from transcription cleanup to conversational AI
-- **System Tray** — Runs quietly in the background with quick access via tray icon
 - **Hotkey Support** — Tap-to-toggle or push-to-talk activation modes
-- **Dark Mode** — Clean, minimal dark interface
 
 ## Language & Translation
 
