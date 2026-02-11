@@ -22,3 +22,12 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Claude Code local settings
+.claude/
+
+# Transient planning docs
+docs/plans/
+
+# Generated Tauri schemas
+src-tauri/gen/schemas/
