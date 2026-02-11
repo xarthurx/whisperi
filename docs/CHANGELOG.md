@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.7] - 2026-02-11
+
+### Dead code & dependency cleanup
+- Removed 11 unused shadcn/ui components (accordion, card, dialog, dropdown-menu, label, progress, select, skeleton, tabs, textarea, tooltip)
+- Removed 8 corresponding `@radix-ui/*` packages; kept react-slot and react-toggle
+- Removed unused exports from `prompts.ts` (`UNIFIED_SYSTEM_PROMPT`, `LEGACY_PROMPTS`, `buildPrompt()`, default export)
+- Removed unused `toast` export object from `Toast.tsx` and `SettingsGroup` component from `SettingsSection.tsx`
+
+### Frontend quality
+- Removed 4 debug `console.log` calls from `useAudioRecording.ts` (kept `console.warn` for reasoning failure)
+- Replaced `(import.meta as any).env` with type-safe `import.meta.env` via standard `vite-env.d.ts`
+
+### Rust consistency
+- Added `ResultExt::str_err()` trait in `commands/mod.rs`, replacing 23 repetitive `.map_err(|e| e.to_string())` calls
+- Normalized tray menu handler variable names (`w` to `window`) in `lib.rs`
+- Shared `reqwest::Client` via `LazyLock` static — replaces 5 per-request allocations with a pooled client with User-Agent header
+
+### Project hygiene
+- Synced `package.json` version to 0.2.6 (was stuck at 0.2.3)
+- Added `.claude/`, `docs/plans/`, `src-tauri/gen/schemas/` to `.gitignore`; removed generated schemas from tracking
+- Updated `ARCHITECTURE.md`: added `commands/` module table, `main.rs` entry point, expanded file map
+
 ## [0.2.6] - 2026-02-11
 
 ### Overlay UX overhaul
