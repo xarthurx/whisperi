@@ -14,7 +14,7 @@ import {
   getSetting,
   saveTranscription,
 } from "@/services/tauriApi";
-import { getSystemPrompt, getUserPrompt } from "@/config/prompts";
+import { getSystemPrompt, getChatSystemPrompt, getUserPrompt, detectChatMode } from "@/config/prompts";
 import { playStartSound, playStopSound } from "@/utils/sounds";
 
 type RecordingPhase = "idle" | "recording" | "processing";
@@ -68,7 +68,8 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
     try {
       await apiStartRecording(deviceId);
       setPhase("recording");
-      playStartSound();
+      const soundEnabled = await getSetting<boolean>("soundEnabled");
+      if (soundEnabled !== false) playStartSound();
     } catch (e) {
       onToast?.({
         title: "Failed to start recording",
@@ -81,7 +82,8 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   const stop = useCallback(async () => {
     if (phase !== "recording") return;
     setPhase("processing");
-    playStopSound();
+    const soundEnabled = await getSetting<boolean>("soundEnabled");
+    if (soundEnabled !== false) playStopSound();
 
     try {
       const audioData = await apiStopRecording();
@@ -102,6 +104,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         useCustomPrompt,
         customSystemPrompt,
         agentName,
+        debugMode,
       ] = await Promise.all([
         getSetting<boolean>("useLocalWhisper"),
         getSetting<string>("whisperModel"),
@@ -116,7 +119,13 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         getSetting<boolean>("useCustomPrompt"),
         getSetting<string>("customSystemPrompt"),
         getAgentName(),
+        getSetting<boolean>("debugMode"),
       ]);
+
+      // Include agent name in transcription dictionary so STT recognizes it
+      const transcriptionDict = agentName && !dictionary.includes(agentName)
+        ? [...dictionary, agentName]
+        : dictionary;
 
       // Transcribe
       let rawText: string;
@@ -125,7 +134,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
           audioData,
           whisperModel ?? "base",
           language ?? undefined,
-          dictionary
+          transcriptionDict
         );
       } else {
         const provider = cloudProvider ?? "openai";
@@ -145,7 +154,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
           apiKey,
           cloudModel ?? "gpt-4o-mini-transcribe",
           language ?? undefined,
-          dictionary
+          transcriptionDict
         );
       }
 
@@ -155,8 +164,11 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         try {
           const rApiKey = await getApiKey(reasoningProvider);
           if (rApiKey) {
-            const activePrompt = useCustomPrompt && customSystemPrompt ? customSystemPrompt : undefined;
-            const systemPrompt = getSystemPrompt(agentName, dictionary, language ?? undefined, activePrompt);
+            const isChatMode = detectChatMode(rawText, agentName);
+            const systemPrompt = isChatMode
+              ? getChatSystemPrompt(agentName, dictionary, language ?? undefined)
+              : getSystemPrompt(agentName, dictionary, language ?? undefined,
+                  useCustomPrompt && customSystemPrompt ? customSystemPrompt : undefined);
             const userPrompt = getUserPrompt(rawText);
             finalText = await processReasoning(
               userPrompt,
@@ -171,11 +183,16 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         }
       }
 
-      setTranscript(finalText);
+      // In debug mode, output both raw and enhanced with labels
+      const outputText = debugMode && finalText !== rawText
+        ? `[Transcription]\n${rawText}\n\n[Enhanced]\n${finalText}`
+        : finalText;
+
+      setTranscript(outputText);
 
       // Copy to clipboard and paste into focused app (if enabled)
       if (autoPaste !== false) {
-        await pasteText(finalText);
+        await pasteText(outputText);
       }
 
       // Save to database

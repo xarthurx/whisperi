@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getVersion } from "@tauri-apps/api/app";
+import { appDataDir } from "@tauri-apps/api/path";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import {
@@ -123,8 +124,8 @@ function SettingsPanelInner() {
         </nav>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-8 border-l border-border">
-          <div key={section} className="space-y-8 transition-opacity duration-300 animate-in fade-in">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 border-l border-border">
+          <div key={section} className="space-y-5 transition-opacity duration-300 animate-in fade-in">
             {section === "general" && (
               <GeneralSection settings={settings} update={update} />
             )}
@@ -141,7 +142,7 @@ function SettingsPanelInner() {
               <AgentSection settings={settings} update={update} />
             )}
             {section === "developer" && (
-              <DeveloperSection toast={toast} />
+              <DeveloperSection settings={settings} update={update} toast={toast} />
             )}
             {section === "about" && <AboutSection />}
           </div>
@@ -224,6 +225,12 @@ function GeneralSection({ settings, update }: SectionProps) {
             onChange={(v) => update("autoPaste", v)}
           />
         </SettingsRow>
+        <SettingsRow label="Sound effects" description="Play a sound when recording starts and stops">
+          <Toggle
+            checked={settings.soundEnabled}
+            onChange={(v) => update("soundEnabled", v)}
+          />
+        </SettingsRow>
       </SettingsSection>
     </>
   );
@@ -253,12 +260,12 @@ function TranscriptionSection({ settings, update }: SectionProps) {
             }
           }}
         />
-        <div className="mt-3 space-y-3">
+        <div className="space-y-3">
           <SettingsRow label="Model">
             <select
               value={settings.cloudTranscriptionModel}
               onChange={(e) => update("cloudTranscriptionModel", e.target.value)}
-              className="w-56 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
+              className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
             >
               {modelRegistry.transcriptionProviders
                 .find((p) => p.id === settings.cloudTranscriptionProvider)
@@ -314,7 +321,7 @@ function getReasoningProviders(settings: import("@/hooks/useSettings").Settings)
 function AIModelsSection({ settings, update }: SectionProps) {
   return (
     <>
-      <SettingsSection title="AI Enhancement" description="Post-process transcriptions with AI">
+      <SettingsSection title="AI Enhancement" description="Post-process transcriptions with an AI reasoning model">
         <SettingsRow label="Enable AI processing" description="Clean up grammar, punctuation, and formatting">
           <Toggle
             checked={settings.useReasoningModel}
@@ -337,12 +344,12 @@ function AIModelsSection({ settings, update }: SectionProps) {
               }
             }}
           />
-          <div className="mt-3 space-y-3">
+          <div className="space-y-3">
             <SettingsRow label="Model">
               <select
                 value={settings.reasoningModel}
                 onChange={(e) => update("reasoningModel", e.target.value)}
-                className="w-56 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
+                className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
               >
                 {modelRegistry.cloudProviders
                   .find((p) => p.id === settings.reasoningProvider)
@@ -419,7 +426,7 @@ function AIModelsSection({ settings, update }: SectionProps) {
               value={settings.customSystemPrompt}
               onChange={(e) => update("customSystemPrompt", e.target.value)}
               placeholder="Enter your custom cleanup instructions here. Core behavior rules (agent activation, output format) are always applied automatically."
-              className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground/60 resize-y min-h-[160px] flex-1 focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-border-active"
+              className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground/60 resize-y min-h-[280px] flex-1 focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-border-active"
             />
           ) : (
             <div className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border rounded-lg text-muted-foreground/80 max-h-[50vh] overflow-y-auto whitespace-pre-wrap leading-relaxed">
@@ -515,7 +522,13 @@ function AgentSection({ settings, update }: SectionProps) {
   );
 }
 
-function DeveloperSection({ toast }: { toast: (props: { title?: string; description?: string; variant: "default" | "destructive" | "success" }) => void }) {
+function DeveloperSection({ settings, update, toast }: SectionProps & { toast: (props: { title?: string; description?: string; variant: "default" | "destructive" | "success" }) => void }) {
+  const [dataPath, setDataPath] = useState("");
+
+  useEffect(() => {
+    appDataDir().then(setDataPath);
+  }, []);
+
   const handleClearHistory = async () => {
     try {
       await clearTranscriptions();
@@ -526,11 +539,22 @@ function DeveloperSection({ toast }: { toast: (props: { title?: string; descript
   };
 
   return (
-    <SettingsSection title="Data" description="Manage application data">
-      <Button variant="outline" size="sm" onClick={handleClearHistory} className="text-destructive hover:bg-destructive/10 hover:border-destructive/30">
-        <Trash2 className="w-3 h-3" /> Clear transcription history
-      </Button>
-    </SettingsSection>
+    <>
+      <SettingsSection title="Debug Mode" description="When enabled, the output includes labeled sections for both the raw transcription and the AI-enhanced result, so you can compare them side by side.">
+        <SettingsRow label="Enable debug output">
+          <Toggle
+            checked={settings.debugMode}
+            onChange={(v) => update("debugMode", v)}
+          />
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Data" description={dataPath ? `Stored in ${dataPath}` : "Manage application data"}>
+        <Button variant="outline" size="sm" onClick={handleClearHistory} className="text-destructive hover:bg-destructive/10 hover:border-destructive/30">
+          <Trash2 className="w-3 h-3" /> Clear transcription history
+        </Button>
+      </SettingsSection>
+    </>
   );
 }
 
@@ -565,7 +589,12 @@ function AboutSection() {
         body: update.body ?? "",
       });
     } catch (e) {
-      setStatus({ phase: "error", message: String(e) });
+      const msg = String(e);
+      if (msg.includes("valid release JSON") || msg.includes("status code")) {
+        setStatus({ phase: "error", message: "Could not reach the update server. The repository may be private or the network is unavailable." });
+      } else {
+        setStatus({ phase: "error", message: msg });
+      }
     }
   };
 
@@ -608,16 +637,9 @@ function AboutSection() {
   return (
     <>
       <SettingsSection
-        title="Whisperi"
-        description="Fast desktop dictation powered by whisper.cpp"
-      >
-        <p className="text-sm text-foreground">
-          Version <span className="font-mono">{version}</span>
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Built with Tauri, React, and whisper.cpp
-        </p>
-      </SettingsSection>
+        title={<>Whisperi <span className="font-mono font-normal text-sm text-muted-foreground ml-2">v{version}</span></>}
+        description="Desktop dictation with cloud and local transcription. Built with Tauri and React."
+      />
 
       <SettingsSection title="Updates" description="Check for new versions">
         <div className="space-y-3">

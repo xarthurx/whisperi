@@ -33,12 +33,16 @@ export interface Settings {
 
   // Output
   autoPaste: boolean;
+  soundEnabled: boolean;
 
   // Microphone
   selectedMicDeviceId: string;
 
   // Agent
   agentName: string;
+
+  // Developer
+  debugMode: boolean;
 
   // API keys
   openaiApiKey: string;
@@ -61,10 +65,12 @@ const DEFAULTS: Settings = {
   useCustomPrompt: false,
   customSystemPrompt: "",
   autoPaste: true,
+  soundEnabled: true,
   dictationKey: "",
   activationMode: "tap",
   selectedMicDeviceId: "",
   agentName: "Whisperi",
+  debugMode: false,
   openaiApiKey: "",
   anthropicApiKey: "",
   geminiApiKey: "",
@@ -93,9 +99,11 @@ export function useSettings() {
         useCustomPrompt,
         customSystemPrompt,
         autoPaste,
+        soundEnabled,
         dictationKey,
         activationMode,
         selectedMicDeviceId,
+        debugMode,
         agentNameVal,
         customDictionary,
         openaiApiKey,
@@ -115,9 +123,11 @@ export function useSettings() {
         getSetting<boolean>("useCustomPrompt"),
         getSetting<string>("customSystemPrompt"),
         getSetting<boolean>("autoPaste"),
+        getSetting<boolean>("soundEnabled"),
         getSetting<string>("dictationKey"),
         getSetting<"tap" | "push">("activationMode"),
         getSetting<string>("selectedMicDeviceId"),
+        getSetting<boolean>("debugMode"),
         getAgentName(),
         getCustomDictionary(),
         getApiKey("openai"),
@@ -141,9 +151,11 @@ export function useSettings() {
         useCustomPrompt: useCustomPrompt ?? DEFAULTS.useCustomPrompt,
         customSystemPrompt: customSystemPrompt ?? DEFAULTS.customSystemPrompt,
         autoPaste: autoPaste ?? DEFAULTS.autoPaste,
+        soundEnabled: soundEnabled ?? DEFAULTS.soundEnabled,
         dictationKey: dictationKey ?? DEFAULTS.dictationKey,
         activationMode: activationMode ?? DEFAULTS.activationMode,
         selectedMicDeviceId: selectedMicDeviceId ?? DEFAULTS.selectedMicDeviceId,
+        debugMode: debugMode ?? DEFAULTS.debugMode,
         agentName: agentNameVal,
         customDictionary,
         openaiApiKey,
@@ -168,6 +180,8 @@ export function useSettings() {
         { stored: useCustomPrompt, key: "useCustomPrompt" },
         { stored: customSystemPrompt, key: "customSystemPrompt" },
         { stored: autoPaste, key: "autoPaste" },
+        { stored: soundEnabled, key: "soundEnabled" },
+        { stored: debugMode, key: "debugMode" },
         { stored: activationMode, key: "activationMode" },
       ];
       for (const { stored, key } of keysToCheck) {

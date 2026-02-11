@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.3.0] - 2026-02-11
+
+### UI redesign
+- Adopted Nord color palette (Polar Night backgrounds, Snow Storm text, Frost cyan accent, Aurora semantics) with HSL tokens
+- Bundled Geist and Geist Mono fonts (woff2), replacing system Segoe UI
+- Unified button variants (ghost default, outline for actions, destructive ghost), pill-toggle pattern for activation mode and prompt tabs
+- Tightened section spacing, reduced content padding, added indented content hierarchy in SettingsSection
+- Provider tabs now use tinted highlight (`bg-primary/15`) instead of solid cyan background
+- Settings window resized to 760x800 (was 900x680), wider model dropdowns
+
+### New settings
+- Sound effects toggle — disable start/stop recording sounds (General > Output)
+- Debug mode toggle — output labeled `[Transcription]` and `[Enhanced]` sections for comparison (Developer tab)
+
+### Chat mode redesign
+- Pre-detect agent name in raw transcription before sending to AI reasoning
+- When agent name is detected, switch to a general-purpose assistant system prompt instead of the cleanup-focused prompt
+- AI now behaves naturally in chat mode (answers questions, follows instructions) instead of trying to clean up commands
+
+### Bug fixes
+- Fixed language auto-detect: `getLanguageInstruction("auto")` now returns a proper auto-detect instruction instead of the broken "preferred language is set to auto" message
+- Agent name is now automatically included in transcription dictionary so STT correctly recognizes custom names
+- Improved updater error message for private repos / network failures
+- Refined About section: version shown inline with title, combined description text
+- Developer section now shows the data storage path
+
 ## [0.2.9] - 2026-02-11
 
 ### In-app auto-update

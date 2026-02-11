@@ -47,8 +47,11 @@ export function validateLanguageForModel(
   return supportedSet.has(baseCode) ? baseCode : undefined;
 }
 
+const AUTO_DETECT_INSTRUCTION =
+  "LANGUAGE CONTEXT: Auto-detect mode is active. Detect the language of the transcribed text and respond in that same language. If the text contains multiple languages, use the dominant language. Preserve any English technical terms or proper nouns as-is.";
+
 export function getLanguageInstruction(language: string | undefined): string {
-  if (!language) return "";
+  if (!language || language === "auto") return AUTO_DETECT_INSTRUCTION;
   return LANGUAGE_INSTRUCTIONS[language] || buildGenericInstruction(language);
 }
 

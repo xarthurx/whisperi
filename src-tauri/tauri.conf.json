@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicegui-org/nicegui-tauri-demo/main/src-tauri/schemas/desktop-schema.json",
   "productName": "Whisperi",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "identifier": "com.whisperi.app",
   "build": {
     "frontendDist": "../dist",
@@ -29,8 +29,8 @@
         "label": "settings",
         "title": "Whisperi Settings",
         "url": "/",
-        "width": 900,
-        "height": 680,
+        "width": 760,
+        "height": 800,
         "resizable": true,
         "decorations": false,
         "visible": false,
