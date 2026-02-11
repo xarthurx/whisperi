@@ -184,20 +184,3 @@ const ToastItem: React.FC<ToastState & { onClose?: () => void }> = ({
     </div>
   );
 };
-
-export const toast = {
-  success: (message: string) => ({
-    title: "Success",
-    description: message,
-    variant: "success" as const,
-  }),
-  error: (message: string) => ({
-    title: "Error",
-    description: message,
-    variant: "destructive" as const,
-  }),
-  info: (message: string) => ({
-    description: message,
-    variant: "default" as const,
-  }),
-};

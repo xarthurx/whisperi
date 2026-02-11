@@ -3,14 +3,7 @@ import { getLanguageInstruction } from "../utils/languageSupport";
 
 export const INTERNAL_SYSTEM_PROMPT = promptData.INTERNAL_SYSTEM_PROMPT;
 export const USER_VISIBLE_PROMPT = promptData.USER_VISIBLE_PROMPT;
-export const UNIFIED_SYSTEM_PROMPT = INTERNAL_SYSTEM_PROMPT + "\n\n" + USER_VISIBLE_PROMPT;
-export const LEGACY_PROMPTS = promptData.LEGACY_PROMPTS;
 const DICTIONARY_SUFFIX = promptData.DICTIONARY_SUFFIX;
-
-export function buildPrompt(text: string, agentName: string | null): string {
-  const name = agentName?.trim() || "Assistant";
-  return UNIFIED_SYSTEM_PROMPT.replace(/\{\{agentName\}\}/g, name).replace(/\{\{text\}\}/g, text);
-}
 
 /**
  * Build the system prompt for AI reasoning.
@@ -47,13 +40,3 @@ export function getSystemPrompt(
 export function getUserPrompt(text: string): string {
   return text;
 }
-
-export default {
-  UNIFIED_SYSTEM_PROMPT,
-  INTERNAL_SYSTEM_PROMPT,
-  USER_VISIBLE_PROMPT,
-  buildPrompt,
-  getSystemPrompt,
-  getUserPrompt,
-  LEGACY_PROMPTS,
-};

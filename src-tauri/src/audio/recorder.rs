@@ -80,7 +80,6 @@ impl RecordingState {
         *self.peak_level.lock().unwrap()
     }
 
-    #[allow(dead_code)]
     pub fn is_recording(&self) -> bool {
         self.is_recording.load(Ordering::SeqCst)
     }
