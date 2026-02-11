@@ -118,22 +118,22 @@ pub fn run() {
                 .on_menu_event(move |app, event| {
                     match event.id().as_ref() {
                         "show" => {
-                            if let Some(w) = app.get_webview_window("main") {
-                                let visible = w.is_visible().unwrap_or(false);
+                            if let Some(window) = app.get_webview_window("main") {
+                                let visible = window.is_visible().unwrap_or(false);
                                 if visible {
-                                    let _ = w.hide();
+                                    let _ = window.hide();
                                     let _ = show_ref.set_checked(false);
                                 } else {
-                                    let _ = w.show();
-                                    let _ = w.set_focus();
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
                                     let _ = show_ref.set_checked(true);
                                 }
                             }
                         }
                         "settings" => {
-                            if let Some(w) = app.get_webview_window("settings") {
-                                let _ = w.show();
-                                let _ = w.set_focus();
+                            if let Some(window) = app.get_webview_window("settings") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
                             }
                         }
                         "quit" => {
