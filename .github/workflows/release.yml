@@ -34,9 +34,11 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Whisperi ${{ github.ref_name }}'
           releaseBody: 'See [CHANGELOG](https://github.com/xarthurx/whisperi/blob/main/docs/CHANGELOG.md) for details.'
           releaseDraft: false
           prerelease: false
+          updaterJsonPreferNsis: true

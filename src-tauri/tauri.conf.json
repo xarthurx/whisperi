@@ -43,6 +43,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -63,6 +64,15 @@
   "plugins": {
     "shell": {
       "open": true
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/xarthurx/whisperi/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA5MTI2NDAzRjM4MDZDREYKUldUZmJJRHpBMlFTQ1haa04zY09pMUpRaCt3WlRLRU56K0lMNjNQMmRNMjFGUVZnVUlPU05INjEK",
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }
