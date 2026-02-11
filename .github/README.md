@@ -9,18 +9,6 @@
   <p>A fast, modern desktop dictation app built with <strong>Tauri 2.x</strong>. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like <strong>Claude Code</strong> and <strong>Codex</strong>.</p>
 </p>
 
-## Paste Anywhere — Including CLI Tools
-
-Most dictation apps can only paste into standard GUI text fields. Whisperi uses native Win32 `SendInput` to simulate real keystrokes, which means it can paste directly into **command-line interfaces** and **terminal emulators** — something most competitors simply cannot do.
-
-This makes Whisperi especially useful for developers who work with AI coding assistants in the terminal:
-
-- **Claude Code** — dictate prompts and instructions directly into the Claude Code CLI
-- **Codex CLI** — speak your coding requests instead of typing them
-- **Any terminal** — PowerShell, Windows Terminal, cmd.exe, WSL terminals
-
-> No need to type out long prompts manually. Just press the hotkey, speak, and your words appear right in the terminal input.
-
 ## Why Cloud-First?
 
 Whisperi primarily relies on **cloud transcription services** (OpenAI, Groq, Mistral) rather than local models. While local speech-to-text models like `whisper.cpp` exist, they require significant computational resources to achieve acceptable speed and accuracy. For most users, cloud APIs deliver **near-instant, high-quality transcription** that local models on consumer hardware simply cannot match.
@@ -68,6 +56,18 @@ This effectively gives you **real-time speech translation**. For example, speak 
 <p align="center">
   <img src="setting_window.png" alt="Whisperi Settings Window" width="700"/>
 </p>
+
+## Paste Anywhere — Including CLI Tools
+
+Most dictation apps can only paste into standard GUI text fields. Whisperi uses native Win32 `SendInput` to simulate real keystrokes, which means it can paste directly into **command-line interfaces** and **terminal emulators** — something most competitors simply cannot do.
+
+This makes Whisperi especially useful for developers who work with AI coding assistants in the terminal:
+
+- **Claude Code** — dictate prompts and instructions directly into the Claude Code CLI
+- **Codex CLI** — speak your coding requests instead of typing them
+- **Any terminal** — PowerShell, Windows Terminal, cmd.exe, WSL terminals
+
+> No need to type out long prompts manually. Just press the hotkey, speak, and your words appear right in the terminal input.
 
 ## Contributing
 
