@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.8] - 2026-02-11
 
 ### CI/CD
 - Added `.github/workflows/release.yml` — automated GitHub Release workflow triggered on version tags (`v*`)
