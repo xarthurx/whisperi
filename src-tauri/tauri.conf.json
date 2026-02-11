@@ -69,7 +69,7 @@
       "endpoints": [
         "https://github.com/xarthurx/whisperi/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA5MTI2NDAzRjM4MDZDREYKUldUZmJJRHpBMlFTQ1haa04zY09pMUpRaCt3WlRLRU56K0lMNjNQMmRNMjFGUVZnVUlPU05INjEK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY5Rjk2RDdGMEM1QzQ5REYKUldUZlNWd01mMjM1YVFpKzJCY3ExU2E3TklvZjhFSjdaNEpFR293OG9uREZwTk1udkF6ZzRreWYK",
       "windows": {
         "installMode": "passive"
       }
