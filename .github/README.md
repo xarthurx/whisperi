@@ -13,18 +13,7 @@
 
 Whisperi primarily relies on **cloud transcription services** (OpenAI, Groq, Mistral) rather than local models. While local speech-to-text models like `whisper.cpp` exist, they require significant computational resources to achieve acceptable speed and accuracy. For most users, cloud APIs deliver **near-instant, high-quality transcription** that local models on consumer hardware simply cannot match.
 
-### Recommended Models
-
-After testing across providers, the following combination delivers the best balance of speed and accuracy:
-
-| Stage             | Provider | Model                  | Why                                                 |
-| ----------------- | -------- | ---------------------- | --------------------------------------------------- |
-| **Transcription** | Groq     | Whisper Large v3 Turbo | Fastest cloud transcription with excellent accuracy |
-| **Enhancement**   | Groq     | LLaMA 3.3 70B          | Best speed-to-quality ratio for text cleanup        |
-
-Both models run on Groq's inference engine, so you only need **a single API key**. Transcription + enhancement typically completes in **under 2 seconds** end-to-end.
-
-If you need more sophisticated enhancement (complex restructuring, tone adjustments, or nuanced formatting), switch to **LLaMA 4 Maverick** or **LLaMA 4 Scout** on Groq. These models produce higher-quality rewrites but take noticeably longer per request.
+See [Supported Providers](#supported-providers) for the full list of models and our recommended setup.
 
 ## Features
 
@@ -97,6 +86,19 @@ bun run tauri build
 ```
 
 ## Supported Providers
+
+### Recommended Models
+
+After testing across providers, the following combination delivers the best balance of speed and accuracy:
+
+| Stage             | Provider | Model                  | Why                                                 |
+| ----------------- | -------- | ---------------------- | --------------------------------------------------- |
+| **Transcription** | Groq     | Whisper Large v3 Turbo | Fastest cloud transcription with excellent accuracy |
+| **Enhancement**   | Groq     | LLaMA 3.3 70B          | Best speed-to-quality ratio for text cleanup        |
+
+Both models run on Groq's inference engine, so you only need **a single API key**. Transcription + enhancement typically completes in **under 2 seconds** end-to-end.
+
+If you need more sophisticated enhancement (complex restructuring, tone adjustments, or nuanced formatting), switch to **LLaMA 4 Maverick** or **LLaMA 4 Scout** on Groq. These models produce higher-quality rewrites but take noticeably longer per request.
 
 ### Voice Transcription
 
