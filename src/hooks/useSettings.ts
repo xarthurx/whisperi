@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { emit, listen } from "@tauri-apps/api/event";
 import {
   getSetting,
   setSetting,
@@ -183,10 +184,28 @@ export function useSettings() {
     return () => { cancelled = true; };
   }, []);
 
+  // Listen for settings changes from other windows
+  useEffect(() => {
+    const unlisten = listen<{ key: string; value: unknown }>(
+      "settings-changed",
+      (event) => {
+        const { key, value } = event.payload;
+        setSettings((prev) => ({ ...prev, [key]: value }));
+      }
+    );
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
   // Helper to update a single setting (persist to store + update state)
   const update = useCallback(
     <K extends keyof Settings>(key: K, value: Settings[K]) => {
       setSettings((prev) => ({ ...prev, [key]: value }));
+
+      // Notify other windows about the change
+      emit("settings-changed", { key, value });
 
       // Persist based on key type
       if (key === "agentName") {

@@ -1,21 +1,7 @@
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WhisperModel {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub size: String,
-    pub size_mb: u64,
-    pub file_name: String,
-    pub download_url: String,
-    pub downloaded: bool,
-    pub recommended: bool,
-}
 
 /// Get the directory where whisper models are stored
 pub fn models_dir() -> Result<PathBuf> {

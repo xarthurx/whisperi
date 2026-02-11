@@ -1,59 +1,6 @@
 use anyhow::Result;
 use futures_util::StreamExt;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WhisperModelInfo {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub size: String,
-    pub size_mb: u64,
-    pub file_name: String,
-    pub download_url: String,
-    pub downloaded: bool,
-    #[serde(default)]
-    pub recommended: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CloudModelInfo {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    #[serde(default)]
-    pub disable_thinking: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CloudProvider {
-    pub id: String,
-    pub name: String,
-    pub models: Vec<CloudModelInfo>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TranscriptionModel {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TranscriptionProvider {
-    pub id: String,
-    pub name: String,
-    pub base_url: String,
-    pub models: Vec<TranscriptionModel>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelRegistry {
-    pub whisper_models: Vec<WhisperModelInfo>,
-    pub cloud_providers: Vec<CloudProvider>,
-    pub transcription_providers: Vec<TranscriptionProvider>,
-}
 
 /// Download a file with streaming progress reporting.
 /// Calls `on_progress(downloaded_bytes, total_bytes)` periodically during download.

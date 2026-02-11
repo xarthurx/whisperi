@@ -263,7 +263,7 @@ function TranscriptionSection({ settings, update }: SectionProps) {
               .find((p) => p.id === settings.cloudTranscriptionProvider)
               ?.models.find((m) => m.id === settings.cloudTranscriptionModel);
             return selectedModel?.description ? (
-              <p className="text-xs text-muted-foreground -mt-1 ml-1">{selectedModel.description}</p>
+              <p className="text-xs text-muted-foreground -mt-1 text-right">{selectedModel.description}</p>
             ) : null;
           })()}
           <ApiKeyInput
@@ -347,7 +347,7 @@ function AIModelsSection({ settings, update }: SectionProps) {
                 .find((p) => p.id === settings.reasoningProvider)
                 ?.models.find((m) => m.id === settings.reasoningModel);
               return selectedModel?.description ? (
-                <p className="text-xs text-muted-foreground -mt-1 ml-1">{selectedModel.description}</p>
+                <p className="text-xs text-muted-foreground -mt-1 text-right">{selectedModel.description}</p>
               ) : null;
             })()}
             <ApiKeyInput
