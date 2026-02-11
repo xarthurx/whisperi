@@ -15,11 +15,12 @@
       {
         "label": "main",
         "title": "Whisperi",
-        "width": 150,
-        "height": 150,
+        "width": 100,
+        "height": 100,
         "resizable": false,
         "decorations": false,
-        "transparent": false,
+        "transparent": true,
+        "shadow": false,
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "center": true

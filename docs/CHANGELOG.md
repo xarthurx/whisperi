@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.5] - 2026-02-11
+
+### Dead code cleanup
+- Removed 7 unused Rust structs (`WhisperModelInfo`, `CloudModelInfo`, `CloudProvider`, `TranscriptionModel`, `TranscriptionProvider`, `ModelRegistry`, `WhisperModel`) and their unused `serde` imports
+- Zero compiler warnings
+
+### Cross-window settings sync
+- Settings changed in the Settings window now immediately propagate to the Overlay window without requiring an app restart
+- Uses Tauri's cross-window event system (`emit`/`listen` on `settings-changed`) in `useSettings` hook
+- Fixes hotkey, activation mode, mic device, and all other settings requiring a restart to take effect
+
+### UI improvements
+- Right-aligned model description text to appear under the model dropdown selector instead of left-aligned
+
 ## [0.2.4] - 2026-02-10
 
 ### Internal system prompt framework

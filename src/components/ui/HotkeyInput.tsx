@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { emit } from "@tauri-apps/api/event";
 
 interface HotkeyInputProps {
   value: string;
@@ -74,6 +75,11 @@ export function HotkeyInput({ value, onChange, disabled }: HotkeyInputProps) {
     if (disabled) return;
     setListening(true);
   }, [disabled]);
+
+  // Notify other windows when capture mode changes
+  useEffect(() => {
+    emit("hotkey-capturing", { capturing: listening });
+  }, [listening]);
 
   // Handle key capture
   useEffect(() => {

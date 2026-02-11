@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { listen } from "@tauri-apps/api/event";
 import { Mic, Settings, XCircle, LogOut } from "lucide-react";
 import { useAudioRecording } from "@/hooks/useAudioRecording";
 import { useSettings } from "@/hooks/useSettings";
@@ -116,6 +117,15 @@ function DictationOverlayInner() {
 
   const { settings, loaded } = useSettings();
 
+  // Suspend hotkey while settings window is capturing a new shortcut
+  const [hotkeyCapturing, setHotkeyCapturing] = useState(false);
+  useEffect(() => {
+    const unlisten = listen<{ capturing: boolean }>("hotkey-capturing", (event) => {
+      setHotkeyCapturing(event.payload.capturing);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     visible: false,
     x: 0,
@@ -133,7 +143,7 @@ function DictationOverlayInner() {
     onToggle: () => toggle(settings.selectedMicDeviceId || undefined),
     onPushStart: () => start(settings.selectedMicDeviceId || undefined),
     onPushEnd: () => stop(),
-    enabled: loaded && !!settings.dictationKey,
+    enabled: loaded && !!settings.dictationKey && !hotkeyCapturing,
   });
 
   // Window dragging — the entire overlay is draggable
@@ -161,15 +171,42 @@ function DictationOverlayInner() {
     []
   );
 
+  // Drag-vs-click detection on the recording button
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+
+  const handleButtonPointerDown = useCallback((e: React.PointerEvent) => {
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    isDraggingRef.current = false;
+  }, []);
+
+  const handleButtonPointerMove = useCallback(async (e: React.PointerEvent) => {
+    if (!dragStartRef.current || isDraggingRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    if (Math.abs(dx) + Math.abs(dy) > 5) {
+      isDraggingRef.current = true;
+      dragStartRef.current = null;
+      await getCurrentWebviewWindow().startDragging();
+    }
+  }, []);
+
+  const handleButtonPointerUp = useCallback(() => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      dragStartRef.current = null;
+      return;
+    }
+    dragStartRef.current = null;
+    if (phase === "idle") {
+      start(settings.selectedMicDeviceId || undefined);
+    } else if (phase === "recording") {
+      stop();
+    }
+  }, [phase, start, stop, settings.selectedMicDeviceId]);
+
   // Audio level visualization — scale the button ring
   const levelScale = 1 + audioLevel * 0.3;
-
-  // Status text below button
-  const statusText = isProcessing
-    ? "Processing..."
-    : isRecording
-      ? "Recording — click to stop"
-      : "";
 
   return (
     <>
@@ -181,7 +218,7 @@ function DictationOverlayInner() {
     `}</style>
     <div
       data-drag-region
-      className="dictation-window flex flex-col items-center pt-8 h-screen bg-background"
+      className="dictation-window flex flex-col items-center justify-center h-screen"
       onContextMenu={handleContextMenu}
     >
       {/* Button area */}
@@ -202,13 +239,9 @@ function DictationOverlayInner() {
 
         {/* Main button */}
         <button
-          onClick={() => {
-            if (phase === "idle") {
-              start(settings.selectedMicDeviceId || undefined);
-            } else if (phase === "recording") {
-              stop();
-            }
-          }}
+          onPointerDown={handleButtonPointerDown}
+          onPointerMove={handleButtonPointerMove}
+          onPointerUp={handleButtonPointerUp}
           disabled={isProcessing}
           className={`relative w-16 h-16 rounded-full border-2 transition-all duration-200 ${
             isProcessing
@@ -243,13 +276,6 @@ function DictationOverlayInner() {
           )}
         </button>
       </div>
-
-      {/* Status text */}
-      {statusText && (
-        <p className="mt-3 text-[11px] text-muted-foreground/70 select-none">
-          {statusText}
-        </p>
-      )}
 
       {/* Context menu */}
       <OverlayContextMenu

@@ -7,8 +7,48 @@ mod reasoning;
 mod transcription;
 
 use tauri::Manager;
-use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
+
+/// Override the Windows minimum window size constraint for a given window.
+/// Windows enforces a minimum width (~136px at 100% DPI) even for undecorated windows.
+/// This subclasses the window proc to intercept WM_GETMINMAXINFO and set our own minimum.
+/// Automatically adjusts for DPI changes.
+#[cfg(windows)]
+fn override_min_window_size(window: &tauri::WebviewWindow, logical_w: i32, logical_h: i32) {
+    use std::sync::atomic::{AtomicI32, AtomicIsize, Ordering};
+    use windows::Win32::Foundation::*;
+    use windows::Win32::UI::HiDpi::GetDpiForWindow;
+    use windows::Win32::UI::WindowsAndMessaging::*;
+
+    static OLD_WNDPROC: AtomicIsize = AtomicIsize::new(0);
+    static MIN_W: AtomicI32 = AtomicI32::new(0);
+    static MIN_H: AtomicI32 = AtomicI32::new(0);
+
+    MIN_W.store(logical_w, Ordering::Relaxed);
+    MIN_H.store(logical_h, Ordering::Relaxed);
+
+    unsafe extern "system" fn wnd_proc(
+        hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM,
+    ) -> LRESULT {
+        if msg == WM_GETMINMAXINFO && lparam.0 != 0 {
+            let info = &mut *(lparam.0 as *mut MINMAXINFO);
+            let dpi = unsafe { GetDpiForWindow(hwnd) };
+            let scale = dpi as f64 / 96.0;
+            info.ptMinTrackSize.x = (MIN_W.load(Ordering::Relaxed) as f64 * scale) as i32;
+            info.ptMinTrackSize.y = (MIN_H.load(Ordering::Relaxed) as f64 * scale) as i32;
+            return LRESULT(0);
+        }
+        let old: WNDPROC = unsafe { std::mem::transmute(OLD_WNDPROC.load(Ordering::Relaxed)) };
+        unsafe { CallWindowProcW(old, hwnd, msg, wparam, lparam) }
+    }
+
+    let hwnd = HWND(window.hwnd().unwrap().0 as *mut _);
+    unsafe {
+        let old = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, wnd_proc as *const () as isize);
+        OLD_WNDPROC.store(old, Ordering::Relaxed);
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -44,13 +84,22 @@ pub fn run() {
             let app_handle = app.handle().clone();
             database::init(&app_handle)?;
 
+            // Override Windows minimum window size for the overlay
+            #[cfg(windows)]
+            if let Some(main_window) = app.get_webview_window("main") {
+                override_min_window_size(&main_window, 100, 100);
+            }
+
             // Settings window starts hidden — opened via tray
             if let Some(settings_window) = app.get_webview_window("settings") {
                 let _ = settings_window.hide();
             }
 
             // System tray
-            let show = MenuItemBuilder::with_id("show", "Show Whisperi").build(app)?;
+            let show = CheckMenuItemBuilder::with_id("show", "Show Whisperi")
+                .checked(true)
+                .build(app)?;
+            let show_ref = show.clone();
             let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
@@ -70,8 +119,15 @@ pub fn run() {
                     match event.id().as_ref() {
                         "show" => {
                             if let Some(w) = app.get_webview_window("main") {
-                                let _ = w.show();
-                                let _ = w.set_focus();
+                                let visible = w.is_visible().unwrap_or(false);
+                                if visible {
+                                    let _ = w.hide();
+                                    let _ = show_ref.set_checked(false);
+                                } else {
+                                    let _ = w.show();
+                                    let _ = w.set_focus();
+                                    let _ = show_ref.set_checked(true);
+                                }
                             }
                         }
                         "settings" => {
