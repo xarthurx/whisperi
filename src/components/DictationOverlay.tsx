@@ -138,10 +138,10 @@ function DictationOverlayInner() {
           disabled={isProcessing}
           className={`relative w-16 h-16 rounded-full border-2 transition-all duration-200 ${
             isProcessing
-              ? "bg-surface-1 border-border-subtle cursor-wait"
+              ? "bg-surface-1 border-border-subtle cursor-wait shadow-md shadow-black/40"
               : isRecording
                 ? "bg-destructive border-destructive shadow-lg shadow-destructive/20"
-                : "bg-surface-1 border-border hover:border-border-hover hover:bg-surface-2 active:scale-95"
+                : "bg-surface-1 border-border shadow-md shadow-black/40 hover:border-border-hover hover:bg-surface-2 hover:shadow-lg hover:shadow-primary/10 active:scale-95"
           }`}
           aria-label={
             isProcessing

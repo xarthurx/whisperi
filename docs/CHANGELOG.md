@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2] - 2026-02-11
+
+### Overlay button polish
+- Added subtle drop shadow to idle and processing state buttons for visual depth
+- Idle button gets a faint cyan glow on hover
+- Processing LoadingDots changed from near-invisible dark color to visible Snow Storm white
+- Rewrote LoadingDots animation: pure CSS `@keyframes` with GPU-composited `scaleY` transform replaces choppy JS-driven `setInterval` + height transitions
+
 ## [0.3.1] - 2026-02-11
 
 ### App icon redesign

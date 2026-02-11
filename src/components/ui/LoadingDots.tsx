@@ -1,28 +1,25 @@
-import { useState, useEffect } from "react";
-
-export const LoadingDots = () => {
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 350);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", height: 10, gap: 1 }}>
+export const LoadingDots = () => (
+  <>
+    <style>{`
+      @keyframes loading-bar {
+        0%, 100% { transform: scaleY(1); opacity: 0.5; }
+        50% { transform: scaleY(2); opacity: 1; }
+      }
+    `}</style>
+    <div style={{ display: "flex", alignItems: "center", height: 14, gap: 2 }}>
       {[0, 1, 2].map((i) => (
         <div
           key={i}
-          className="bg-primary-foreground"
+          className="bg-foreground"
           style={{
-            width: 4,
-            height: 6 + 6 * (tick % 3 === i ? 1 : 0),
+            width: 3.5,
+            height: 6,
             borderRadius: 2,
-            opacity: 0.9,
-            transition: "height 0.2s",
+            transformOrigin: "center",
+            animation: `loading-bar 0.8s ease-in-out ${i * 0.15}s infinite`,
           }}
         />
       ))}
     </div>
-  );
-};
+  </>
+);
