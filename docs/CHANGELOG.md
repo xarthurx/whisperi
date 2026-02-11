@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.3] - 2026-02-11
+
+### First-launch experience
+- Auto-open settings window when no API keys are configured (first-time users)
+- Check for updates on app startup; show pulsing yellow badge on About tab when an update is available
+
+### UI
+- Added app icon to settings window custom title bar
+- App icon added to README header
+
+### README overhaul
+- Reordered sections: Why Cloud-First → Features → Language & Translation → Paste Anywhere
+- Moved Recommended Models into Supported Providers section with anchor link
+- Added animated overlay button states diagram (SVG with exact Lucide Mic paths and LoadingDots geometry)
+- Added settings window screenshot in Language & Translation section
+- Trimmed Features list, renamed Agent Mode to Transcribe & Chat Modes
+- Condensed Contributing section and moved it before License
+
 ## [0.3.2] - 2026-02-11
 
 ### Overlay button polish
