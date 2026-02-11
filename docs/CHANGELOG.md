@@ -13,6 +13,20 @@
 - Developer tab now contains only "Data" section (more features planned)
 - New About tab shows app version and update UI with full state machine: idle, checking, up-to-date, available, downloading (progress bar), installing, error
 
+### Custom app icon
+- New teal/emerald gradient icon with stylized microphone and sound wave arcs
+- Replaced all OpenWhispr icons in `src-tauri/icons/`
+- Added `scripts/generate-icons.mjs` for regenerating icons from SVG
+
+### Overlay context menu
+- Right-click overlay shows native context menu (via Tauri Menu API) with Settings, Cancel Recording, and Quit
+- Added `quit_app` and `show_settings` Tauri commands
+
+### CI/CD improvements
+- Merged CI `check` + `build` into single job to share Rust compilation cache
+- Added bun dependency caching (`actions/cache@v4` keyed on `bun.lock`)
+- Fixed updater signing key password — use GitHub secret instead of hardcoded empty string
+
 ## [0.2.8] - 2026-02-11
 
 ### CI/CD
