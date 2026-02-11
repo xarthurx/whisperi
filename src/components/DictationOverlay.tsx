@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { listen } from "@tauri-apps/api/event";
+import { listen, emit } from "@tauri-apps/api/event";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
+import { check } from "@tauri-apps/plugin-updater";
 import { Mic } from "lucide-react";
 import { useAudioRecording } from "@/hooks/useAudioRecording";
 import { useSettings } from "@/hooks/useSettings";
@@ -24,6 +25,28 @@ function DictationOverlayInner() {
     useAudioRecording({ onToast: toastCallback });
 
   const { settings, loaded } = useSettings();
+
+  // On first launch: open settings if no API keys are configured
+  useEffect(() => {
+    if (!loaded) return;
+    const hasAnyKey =
+      settings.openaiApiKey || settings.anthropicApiKey || settings.geminiApiKey ||
+      settings.groqApiKey || settings.mistralApiKey;
+    if (!hasAnyKey) {
+      showSettings();
+    }
+  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check for updates on startup and notify settings window
+  useEffect(() => {
+    check()
+      .then((update) => {
+        if (update) {
+          emit("update-available", { version: update.version });
+        }
+      })
+      .catch(() => {}); // silently ignore network errors
+  }, []);
 
   // Suspend hotkey while settings window is capturing a new shortcut
   const [hotkeyCapturing, setHotkeyCapturing] = useState(false);

@@ -1,14 +1,12 @@
 <div align="center">
   <img src="assets/app-icon.png" alt="Whisperi" width="96"/>
-  <h2>Whisperi</h2>
+  <h1>Whisperi</h1>
   <p><strong>Built on Windows, for Windows.</strong></p>
-  <hr/>
-  <p>A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like Claude Code and Codex.</p>
-  <hr/>
 </div>
 
 <p align="center">
   <img src="assets/flow-diagram.svg" alt="Speech → Voice Transcription → Text Enhancement → Output" width="800"/>
+  <p>A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like Claude Code and Codex.</p>
 </p>
 
 ## Paste Anywhere — Including CLI Tools

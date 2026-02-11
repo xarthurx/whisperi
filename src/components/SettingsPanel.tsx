@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { listen } from "@tauri-apps/api/event";
 import { getVersion } from "@tauri-apps/api/app";
 import { appDataDir } from "@tauri-apps/api/path";
 import { check } from "@tauri-apps/plugin-updater";
@@ -59,8 +60,17 @@ const SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
 
 function SettingsPanelInner() {
   const [section, setSection] = useState<Section>("general");
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   const { settings, update, loaded } = useSettings();
   const { toast } = useToast();
+
+  // Listen for update-available event from overlay startup check
+  useEffect(() => {
+    const unlisten = listen<{ version: string }>("update-available", () => {
+      setUpdateAvailable(true);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
 
   // Close window
   const handleClose = useCallback(async () => {
@@ -122,6 +132,9 @@ function SettingsPanelInner() {
             >
               <Icon className="w-4 h-4" />
               {label}
+              {id === "about" && updateAvailable && (
+                <span className="ml-auto w-2 h-2 rounded-full bg-warning animate-pulse" title="Update available" />
+              )}
             </button>
           ))}
         </nav>
