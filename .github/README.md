@@ -50,6 +50,12 @@ If you need more sophisticated enhancement (complex restructuring, tone adjustme
 - **Hotkey Support** — Tap-to-toggle or push-to-talk activation modes
 - **Dark Mode** — Clean, minimal dark interface
 
+### Overlay Button States
+
+<p align="center">
+  <img src="assets/overlay-states.svg" alt="Overlay button states: Idle → Recording → Processing" width="700"/>
+</p>
+
 ## Language & Translation
 
 Whisperi's language selector (Settings > General > Language) controls the **output language**, not the input language. This means you can speak in one language and have the output automatically produced in another.
