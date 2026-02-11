@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.9] - 2026-02-11
+
+### In-app auto-update
+- Added `tauri-plugin-updater` and `tauri-plugin-process` for in-app update checking, downloading, and installing
+- Configured updater endpoint pointing to GitHub Releases `latest.json`
+- Added signing key support to CI and release workflows (`TAURI_SIGNING_PRIVATE_KEY`)
+- Release workflow now produces signed NSIS installer + `latest.json` for updater
+
+### Settings UI
+- Split "About" out of Developer tab into its own sidebar tab (with Info icon)
+- Developer tab now contains only "Data" section (more features planned)
+- New About tab shows app version and update UI with full state machine: idle, checking, up-to-date, available, downloading (progress bar), installing, error
+
 ## [0.2.8] - 2026-02-11
 
 ### CI/CD
