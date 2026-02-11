@@ -1,11 +1,105 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { Mic } from "lucide-react";
+import { Mic, Settings, XCircle, LogOut } from "lucide-react";
 import { useAudioRecording } from "@/hooks/useAudioRecording";
 import { useSettings } from "@/hooks/useSettings";
 import { useHotkey } from "@/hooks/useHotkey";
 import { useToast, ToastProvider } from "@/components/ui/Toast";
 import { LoadingDots } from "@/components/ui/LoadingDots";
+import { showSettings, quitApp } from "@/services/tauriApi";
+
+interface ContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+}
+
+function OverlayContextMenu({
+  menu,
+  isRecording,
+  onCancel,
+  onClose,
+}: {
+  menu: ContextMenuState;
+  isRecording: boolean;
+  onCancel: () => void;
+  onClose: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  if (!menu.visible) return null;
+
+  // Clamp position within viewport
+  const menuWidth = 160;
+  const menuHeight = isRecording ? 120 : 84;
+  const x = Math.min(menu.x, window.innerWidth - menuWidth - 4);
+  const y = Math.min(menu.y, window.innerHeight - menuHeight - 4);
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-50 min-w-[160px] rounded-lg border border-border-subtle bg-surface-1 py-1 shadow-xl"
+      style={{ left: x, top: y }}
+    >
+      <button
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-surface-raised transition-colors"
+        onClick={() => {
+          onClose();
+          showSettings();
+        }}
+      >
+        <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+        Settings
+      </button>
+
+      {isRecording && (
+        <button
+          className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-surface-raised transition-colors"
+          onClick={() => {
+            onClose();
+            onCancel();
+          }}
+        >
+          <XCircle className="w-3.5 h-3.5" />
+          Cancel Recording
+        </button>
+      )}
+
+      <div className="my-1 h-px bg-border-subtle" />
+
+      <button
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-surface-raised transition-colors"
+        onClick={() => {
+          onClose();
+          quitApp();
+        }}
+      >
+        <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
+        Quit
+      </button>
+    </div>
+  );
+}
 
 function DictationOverlayInner() {
   const { toast } = useToast();
@@ -21,6 +115,16 @@ function DictationOverlayInner() {
     useAudioRecording({ onToast: toastCallback });
 
   const { settings, loaded } = useSettings();
+
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    visible: false,
+    x: 0,
+    y: 0,
+  });
+
+  const closeMenu = useCallback(() => {
+    setContextMenu((prev) => ({ ...prev, visible: false }));
+  }, []);
 
   // Hotkey integration
   useHotkey({
@@ -48,15 +152,13 @@ function DictationOverlayInner() {
     return () => el.removeEventListener("mousedown", handleMouseDown);
   }, []);
 
-  // Right-click to cancel recording
+  // Right-click to open context menu
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      if (isRecording) {
-        cancel();
-      }
+      setContextMenu({ visible: true, x: e.clientX, y: e.clientY });
     },
-    [isRecording, cancel]
+    []
   );
 
   // Audio level visualization — scale the button ring
@@ -148,6 +250,14 @@ function DictationOverlayInner() {
           {statusText}
         </p>
       )}
+
+      {/* Context menu */}
+      <OverlayContextMenu
+        menu={contextMenu}
+        isRecording={isRecording}
+        onCancel={cancel}
+        onClose={closeMenu}
+      />
     </div>
     </>
   );

@@ -203,6 +203,15 @@ export async function getModelRegistry(): Promise<unknown> {
   return invoke("get_model_registry");
 }
 
+// App
+export async function quitApp(): Promise<void> {
+  return invoke("quit_app");
+}
+
+export async function showSettings(): Promise<void> {
+  return invoke("show_settings");
+}
+
 // --- Settings convenience helpers ---
 
 // Agent name

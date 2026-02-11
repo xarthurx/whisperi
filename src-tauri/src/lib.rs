@@ -112,6 +112,8 @@ pub fn run() {
             commands::database::get_transcriptions,
             commands::database::delete_transcription,
             commands::database::clear_transcriptions,
+            commands::app::quit_app,
+            commands::app::show_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running whisperi");
