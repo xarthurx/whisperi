@@ -151,11 +151,9 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
 
       // AI reasoning (post-processing)
       let finalText = rawText;
-      console.log("[Whisperi] Enhancement:", { useReasoning, reasoningProvider, reasoningModel });
       if (useReasoning && reasoningModel && reasoningProvider) {
         try {
           const rApiKey = await getApiKey(reasoningProvider);
-          console.log("[Whisperi] Reasoning API key present:", !!rApiKey);
           if (rApiKey) {
             const activePrompt = useCustomPrompt && customSystemPrompt ? customSystemPrompt : undefined;
             const systemPrompt = getSystemPrompt(agentName, dictionary, language ?? undefined, activePrompt);
@@ -174,12 +172,6 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       }
 
       setTranscript(finalText);
-
-      // Dev logging
-      console.log("[Whisperi] Raw transcription:", rawText);
-      if (finalText !== rawText) {
-        console.log("[Whisperi] AI-processed text:", finalText);
-      }
 
       // Copy to clipboard and paste into focused app (if enabled)
       if (autoPaste !== false) {

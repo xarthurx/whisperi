@@ -37,7 +37,7 @@ export const buildApiUrl = (base: string, path: string): string => {
   return `${normalizedBase}${normalizedPath}`;
 };
 
-const env = (typeof import.meta !== "undefined" && (import.meta as any).env) || {};
+const env = import.meta.env ?? {};
 
 const computeBaseUrl = (candidates: Array<string | undefined>, fallback: string): string => {
   for (const candidate of candidates) {
