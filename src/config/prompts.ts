@@ -7,13 +7,20 @@ const CHAT_SYSTEM_PROMPT = promptData.CHAT_SYSTEM_PROMPT;
 const DICTIONARY_SUFFIX = promptData.DICTIONARY_SUFFIX;
 
 /**
- * Check if the transcribed text contains the agent name (case-insensitive),
- * indicating the user is addressing the agent directly.
+ * Check if the transcribed text contains the agent name or any alias
+ * (case-insensitive), indicating the user is addressing the agent directly.
  */
-export function detectChatMode(text: string, agentName: string | null): boolean {
+export function detectChatMode(text: string, agentName: string | null, aliases?: string[]): boolean {
+  const lower = text.toLowerCase();
   const name = agentName?.trim();
-  if (!name) return false;
-  return text.toLowerCase().includes(name.toLowerCase());
+  if (name && lower.includes(name.toLowerCase())) return true;
+  if (aliases) {
+    for (const alias of aliases) {
+      const a = alias.trim();
+      if (a && lower.includes(a.toLowerCase())) return true;
+    }
+  }
+  return false;
 }
 
 /**

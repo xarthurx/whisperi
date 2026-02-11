@@ -10,6 +10,7 @@ import {
   onRecordingError,
   getApiKey,
   getAgentName,
+  getAgentAliases,
   getCustomDictionary,
   getSetting,
   saveTranscription,
@@ -104,6 +105,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         useCustomPrompt,
         customSystemPrompt,
         agentName,
+        agentAliases,
         debugMode,
       ] = await Promise.all([
         getSetting<boolean>("useLocalWhisper"),
@@ -119,12 +121,16 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         getSetting<boolean>("useCustomPrompt"),
         getSetting<string>("customSystemPrompt"),
         getAgentName(),
+        getAgentAliases(),
         getSetting<boolean>("debugMode"),
       ]);
 
-      // Include agent name in transcription dictionary so STT recognizes it
-      const transcriptionDict = agentName && !dictionary.includes(agentName)
-        ? [...dictionary, agentName]
+      // Include agent name + aliases in transcription dictionary so STT recognizes them
+      const extraWords = [agentName, ...agentAliases]
+        .filter((w): w is string => !!w?.trim())
+        .filter((w) => !dictionary.includes(w));
+      const transcriptionDict = extraWords.length > 0
+        ? [...dictionary, ...extraWords]
         : dictionary;
 
       // Transcribe
@@ -164,7 +170,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         try {
           const rApiKey = await getApiKey(reasoningProvider);
           if (rApiKey) {
-            const isChatMode = detectChatMode(rawText, agentName);
+            const isChatMode = detectChatMode(rawText, agentName, agentAliases);
             const systemPrompt = isChatMode
               ? getChatSystemPrompt(agentName, dictionary, language ?? undefined)
               : getSystemPrompt(agentName, dictionary, language ?? undefined,

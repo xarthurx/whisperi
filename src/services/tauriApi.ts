@@ -255,3 +255,13 @@ export async function getCustomDictionary(): Promise<string[]> {
 export async function setCustomDictionary(words: string[]): Promise<void> {
   return setSetting("customDictionary", words);
 }
+
+// Agent aliases
+export async function getAgentAliases(): Promise<string[]> {
+  const aliases = await getSetting<string[]>("agentAliases");
+  return aliases || [];
+}
+
+export async function setAgentAliases(aliases: string[]): Promise<void> {
+  return setSetting("agentAliases", aliases);
+}

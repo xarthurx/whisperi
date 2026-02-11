@@ -1,5 +1,5 @@
 {
-  "_genericTemplate": "LANGUAGE CONTEXT: The user's preferred language is set to \"{{code}}\". Detect the language of the transcribed text and respond in that same language. Maintain proper grammar, spelling, and punctuation for the target language. If the user naturally uses English words or technical terms, preserve those as-is.",
+  "_genericTemplate": "CRITICAL LANGUAGE RULE — THIS OVERRIDES ALL OTHER INSTRUCTIONS:\nThe user's preferred output language is \"{{code}}\". You MUST respond entirely in this language, regardless of what language the system prompt is written in or what language the user spoke. The system prompt language is irrelevant — only this setting determines your output language. Maintain proper grammar, spelling, and punctuation for the target language. When outputting Chinese, always use Simplified Chinese characters (简体中文), not Traditional Chinese (繁體中文). Preserve any technical terms or proper nouns as-is.",
   "languages": [
     {
       "code": "auto",

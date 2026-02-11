@@ -48,7 +48,13 @@ export function validateLanguageForModel(
 }
 
 const AUTO_DETECT_INSTRUCTION =
-  "LANGUAGE CONTEXT: Auto-detect mode is active. Detect the language of the transcribed text and respond in that same language. If the text contains multiple languages, use the dominant language. Preserve any English technical terms or proper nouns as-is.";
+  "CRITICAL LANGUAGE RULE — THIS OVERRIDES ALL OTHER INSTRUCTIONS:\n" +
+  "Your output language must match the language of the transcribed speech input, NOT the language of this system prompt.\n" +
+  "If the user spoke English, output English. If the user spoke Chinese, output Chinese. If the user spoke French, output French.\n" +
+  "The system prompt may be written in any language — ignore its language entirely when deciding your output language.\n" +
+  "Detect the language from the [TRANSCRIBED_SPEECH] content only. If the text contains multiple languages, use the dominant language.\n" +
+  "When outputting Chinese, always use Simplified Chinese characters (简体中文), not Traditional Chinese (繁體中文).\n" +
+  "Preserve any technical terms or proper nouns as-is regardless of language.";
 
 export function getLanguageInstruction(language: string | undefined): string {
   if (!language || language === "auto") return AUTO_DETECT_INSTRUCTION;

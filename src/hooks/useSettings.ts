@@ -9,6 +9,8 @@ import {
   setAgentName as setAgentNameApi,
   getCustomDictionary,
   setCustomDictionary as setCustomDictionaryApi,
+  getAgentAliases,
+  setAgentAliases as setAgentAliasesApi,
 } from "@/services/tauriApi";
 
 export interface Settings {
@@ -40,6 +42,7 @@ export interface Settings {
 
   // Agent
   agentName: string;
+  agentAliases: string[];
 
   // Developer
   debugMode: boolean;
@@ -70,6 +73,7 @@ const DEFAULTS: Settings = {
   activationMode: "tap",
   selectedMicDeviceId: "",
   agentName: "Whisperi",
+  agentAliases: [],
   debugMode: false,
   openaiApiKey: "",
   anthropicApiKey: "",
@@ -105,6 +109,7 @@ export function useSettings() {
         selectedMicDeviceId,
         debugMode,
         agentNameVal,
+        agentAliases,
         customDictionary,
         openaiApiKey,
         anthropicApiKey,
@@ -129,6 +134,7 @@ export function useSettings() {
         getSetting<string>("selectedMicDeviceId"),
         getSetting<boolean>("debugMode"),
         getAgentName(),
+        getAgentAliases(),
         getCustomDictionary(),
         getApiKey("openai"),
         getApiKey("anthropic"),
@@ -157,6 +163,7 @@ export function useSettings() {
         selectedMicDeviceId: selectedMicDeviceId ?? DEFAULTS.selectedMicDeviceId,
         debugMode: debugMode ?? DEFAULTS.debugMode,
         agentName: agentNameVal,
+        agentAliases,
         customDictionary,
         openaiApiKey,
         anthropicApiKey,
@@ -224,6 +231,8 @@ export function useSettings() {
       // Persist based on key type
       if (key === "agentName") {
         setAgentNameApi(value as string);
+      } else if (key === "agentAliases") {
+        setAgentAliasesApi(value as string[]);
       } else if (key === "customDictionary") {
         setCustomDictionaryApi(value as string[]);
       } else if (key.endsWith("ApiKey")) {

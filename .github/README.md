@@ -49,6 +49,17 @@ If you need more sophisticated enhancement (complex restructuring, tone adjustme
 - **Hotkey Support** — Tap-to-toggle or push-to-talk activation modes
 - **Dark Mode** — Clean, minimal dark interface
 
+## Language & Translation
+
+Whisperi's language selector (Settings > General > Language) controls the **output language**, not the input language. This means you can speak in one language and have the output automatically produced in another.
+
+- **Auto-detect** — output matches whatever language you speak
+- **Specific language** (e.g., English) — output is always in the selected language, regardless of what language you speak
+
+This effectively gives you real-time speech translation. For example, you can speak in Chinese and set the output language to English — Whisperi will transcribe your speech and produce clean English text. Or speak in English and output in French, Japanese, etc.
+
+The language setting overrides the system prompt language, so even if you use a custom prompt written in Chinese, selecting English as the output language will produce English output.
+
 ## Contributing
 
 ### Prerequisites
