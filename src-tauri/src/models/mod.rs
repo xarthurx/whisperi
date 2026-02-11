@@ -9,8 +9,7 @@ pub async fn download_file(
     dest: &PathBuf,
     on_progress: impl Fn(u64, u64),
 ) -> Result<()> {
-    let client = reqwest::Client::new();
-    let response = client.get(url).send().await?;
+    let response = crate::HTTP_CLIENT.get(url).send().await?;
 
     if !response.status().is_success() {
         anyhow::bail!("Download failed with status: {}", response.status());

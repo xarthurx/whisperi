@@ -70,8 +70,7 @@ pub async fn complete(
         },
     };
 
-    let client = reqwest::Client::new();
-    let response = client
+    let response = crate::HTTP_CLIENT
         .post(&url)
         .header("content-type", "application/json")
         .json(&request)

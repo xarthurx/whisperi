@@ -44,8 +44,7 @@ pub async fn complete(
         }],
     };
 
-    let client = reqwest::Client::new();
-    let response = client
+    let response = crate::HTTP_CLIENT
         .post("https://api.anthropic.com/v1/messages")
         .header("x-api-key", api_key)
         .header("anthropic-version", "2023-06-01")

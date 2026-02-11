@@ -75,12 +75,12 @@ pub async fn complete(
     max_tokens: Option<u32>,
     base_url: Option<&str>,
 ) -> Result<String> {
-    let client = reqwest::Client::new();
+    let client = &*crate::HTTP_CLIENT;
     let base = base_url.unwrap_or("https://api.openai.com/v1");
 
     // Try Responses API first (newer models) — only for OpenAI
     if base_url.is_none() {
-        match complete_responses(&client, api_key, model, system_prompt, user_text, max_tokens, base).await {
+        match complete_responses(client, api_key, model, system_prompt, user_text, max_tokens, base).await {
             Ok(text) => return Ok(text),
             Err(e) => {
                 log::debug!("Responses API failed, falling back to Chat Completions: {}", e);
@@ -89,7 +89,7 @@ pub async fn complete(
     }
 
     // Fall back to Chat Completions API
-    complete_chat(&client, api_key, model, system_prompt, user_text, max_tokens, base).await
+    complete_chat(client, api_key, model, system_prompt, user_text, max_tokens, base).await
 }
 
 async fn complete_responses(

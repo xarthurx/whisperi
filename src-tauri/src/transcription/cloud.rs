@@ -41,8 +41,7 @@ pub async fn transcribe_openai(
         }
     }
 
-    let client = reqwest::Client::new();
-    let response = client
+    let response = crate::HTTP_CLIENT
         .post(&url)
         .bearer_auth(api_key)
         .multipart(form)
