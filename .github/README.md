@@ -25,7 +25,7 @@ See [Supported Providers](#supported-providers) for the full list of models and 
 - **Text Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, or Groq models to clean up grammar, punctuation, and formatting
 - **Auto-Paste** — Transcribed text is automatically pasted into the active window, including [CLI tools](#paste-anywhere--including-cli-tools)
 - **Custom Dictionary** — Add names, jargon, and technical terms to improve accuracy
-- **Agent Mode** — Say the agent name to switch from transcription cleanup to conversational AI
+- **Transcribe & Chat Modes** — Cleans up speech by default; say the agent name to switch to a conversational AI chatbot
 - **Hotkey Support** — Tap-to-toggle or push-to-talk activation modes
 
 ## Language & Translation
