@@ -4,12 +4,9 @@
   <p>A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like Claude Code and Codex.</p>
 </div>
 
-```mermaid
-graph LR
-    A[🎙️ Speech] --> B[Voice Transcription]
-    B --> C[Text Enhancement]
-    C --> D[📋 Output]
-```
+<p align="center">
+  <img src="assets/flow-diagram.svg" alt="Speech → Voice Transcription → Text Enhancement → Output" width="800"/>
+</p>
 
 ## Paste Anywhere — Including CLI Tools
 
