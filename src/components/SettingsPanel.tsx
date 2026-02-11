@@ -87,7 +87,10 @@ function SettingsPanelInner() {
         data-tauri-drag-region
         className="h-8 flex items-center justify-between px-3 bg-background select-none shrink-0"
       >
-        <span className="text-[13px] font-medium tracking-wide text-muted-foreground">Whisperi Settings</span>
+        <div className="flex items-center gap-2">
+          <img src="/app-icon.png" alt="" className="w-4 h-4" draggable={false} />
+          <span className="text-[13px] font-medium tracking-wide text-muted-foreground">Whisperi Settings</span>
+        </div>
         <div className="flex items-center gap-1">
           <button
             onClick={handleMinimize}
