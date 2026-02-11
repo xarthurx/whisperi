@@ -110,6 +110,8 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 | **database** | `database/mod.rs`, `migrations.rs` | SQLite via rusqlite. Single `transcriptions` table. Auto-migrates on startup. `Mutex<Connection>` for thread safety |
 | **settings** | `commands/settings.rs` | Thin wrapper over `tauri-plugin-store` — get/set/get-all |
 | **models** | `models/mod.rs` | Streaming HTTP download with progress events, atomic file rename, `.part` temp files |
+| **commands** | `commands/audio.rs`, `app.rs`, `clipboard.rs`, `database.rs`, `models.rs`, `reasoning.rs`, `settings.rs`, `transcription.rs` | Tauri `#[command]` handlers — thin wrappers that delegate to domain modules |
+| **main.rs** | `main.rs` | Binary entry point, calls `whisperi_lib::run()` |
 | **lib.rs** | `lib.rs` | App entry point: plugin registration, state injection, tray menu, command handler registration |
 
 ### Frontend (`src/`)
@@ -126,7 +128,7 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 | **Config** | `config/constants.ts`, `prompts.ts` | Default values, prompt templates with agent-name and language interpolation |
 | **Models** | `models/modelRegistryData.json` | Static registry of all supported transcription and reasoning models per provider |
 | **Utils** | `utils/sounds.ts`, `languageSupport.ts` | Web Audio API tone generation (no static assets); Whisper language compatibility matrix |
-| **UI Kit** | `components/ui/*` | shadcn/ui primitives (button, card, dialog, input, select, tabs, etc.) |
+| **UI Kit** | `components/ui/*` | shadcn/ui primitives (button, input, toggle, toast, settings section) |
 
 ---
 
@@ -310,7 +312,16 @@ whisperi/
 │   │   ├── database/
 │   │   │   ├── mod.rs                 # CRUD operations
 │   │   │   └── migrations.rs          # Schema setup
-│   │   ├── commands/settings.rs       # Store get/set
+│   │   ├── commands/                  # Tauri command handlers
+│   │   │   ├── mod.rs                 # Module exports
+│   │   │   ├── audio.rs              # Recording commands
+│   │   │   ├── app.rs                # App lifecycle (quit, show settings)
+│   │   │   ├── clipboard.rs          # Paste/read clipboard
+│   │   │   ├── database.rs           # Transcription CRUD
+│   │   │   ├── models.rs             # Model registry
+│   │   │   ├── reasoning.rs          # AI reasoning dispatch
+│   │   │   ├── settings.rs           # Store get/set
+│   │   │   └── transcription.rs      # Local/cloud transcription
 │   │   └── models/mod.rs             # Download manager
 │   ├── binaries/                      # whisper-cpp sidecar
 │   ├── capabilities/default.json      # Permission scopes
