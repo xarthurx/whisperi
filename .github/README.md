@@ -1,20 +1,17 @@
-<p align="center">
-  <img src="../src-tauri/icons/icon.png" alt="Whisperi" width="128" height="128">
-</p>
+<div align="center">
+  <h1>Whisperi</h1>
+  <p><strong>Built on Windows for Windows</strong></p>
+  <p>A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like Claude Code and Codex.</p>
+</div>
 
-<h1 align="center">Whisperi</h1>
+```mermaid
+graph LR
+    A[🎙️ Speech] --> B[Voice Transcription]
+    B --> C[Text Enhancement]
+    C --> D[📋 Output]
+```
 
-<p align="center"><b>Built on Windows, for Windows.</b></p>
-
----
-
-A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like Claude Code and Codex.
-
-## Why Cloud-First?
-
-Whisperi primarily relies on cloud transcription services (OpenAI, Groq, Mistral) rather than local models. While local speech-to-text models like whisper.cpp exist, they require significant computational resources to achieve acceptable speed and accuracy. For most users, cloud APIs deliver near-instant, high-quality transcription that local models on consumer hardware simply cannot match.
-
-## Paste Anywhere — Including the Terminal
+## Paste Anywhere — Including CLI Tools
 
 Most dictation apps on the market can only paste into standard GUI text fields. Whisperi uses native Win32 `SendInput` to simulate keystrokes, which means it can paste directly into **command-line interfaces and terminal emulators** — something most competitors cannot do.
 
@@ -26,11 +23,15 @@ This makes Whisperi especially useful for developers who work with AI coding ass
 
 No need to type out long prompts manually. Just press the hotkey, speak, and your words appear right in the terminal input.
 
+## Why Cloud-First?
+
+Whisperi primarily relies on cloud transcription services (OpenAI, Groq, Mistral) rather than local models. While local speech-to-text models like whisper.cpp exist, they require significant computational resources to achieve acceptable speed and accuracy. For most users, cloud APIs deliver near-instant, high-quality transcription that local models on consumer hardware simply cannot match.
+
 ## Features
 
 - **Terminal Paste** — Paste transcribed text directly into CLI tools (Claude Code, Codex, terminals) via native keystroke simulation
-- **Cloud Transcription** — OpenAI, Groq, and Mistral with model selection
-- **AI Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, or Groq models to clean up grammar, punctuation, and formatting
+- **Voice Transcription** — OpenAI, Groq, and Mistral with model selection
+- **Text Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, or Groq models to clean up grammar, punctuation, and formatting
 - **Auto-Paste** — Transcribed text is automatically copied to clipboard and pasted into the active window
 - **Custom Dictionary** — Add names, jargon, and technical terms to improve accuracy
 - **Agent Mode** — Say the agent name to switch from transcription cleanup to conversational AI
@@ -38,14 +39,7 @@ No need to type out long prompts manually. Just press the hotkey, speak, and you
 - **Hotkey Support** — Tap-to-toggle or push-to-talk activation modes
 - **Dark Mode** — Clean, minimal dark interface
 
-## Tech Stack
-
-- **Desktop Framework**: Tauri 2.x (Rust + WebView)
-- **Frontend**: React 19, TypeScript, Tailwind CSS v4
-- **Backend**: Rust with reqwest, rusqlite
-- **Package Manager**: bun
-
-## Getting Started
+## Contributing
 
 ### Prerequisites
 
@@ -74,14 +68,14 @@ bun run tauri build
 
 ## Supported Providers
 
-### Transcription
+### Voice Transcription
 | Provider | Models |
 |----------|--------|
 | OpenAI | GPT-4o Mini Transcribe, GPT-4o Transcribe, Whisper |
 | Groq | Whisper Large v3 Turbo |
 | Mistral | Voxtral Mini |
 
-### AI Enhancement
+### Text Enhancement
 | Provider | Models |
 |----------|--------|
 | OpenAI | GPT-5.2, GPT-5.2 Pro, GPT-5 Mini, GPT-5 Nano, GPT-4.1 family |
@@ -89,6 +83,15 @@ bun run tauri build
 | Google Gemini | Gemini 3 Pro, Gemini 3 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash |
 | Groq | LLaMA 4 Maverick, LLaMA 4 Scout, Qwen3 32B, GPT-OSS 120B/20B, LLaMA 3.3 70B |
 
+## Other Platforms
+
+Whisperi currently targets Windows only, but it is built with [Tauri](https://tauri.app/), which supports macOS and Linux as well. If you'd like to see support for other platforms, please [open an issue](https://github.com/xarthurx/whisperi/issues).
+
+In the meantime, check out these cross-platform alternatives:
+
+- [OpenWhispr](https://openwhispr.com) — cross-platform dictation tool
+- [Whispering](https://github.com/EpicenterHQ/epicenter) — open-source speech-to-text
+
 ## License
 
-MIT
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
