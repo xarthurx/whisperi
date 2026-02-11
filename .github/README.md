@@ -1,8 +1,14 @@
-# Whisperi
+<p align="center">
+  <img src="../src-tauri/icons/icon.png" alt="Whisperi" width="128" height="128">
+</p>
+
+<h1 align="center">Whisperi</h1>
+
+<p align="center">Built on Windows, for Windows.</p>
 
 A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like Claude Code and Codex.
 
-## Paste Anywhere — Including the CLI tools
+## Paste Anywhere — Including the Terminal
 
 Most dictation apps on the market can only paste into standard GUI text fields. Whisperi uses native Win32 `SendInput` to simulate keystrokes, which means it can paste directly into **command-line interfaces and terminal emulators** — something most competitors cannot do.
 
