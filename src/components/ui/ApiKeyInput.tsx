@@ -23,7 +23,7 @@ export default function ApiKeyInput({
 
   return (
     <div className={className}>
-      {label && <label className="block text-xs font-medium text-foreground mb-1">{label}</label>}
+      {label && <label className="block text-[13px] font-medium text-foreground mb-1">{label}</label>}
       <div className="relative">
         <Input
           type="password"
@@ -38,7 +38,7 @@ export default function ApiKeyInput({
           </div>
         )}
       </div>
-      {helpText && <p className="text-[11px] text-muted-foreground/70 mt-1">{helpText}</p>}
+      {helpText && <p className="text-[12px] text-muted-foreground mt-1">{helpText}</p>}
     </div>
   );
 }

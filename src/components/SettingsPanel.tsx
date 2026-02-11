@@ -84,9 +84,9 @@ function SettingsPanelInner() {
       {/* Custom titlebar */}
       <div
         data-tauri-drag-region
-        className="h-8 flex items-center justify-between px-3 bg-surface-1 border-b border-border-subtle select-none shrink-0"
+        className="h-8 flex items-center justify-between px-3 bg-background select-none shrink-0"
       >
-        <span className="text-sm font-medium text-muted-foreground">Whisperi Settings</span>
+        <span className="text-[13px] font-medium tracking-wide text-muted-foreground">Whisperi Settings</span>
         <div className="flex items-center gap-1">
           <button
             onClick={handleMinimize}
@@ -105,15 +105,15 @@ function SettingsPanelInner() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <nav className="w-48 bg-surface-1 border-r border-border-subtle p-2 space-y-0.5 shrink-0">
+        <nav className="w-60 bg-background border-r border-border-subtle p-2 space-y-0.5 shrink-0">
           {SECTIONS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setSection(id)}
-              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 section === id
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-surface-raised"
+                  ? "bg-primary/10 text-primary border-l-2 border-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-surface-1"
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -123,26 +123,28 @@ function SettingsPanelInner() {
         </nav>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-7 space-y-7">
-          {section === "general" && (
-            <GeneralSection settings={settings} update={update} />
-          )}
-          {section === "transcription" && (
-            <TranscriptionSection settings={settings} update={update} />
-          )}
-          {section === "ai-models" && (
-            <AIModelsSection settings={settings} update={update} />
-          )}
-          {section === "dictionary" && (
-            <DictionarySection settings={settings} update={update} />
-          )}
-          {section === "agent" && (
-            <AgentSection settings={settings} update={update} />
-          )}
-          {section === "developer" && (
-            <DeveloperSection toast={toast} />
-          )}
-          {section === "about" && <AboutSection />}
+        <div className="flex-1 overflow-y-auto p-8 space-y-8 border-l border-border">
+          <div key={section} className="space-y-8 transition-opacity duration-300 animate-in fade-in">
+            {section === "general" && (
+              <GeneralSection settings={settings} update={update} />
+            )}
+            {section === "transcription" && (
+              <TranscriptionSection settings={settings} update={update} />
+            )}
+            {section === "ai-models" && (
+              <AIModelsSection settings={settings} update={update} />
+            )}
+            {section === "dictionary" && (
+              <DictionarySection settings={settings} update={update} />
+            )}
+            {section === "agent" && (
+              <AgentSection settings={settings} update={update} />
+            )}
+            {section === "developer" && (
+              <DeveloperSection toast={toast} />
+            )}
+            {section === "about" && <AboutSection />}
+          </div>
         </div>
       </div>
     </div>
@@ -181,15 +183,15 @@ function GeneralSection({ settings, update }: SectionProps) {
             onChange={(hotkey) => update("dictationKey", hotkey)}
           />
           <SettingsRow label="Activation mode">
-            <div className="flex gap-2">
+            <div className="flex p-0.5 rounded-lg bg-surface-1">
               {(["tap", "push"] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => update("activationMode", mode)}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
                     settings.activationMode === mode
-                      ? "bg-primary/15 text-primary"
-                      : "bg-surface-raised text-muted-foreground hover:text-foreground"
+                      ? "bg-primary/15 text-primary border border-primary/30"
+                      : "text-muted-foreground hover:text-foreground border border-transparent"
                   }`}
                 >
                   {mode === "tap" ? "Tap to toggle" : "Push to talk"}
@@ -204,7 +206,7 @@ function GeneralSection({ settings, update }: SectionProps) {
         <select
           value={settings.selectedMicDeviceId}
           onChange={(e) => update("selectedMicDeviceId", e.target.value)}
-          className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
+          className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
         >
           <option value="">System default</option>
           {devices.map((d) => (
@@ -256,7 +258,7 @@ function TranscriptionSection({ settings, update }: SectionProps) {
             <select
               value={settings.cloudTranscriptionModel}
               onChange={(e) => update("cloudTranscriptionModel", e.target.value)}
-              className="w-56 h-9 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
+              className="w-56 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
             >
               {modelRegistry.transcriptionProviders
                 .find((p) => p.id === settings.cloudTranscriptionProvider)
@@ -340,7 +342,7 @@ function AIModelsSection({ settings, update }: SectionProps) {
               <select
                 value={settings.reasoningModel}
                 onChange={(e) => update("reasoningModel", e.target.value)}
-                className="w-56 h-9 px-2 text-sm bg-surface-1 border border-border-subtle rounded text-foreground"
+                className="w-56 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
               >
                 {modelRegistry.cloudProviders
                   .find((p) => p.id === settings.reasoningProvider)
@@ -392,7 +394,7 @@ function AIModelsSection({ settings, update }: SectionProps) {
       <SettingsSection title="System Prompt" description="Cleanup instructions sent to the AI model. Core behavior rules are applied automatically.">
         <div className="flex flex-col flex-1 min-h-0">
           {/* Prompt tabs */}
-          <div className="relative flex p-0.5 rounded-md bg-surface-1 shrink-0">
+          <div className="relative flex p-0.5 rounded-lg bg-surface-1 shrink-0">
             {(["default", "custom"] as const).map((tab) => {
               const isActive = tab === "custom" ? settings.useCustomPrompt : !settings.useCustomPrompt;
               return (
@@ -401,8 +403,8 @@ function AIModelsSection({ settings, update }: SectionProps) {
                   onClick={() => update("useCustomPrompt", tab === "custom")}
                   className={`relative z-10 flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
                     isActive
-                      ? "bg-primary/20 border border-primary/40 text-primary font-semibold shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-primary/15 text-primary border border-primary/30"
+                      : "text-muted-foreground hover:text-foreground border border-transparent"
                   }`}
                 >
                   {tab === "default" ? "Default Prompt" : "Custom Prompt"}
@@ -417,10 +419,10 @@ function AIModelsSection({ settings, update }: SectionProps) {
               value={settings.customSystemPrompt}
               onChange={(e) => update("customSystemPrompt", e.target.value)}
               placeholder="Enter your custom cleanup instructions here. Core behavior rules (agent activation, output format) are always applied automatically."
-              className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border-subtle rounded-lg text-foreground placeholder:text-muted-foreground/40 resize-y min-h-[160px] flex-1 focus:outline-none focus:ring-2 focus:ring-ring/10 focus:border-border-active"
+              className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground/60 resize-y min-h-[160px] flex-1 focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-border-active"
             />
           ) : (
-            <div className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border-subtle rounded-lg text-muted-foreground/80 max-h-[50vh] overflow-y-auto whitespace-pre-wrap leading-relaxed">
+            <div className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border rounded-lg text-muted-foreground/80 max-h-[50vh] overflow-y-auto whitespace-pre-wrap leading-relaxed">
               {USER_VISIBLE_PROMPT}
             </div>
           )}
@@ -525,7 +527,7 @@ function DeveloperSection({ toast }: { toast: (props: { title?: string; descript
 
   return (
     <SettingsSection title="Data" description="Manage application data">
-      <Button variant="destructive" size="sm" onClick={handleClearHistory}>
+      <Button variant="outline" size="sm" onClick={handleClearHistory} className="text-destructive hover:bg-destructive/10 hover:border-destructive/30">
         <Trash2 className="w-3 h-3" /> Clear transcription history
       </Button>
     </SettingsSection>
@@ -634,7 +636,7 @@ function AboutSection() {
 
           {status.phase === "up-to-date" && (
             <div className="space-y-2">
-              <p className="text-sm text-green-400">
+              <p className="text-sm text-success">
                 You're on the latest version.
               </p>
               <Button variant="outline" size="sm" onClick={checkForUpdates}>

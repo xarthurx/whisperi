@@ -125,7 +125,7 @@ function DictationOverlayInner() {
             borderRadius: "50%",
             transform: `scale(${isRecording ? levelScale : 1})`,
             background: isRecording
-              ? `radial-gradient(circle, oklch(0.6 0.25 25 / ${0.2 + audioLevel * 0.3}), transparent 70%)`
+              ? `radial-gradient(circle, hsl(354, 42%, 56%, ${0.2 + audioLevel * 0.3}), transparent 70%)`
               : "transparent",
           }}
         />
@@ -138,10 +138,10 @@ function DictationOverlayInner() {
           disabled={isProcessing}
           className={`relative w-16 h-16 rounded-full border-2 transition-all duration-200 ${
             isProcessing
-              ? "bg-surface-2 border-border-subtle cursor-wait"
+              ? "bg-surface-1 border-border-subtle cursor-wait"
               : isRecording
-                ? "bg-destructive border-destructive shadow-lg shadow-destructive/30"
-                : "bg-surface-2 border-border-subtle hover:border-border-hover hover:bg-surface-3 active:scale-95"
+                ? "bg-destructive border-destructive shadow-lg shadow-destructive/20"
+                : "bg-surface-1 border-border hover:border-border-hover hover:bg-surface-2 active:scale-95"
           }`}
           aria-label={
             isProcessing

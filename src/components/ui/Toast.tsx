@@ -114,21 +114,21 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 const variantConfig = {
   default: {
     icon: Info,
-    containerClass: "bg-surface-2/95 border-white/10 shadow-elevated",
+    containerClass: "bg-surface-1 border-border shadow-elevated",
     iconClass: "text-muted-foreground",
-    titleClass: "text-card-foreground",
+    titleClass: "text-foreground",
     descClass: "text-muted-foreground",
   },
   destructive: {
     icon: AlertCircle,
-    containerClass: "bg-destructive/12 border-destructive/25 shadow-elevated",
+    containerClass: "bg-destructive/10 border-destructive/30 shadow-elevated",
     iconClass: "text-destructive",
     titleClass: "text-destructive",
     descClass: "text-destructive/80",
   },
   success: {
     icon: CheckCircle2,
-    containerClass: "bg-success/12 border-success/25 shadow-elevated",
+    containerClass: "bg-success/10 border-success/30 shadow-elevated",
     iconClass: "text-success",
     titleClass: "text-success",
     descClass: "text-success/80",

@@ -7,7 +7,7 @@ const buttonVariants = cva(
   [
     "inline-flex items-center justify-center gap-2 whitespace-nowrap",
     "rounded text-sm font-medium cursor-pointer select-none",
-    "transition-all duration-200 ease-out",
+    "transition-all duration-150",
     "outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
     "disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
     "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 shrink-0",
@@ -16,39 +16,28 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: [
-          "relative text-primary-foreground font-semibold tracking-[0.005em]",
-          "bg-primary border border-primary/60 shadow-sm",
-          "hover:bg-primary/95 hover:shadow",
-          "active:bg-primary/85 active:scale-[0.985]",
+          "bg-transparent text-foreground",
+          "hover:bg-surface-1",
         ].join(" "),
         success: [
-          "relative text-success-foreground font-semibold",
-          "bg-success border border-success/70 shadow-sm",
-          "hover:bg-success/90",
-          "active:bg-success/80 active:scale-[0.98]",
+          "bg-transparent text-success",
+          "hover:bg-success/10",
         ].join(" "),
         destructive: [
-          "relative text-destructive-foreground font-semibold",
-          "bg-destructive border border-destructive/70 shadow-sm",
-          "hover:bg-destructive/90",
-          "active:bg-destructive/80 active:scale-[0.98]",
+          "bg-transparent text-destructive",
+          "hover:bg-destructive/10",
         ].join(" "),
         outline: [
-          "relative font-medium text-foreground",
-          "bg-surface-raised/90 border border-border-hover",
-          "shadow-sm hover:bg-surface-raised",
-          "active:scale-[0.985]",
+          "border border-border bg-transparent text-foreground",
+          "hover:bg-surface-1",
         ].join(" "),
         secondary: [
-          "relative font-medium",
-          "text-foreground/90 bg-white/8 border border-white/5",
-          "hover:bg-white/12",
-          "active:scale-[0.98]",
+          "bg-surface-1 text-foreground",
+          "hover:bg-surface-2",
         ].join(" "),
         ghost: [
-          "font-medium text-foreground/90",
-          "hover:bg-white/8",
-          "active:scale-[0.98]",
+          "text-muted-foreground",
+          "hover:text-foreground hover:bg-surface-1",
         ].join(" "),
         link: [
           "font-medium text-primary",

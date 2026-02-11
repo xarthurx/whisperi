@@ -65,7 +65,7 @@ export function ProviderTabs({
       className="relative flex p-0.5 rounded-md bg-surface-1"
     >
       <div
-        className="absolute top-0.5 left-0 rounded-md bg-primary/20 border border-primary/40 shadow-sm transition-all duration-200 ease-out pointer-events-none"
+        className="absolute top-0.5 left-0 rounded-md bg-primary/15 border border-primary/30 transition-all duration-200 ease-out pointer-events-none"
         style={indicatorStyle}
       />
       {providers.map((provider) => {
@@ -75,8 +75,8 @@ export function ProviderTabs({
             key={provider.id}
             data-tab-button
             onClick={() => onSelect(provider.id)}
-            className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md font-medium text-sm transition-colors duration-150 ${
-              isSelected ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
+            className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md font-medium text-sm transition-all duration-150 border ${
+              isSelected ? "text-primary font-semibold border-transparent" : "text-muted-foreground hover:text-foreground border-transparent"
             }`}
           >
             {renderIcon ? renderIcon(provider.id) : <ProviderIcon provider={provider.id} className="w-4 h-4" />}

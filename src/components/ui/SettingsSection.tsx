@@ -14,11 +14,11 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   className = "",
 }) => {
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-4 rounded-xl p-5 ${className}`}>
       <div>
-        <h3 className="text-base font-semibold text-foreground tracking-tight">{title}</h3>
+        <h3 className="text-[15px] font-semibold text-foreground-bright tracking-tight">{title}</h3>
         {description && (
-          <p className="text-xs text-muted-foreground/80 mt-0.5 leading-relaxed">
+          <p className="text-[13px] text-muted-foreground mt-0.5 leading-relaxed">
             {description}
           </p>
         )}

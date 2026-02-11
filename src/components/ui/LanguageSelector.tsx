@@ -157,7 +157,7 @@ export default function LanguageSelector({
               left: `${dropdownPosition.left}px`,
               width: `${dropdownPosition.width}px`,
             }}
-            className="z-[9999] bg-popover/95 backdrop-blur-xl border border-border/70 rounded shadow-xl overflow-hidden"
+            className="z-[9999] bg-surface-1 backdrop-blur-xl border border-border rounded shadow-xl overflow-hidden"
           >
             <div className="px-2 pt-2 pb-1.5 border-b border-border/50">
               <div className="relative">
@@ -169,7 +169,7 @@ export default function LanguageSelector({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Search..."
-                  className="w-full h-8 pl-7 pr-6 text-sm bg-transparent text-foreground border-0 focus:outline-none placeholder:text-muted-foreground/50"
+                  className="w-full h-8 pl-7 pr-6 text-sm bg-surface-2 border-border rounded text-foreground focus:outline-none placeholder:text-muted-foreground"
                 />
                 {searchQuery && (
                   <button
@@ -198,10 +198,10 @@ export default function LanguageSelector({
                         onClick={() => handleSelect(language.value)}
                         className={`group w-full flex items-center justify-between gap-2 h-8 px-2.5 text-left text-sm font-medium rounded transition-all duration-150 ease-out ${
                           isSelected
-                            ? "bg-primary/15 text-primary shadow-sm"
+                            ? "bg-primary/10 text-primary shadow-sm"
                             : isHighlighted
-                              ? "bg-muted/70 text-foreground"
-                              : "text-foreground hover:bg-muted/50 active:scale-[0.98]"
+                              ? "bg-surface-2 text-foreground"
+                              : "text-foreground hover:bg-surface-2 active:scale-[0.98]"
                         }`}
                         role="option"
                         aria-selected={isSelected}
