@@ -14,53 +14,78 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ICONS_DIR = join(__dirname, "..", "src-tauri", "icons");
 
-// SVG icon design — teal/emerald gradient with stylized microphone + sound waves
+// SVG icon design — Nord palette, Apple-style squircle, microphone + sound waves
+// Apple squircle path approximated as a continuous-curvature superellipse
 const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <!-- Background gradient -->
+    <!-- Nord Polar Night gradient background -->
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0d9488"/>
-      <stop offset="50%" stop-color="#0f766e"/>
-      <stop offset="100%" stop-color="#115e59"/>
+      <stop offset="0%" stop-color="#3B4252"/>
+      <stop offset="100%" stop-color="#2E3440"/>
     </linearGradient>
-    <!-- Subtle inner glow -->
-    <radialGradient id="glow" cx="35%" cy="30%" r="65%">
-      <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.25"/>
-      <stop offset="100%" stop-color="#0d9488" stop-opacity="0"/>
+    <!-- Subtle Frost glow from top-left -->
+    <radialGradient id="glow" cx="30%" cy="25%" r="70%">
+      <stop offset="0%" stop-color="#88C0D0" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#2E3440" stop-opacity="0"/>
     </radialGradient>
-    <!-- Microphone body gradient -->
+    <!-- Microphone body gradient — Snow Storm -->
     <linearGradient id="mic" x1="50%" y1="0%" x2="50%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#e2e8f0"/>
+      <stop offset="0%" stop-color="#ECEFF4"/>
+      <stop offset="100%" stop-color="#D8DEE9"/>
+    </linearGradient>
+    <!-- Frost accent for sound waves -->
+    <linearGradient id="wave" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#88C0D0"/>
+      <stop offset="100%" stop-color="#81A1C1"/>
     </linearGradient>
   </defs>
 
-  <!-- Rounded square background -->
-  <rect width="512" height="512" rx="108" ry="108" fill="url(#bg)"/>
-  <rect width="512" height="512" rx="108" ry="108" fill="url(#glow)"/>
+  <!-- Apple-style squircle (continuous curvature) -->
+  <path d="
+    M256 0
+    C384 0, 426 0, 469 43
+    C512 86, 512 128, 512 256
+    C512 384, 512 426, 469 469
+    C426 512, 384 512, 256 512
+    C128 512, 86 512, 43 469
+    C0 426, 0 384, 0 256
+    C0 128, 0 86, 43 43
+    C86 0, 128 0, 256 0Z
+  " fill="url(#bg)"/>
+  <path d="
+    M256 0
+    C384 0, 426 0, 469 43
+    C512 86, 512 128, 512 256
+    C512 384, 512 426, 469 469
+    C426 512, 384 512, 256 512
+    C128 512, 86 512, 43 469
+    C0 426, 0 384, 0 256
+    C0 128, 0 86, 43 43
+    C86 0, 128 0, 256 0Z
+  " fill="url(#glow)"/>
 
-  <!-- Sound wave arcs (left) -->
-  <path d="M140 210 Q120 256 140 302" fill="none" stroke="white" stroke-opacity="0.35" stroke-width="14" stroke-linecap="round"/>
-  <path d="M108 180 Q78 256 108 332" fill="none" stroke="white" stroke-opacity="0.2" stroke-width="14" stroke-linecap="round"/>
+  <!-- Sound wave arcs (left) — Frost cyan -->
+  <path d="M148 210 Q125 256 148 302" fill="none" stroke="#88C0D0" stroke-opacity="0.5" stroke-width="13" stroke-linecap="round"/>
+  <path d="M115 175 Q82 256 115 337" fill="none" stroke="#88C0D0" stroke-opacity="0.25" stroke-width="13" stroke-linecap="round"/>
 
-  <!-- Sound wave arcs (right) -->
-  <path d="M372 210 Q392 256 372 302" fill="none" stroke="white" stroke-opacity="0.35" stroke-width="14" stroke-linecap="round"/>
-  <path d="M404 180 Q434 256 404 332" fill="none" stroke="white" stroke-opacity="0.2" stroke-width="14" stroke-linecap="round"/>
+  <!-- Sound wave arcs (right) — Frost cyan -->
+  <path d="M364 210 Q387 256 364 302" fill="none" stroke="#88C0D0" stroke-opacity="0.5" stroke-width="13" stroke-linecap="round"/>
+  <path d="M397 175 Q430 256 397 337" fill="none" stroke="#88C0D0" stroke-opacity="0.25" stroke-width="13" stroke-linecap="round"/>
 
-  <!-- Microphone body -->
+  <!-- Microphone body — Snow Storm white -->
   <rect x="222" y="140" width="68" height="150" rx="34" fill="url(#mic)"/>
 
-  <!-- Microphone basket (top arc) -->
-  <ellipse cx="256" cy="145" rx="34" ry="10" fill="white" fill-opacity="0.15"/>
+  <!-- Microphone basket highlight -->
+  <ellipse cx="256" cy="145" rx="34" ry="10" fill="#ECEFF4" fill-opacity="0.12"/>
 
-  <!-- Microphone cradle (U shape) -->
-  <path d="M196 260 Q196 340 256 340 Q316 340 316 260" fill="none" stroke="white" stroke-width="16" stroke-linecap="round"/>
+  <!-- Microphone cradle (U shape) — Snow Storm -->
+  <path d="M196 260 Q196 340 256 340 Q316 340 316 260" fill="none" stroke="#D8DEE9" stroke-width="15" stroke-linecap="round"/>
 
   <!-- Microphone stand -->
-  <line x1="256" y1="340" x2="256" y2="390" stroke="white" stroke-width="16" stroke-linecap="round"/>
+  <line x1="256" y1="340" x2="256" y2="388" stroke="#D8DEE9" stroke-width="15" stroke-linecap="round"/>
 
   <!-- Microphone base -->
-  <line x1="216" y1="390" x2="296" y2="390" stroke="white" stroke-width="16" stroke-linecap="round"/>
+  <line x1="218" y1="388" x2="294" y2="388" stroke="#D8DEE9" stroke-width="15" stroke-linecap="round"/>
 </svg>`;
 
 const SIZES = [

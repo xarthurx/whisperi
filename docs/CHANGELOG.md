@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.1] - 2026-02-11
+
+### App icon redesign
+- Redesigned app icon with Nord color palette: Polar Night gradient background (#3B4252 → #2E3440), Snow Storm white microphone, Frost cyan sound wave arcs
+- Apple-style continuous-curvature squircle shape (superellipse) replacing rounded rectangle
+- Regenerated all icon sizes (32x32, 128x128, 256x256, 512x512, ICO, ICNS)
+- Updated `scripts/generate-icons.mjs` with new SVG design
+- Added `sharp` and `png-to-ico` as dev dependencies for icon generation
+
 ## [0.3.0] - 2026-02-11
 
 ### UI redesign

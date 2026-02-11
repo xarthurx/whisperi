@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicegui-org/nicegui-tauri-demo/main/src-tauri/schemas/desktop-schema.json",
   "productName": "Whisperi",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "identifier": "com.whisperi.app",
   "build": {
     "frontendDist": "../dist",
