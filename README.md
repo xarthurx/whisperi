@@ -83,6 +83,15 @@ bun run tauri build
 | Google Gemini | Gemini 3 Pro, Gemini 3 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash |
 | Groq | LLaMA 4 Maverick, LLaMA 4 Scout, Qwen3 32B, GPT-OSS 120B/20B, LLaMA 3.3 70B |
 
+## Other Platforms
+
+Whisperi currently targets Windows only, but it is built with [Tauri](https://tauri.app/), which supports macOS and Linux as well. If you'd like to see support for other platforms, please [open an issue](https://github.com/xarthurx/whisperi/issues).
+
+In the meantime, check out these cross-platform alternatives:
+
+- [OpenWhispr](https://openwhispr.com) — cross-platform dictation tool
+- [Whispering](https://github.com/EpicenterHQ/epicenter) — open-source speech-to-text
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
