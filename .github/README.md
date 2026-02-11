@@ -58,33 +58,6 @@ This makes Whisperi especially useful for developers who work with AI coding ass
 
 > No need to type out long prompts manually. Just press the hotkey, speak, and your words appear right in the terminal input.
 
-## Contributing
-
-### Prerequisites
-
-- [Rust](https://rustup.rs/) (stable)
-- [bun](https://bun.sh/)
-- Windows 10/11 (primary target)
-
-### Development
-
-```bash
-# Install dependencies
-bun install
-
-# Start dev mode (Vite + Tauri)
-bun run tauri dev
-
-# TypeScript typecheck
-bun run typecheck
-
-# Rust tests
-cd src-tauri && cargo test
-
-# Production build
-bun run tauri build
-```
-
 ## Supported Providers
 
 ### Recommended Models
@@ -134,6 +107,18 @@ In the meantime, check out these cross-platform alternatives:
 
 - [OpenWhispr](https://openwhispr.com) — cross-platform dictation tool
 - [Whispering](https://github.com/EpicenterHQ/epicenter) — open-source speech-to-text
+
+## Contributing
+
+**Prerequisites:** [Rust](https://rustup.rs/) (stable), [bun](https://bun.sh/), Windows 10/11
+
+```bash
+bun install              # install dependencies
+bun run tauri dev        # dev mode (Vite + Tauri)
+bun run typecheck        # TypeScript check
+cd src-tauri && cargo test   # Rust tests
+bun run tauri build      # production build
+```
 
 ## License
 
