@@ -1,3 +1,4 @@
+use super::ResultExt;
 use crate::database::{Database, Transcription};
 use tauri::State;
 
@@ -17,7 +18,7 @@ pub fn save_transcription(
         agent_name.as_deref(),
         error.as_deref(),
     )
-    .map_err(|e| e.to_string())
+    .str_err()
 }
 
 #[tauri::command]
@@ -27,15 +28,15 @@ pub fn get_transcriptions(
     offset: u32,
 ) -> Result<Vec<Transcription>, String> {
     db.get_transcriptions(limit, offset)
-        .map_err(|e| e.to_string())
+        .str_err()
 }
 
 #[tauri::command]
 pub fn delete_transcription(db: State<'_, Database>, id: i64) -> Result<(), String> {
-    db.delete_transcription(id).map_err(|e| e.to_string())
+    db.delete_transcription(id).str_err()
 }
 
 #[tauri::command]
 pub fn clear_transcriptions(db: State<'_, Database>) -> Result<(), String> {
-    db.clear_transcriptions().map_err(|e| e.to_string())
+    db.clear_transcriptions().str_err()
 }

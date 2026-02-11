@@ -1,3 +1,4 @@
+use super::ResultExt;
 use crate::reasoning::{self, ReasoningRequest};
 
 #[tauri::command]
@@ -18,6 +19,6 @@ pub async fn process_reasoning(
         max_tokens,
     };
 
-    let response = reasoning::process(&req).await.map_err(|e| e.to_string())?;
+    let response = reasoning::process(&req).await.str_err()?;
     Ok(response.text)
 }

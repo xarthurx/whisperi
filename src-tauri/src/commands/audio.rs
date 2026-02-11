@@ -1,3 +1,4 @@
+use super::ResultExt;
 use crate::audio::{AudioDevice, AudioRecorder, RecordingState};
 use serde::Serialize;
 use std::sync::atomic::Ordering;
@@ -15,7 +16,7 @@ struct RecordingErrorPayload {
 
 #[tauri::command]
 pub fn list_audio_devices() -> Result<Vec<AudioDevice>, String> {
-    AudioRecorder::list_devices().map_err(|e| e.to_string())
+    AudioRecorder::list_devices().str_err()
 }
 
 #[tauri::command]
@@ -24,7 +25,7 @@ pub fn start_recording(
     state: State<'_, RecordingState>,
     device_id: Option<String>,
 ) -> Result<(), String> {
-    AudioRecorder::start(&state, device_id).map_err(|e| e.to_string())?;
+    AudioRecorder::start(&state, device_id).str_err()?;
 
     // Clone the Arc handles we need for the level emitter
     let (is_recording, peak_level, recording_error) = state.level_emitter_handles();
@@ -56,7 +57,7 @@ pub fn start_recording(
 
 #[tauri::command]
 pub fn stop_recording(state: State<'_, RecordingState>) -> Result<Vec<u8>, String> {
-    AudioRecorder::stop(&state).map_err(|e| e.to_string())
+    AudioRecorder::stop(&state).str_err()
 }
 
 #[tauri::command]

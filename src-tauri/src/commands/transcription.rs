@@ -1,3 +1,4 @@
+use super::ResultExt;
 use crate::transcription;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
@@ -31,7 +32,7 @@ pub async fn transcribe_local(
         &dictionary,
     )
     .await
-    .map_err(|e| e.to_string())
+    .str_err()
 }
 
 #[tauri::command]
@@ -59,7 +60,7 @@ pub async fn transcribe_cloud(
             None,
         )
         .await
-        .map_err(|e| e.to_string()),
+        .str_err(),
 
         "groq" => transcription::cloud::transcribe_groq(
             audio_data,
@@ -69,7 +70,7 @@ pub async fn transcribe_cloud(
             prompt.as_deref(),
         )
         .await
-        .map_err(|e| e.to_string()),
+        .str_err(),
 
         "mistral" => transcription::cloud::transcribe_mistral(
             audio_data,
@@ -79,7 +80,7 @@ pub async fn transcribe_cloud(
             prompt.as_deref(),
         )
         .await
-        .map_err(|e| e.to_string()),
+        .str_err(),
 
         other => Err(format!("Unknown transcription provider: {}", other)),
     }
@@ -87,7 +88,7 @@ pub async fn transcribe_cloud(
 
 #[tauri::command]
 pub fn list_whisper_models() -> Result<Vec<WhisperModelStatus>, String> {
-    let models_dir = transcription::whisper::models_dir().map_err(|e| e.to_string())?;
+    let models_dir = transcription::whisper::models_dir().str_err()?;
 
     let models = vec![
         ("tiny", "Tiny", "Fastest, lower quality", "75MB", 75, false),
@@ -160,7 +161,7 @@ pub async fn download_whisper_model(app: AppHandle, model_id: String) -> Result<
         file_name
     );
     let dest = transcription::whisper::models_dir()
-        .map_err(|e| e.to_string())?
+        .str_err()?
         .join(&file_name);
 
     // Skip if already downloaded
@@ -197,13 +198,13 @@ pub async fn download_whisper_model(app: AppHandle, model_id: String) -> Result<
         );
     })
     .await
-    .map_err(|e| e.to_string())
+    .str_err()
 }
 
 #[tauri::command]
 pub fn delete_whisper_model(model_id: String) -> Result<(), String> {
     let file_name = format!("ggml-{}.bin", model_id);
-    transcription::whisper::delete_model(&file_name).map_err(|e| e.to_string())
+    transcription::whisper::delete_model(&file_name).str_err()
 }
 
 /// Get the sidecar binary filename for the current platform.

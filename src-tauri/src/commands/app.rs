@@ -1,3 +1,5 @@
+use super::ResultExt;
+
 #[tauri::command]
 pub fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
@@ -9,7 +11,7 @@ pub fn show_settings(app: tauri::AppHandle) -> Result<(), String> {
     let window = app
         .get_webview_window("settings")
         .ok_or("Settings window not found")?;
-    window.show().map_err(|e| e.to_string())?;
-    window.set_focus().map_err(|e| e.to_string())?;
+    window.show().str_err()?;
+    window.set_focus().str_err()?;
     Ok(())
 }

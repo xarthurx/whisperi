@@ -1,9 +1,11 @@
+use super::ResultExt;
+
 #[tauri::command]
 pub fn paste_text(text: String) -> Result<(), String> {
-    crate::clipboard::paste_text(&text).map_err(|e| e.to_string())
+    crate::clipboard::paste_text(&text).str_err()
 }
 
 #[tauri::command]
 pub fn read_clipboard() -> Result<String, String> {
-    crate::clipboard::read_clipboard().map_err(|e| e.to_string())
+    crate::clipboard::read_clipboard().str_err()
 }
