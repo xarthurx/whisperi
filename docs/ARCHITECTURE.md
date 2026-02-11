@@ -251,6 +251,10 @@ cd src-tauri && cargo clippy
 
 **Build job** (depends on check): Download whisper-cpp sidecar → `tauri build` → Upload NSIS installer artifact
 
+### Release Pipeline (`.github/workflows/release.yml`)
+
+Triggered on version tags (`v*`). Builds the NSIS installer via `tauri-apps/tauri-action@v0` and publishes it as a GitHub Release asset. Windows-only.
+
 ### Key Dependencies
 
 | Crate / Package | Purpose |
@@ -336,7 +340,9 @@ whisperi/
 │   └── CHANGELOG.md                   # Version history
 ├── .github/
 │   ├── README.md                      # GitHub repo readme
-│   └── workflows/ci.yml              # CI pipeline
+│   └── workflows/
+│       ├── ci.yml                    # CI pipeline (push/PR)
+│       └── release.yml               # Release pipeline (version tags)
 ├── package.json                       # Frontend deps + scripts
 └── CLAUDE.md                         # Claude Code project instructions
 ```

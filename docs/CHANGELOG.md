@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### CI/CD
+- Added `.github/workflows/release.yml` — automated GitHub Release workflow triggered on version tags (`v*`)
+- Uses `tauri-apps/tauri-action@v0` to build NSIS installer and publish it as a GitHub Release asset
+- Windows-only release (matches project's Windows-first platform target)
+
 ## [0.2.7] - 2026-02-11
 
 ### Dead code & dependency cleanup
