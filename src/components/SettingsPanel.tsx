@@ -624,10 +624,13 @@ function AboutSection() {
         setStatus({ phase: "up-to-date" });
         return;
       }
+      const rawBody = (update.body ?? "").trim();
+      // Filter out boilerplate release body (e.g. "See CHANGELOG for more details")
+      const body = rawBody.toLowerCase().includes("changelog") ? "" : rawBody;
       setStatus({
         phase: "available",
         version: update.version,
-        body: update.body ?? "",
+        body,
       });
     } catch (e) {
       const msg = String(e);
