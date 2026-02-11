@@ -6,6 +6,8 @@
 
 <p align="center"><b>Built on Windows, for Windows.</b></p>
 
+---
+
 A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like Claude Code and Codex.
 
 ## Why Cloud-First?
