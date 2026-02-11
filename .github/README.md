@@ -4,9 +4,13 @@
 
 <h1 align="center">Whisperi</h1>
 
-<p align="center">Built on Windows, for Windows.</p>
+<p align="center"><b>Built on Windows, for Windows.</b></p>
 
 A fast, modern desktop dictation app built with Tauri 2.x. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like Claude Code and Codex.
+
+## Why Cloud-First?
+
+Whisperi primarily relies on cloud transcription services (OpenAI, Groq, Mistral) rather than local models. While local speech-to-text models like whisper.cpp exist, they require significant computational resources to achieve acceptable speed and accuracy. For most users, cloud APIs deliver near-instant, high-quality transcription that local models on consumer hardware simply cannot match.
 
 ## Paste Anywhere — Including the Terminal
 
@@ -19,10 +23,6 @@ This makes Whisperi especially useful for developers who work with AI coding ass
 - **Any terminal** — PowerShell, Windows Terminal, cmd.exe, WSL terminals
 
 No need to type out long prompts manually. Just press the hotkey, speak, and your words appear right in the terminal input.
-
-## Why Cloud-First?
-
-Whisperi primarily relies on cloud transcription services (OpenAI, Groq, Mistral) rather than local models. While local speech-to-text models like whisper.cpp exist, they require significant computational resources to achieve acceptable speed and accuracy. For most users, cloud APIs deliver near-instant, high-quality transcription that local models on consumer hardware simply cannot match.
 
 ## Features
 
