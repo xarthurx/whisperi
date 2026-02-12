@@ -2,6 +2,13 @@
   <img src="assets/app-icon.png" alt="Whisperi" width="96"/>
   <h1>Whisperi</h1>
   <p><strong>Built on Windows, for Windows.</strong></p>
+  <p>
+    <a href="https://github.com/xarthurx/whisperi/actions/workflows/ci.yml"><img src="https://github.com/xarthurx/whisperi/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/xarthurx/whisperi/releases/latest"><img src="https://img.shields.io/github/v/release/xarthurx/whisperi?color=88C0D0" alt="Release"></a>
+    <a href="https://github.com/xarthurx/whisperi/blob/main/LICENSE"><img src="https://img.shields.io/github/license/xarthurx/whisperi?color=A3BE8C" alt="License"></a>
+    <img src="https://img.shields.io/badge/platform-Windows-5E81AC" alt="Platform">
+    <img src="https://img.shields.io/badge/built%20with-Tauri%202.x-EBCB8B" alt="Tauri">
+  </p>
 </div>
 
 <p align="center">
