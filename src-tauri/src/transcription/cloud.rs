@@ -77,25 +77,6 @@ pub async fn transcribe_groq(
     .await
 }
 
-/// Transcribe audio via Qwen (DashScope) API
-pub async fn transcribe_qwen(
-    audio_data: Vec<u8>,
-    api_key: &str,
-    model: &str,
-    language: Option<&str>,
-    prompt: Option<&str>,
-) -> Result<String> {
-    transcribe_openai(
-        audio_data,
-        api_key,
-        model,
-        language,
-        prompt,
-        Some("https://dashscope.aliyuncs.com/compatible-mode/v1"),
-    )
-    .await
-}
-
 /// Transcribe audio via Mistral Voxtral API
 pub async fn transcribe_mistral(
     audio_data: Vec<u8>,

@@ -72,16 +72,6 @@ pub async fn transcribe_cloud(
         .await
         .str_err(),
 
-        "qwen" => transcription::cloud::transcribe_qwen(
-            audio_data,
-            &api_key,
-            &model,
-            language.as_deref(),
-            prompt.as_deref(),
-        )
-        .await
-        .str_err(),
-
         "mistral" => transcription::cloud::transcribe_mistral(
             audio_data,
             &api_key,
