@@ -318,6 +318,11 @@
           "description": "Dense model with strong reasoning"
         }
       ]
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "models": []
     }
   ],
   "localProviders": [

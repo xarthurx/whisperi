@@ -54,6 +54,7 @@ export interface Settings {
   groqApiKey: string;
   mistralApiKey: string;
   qwenApiKey: string;
+  openrouterApiKey: string;
 }
 
 const DEFAULTS: Settings = {
@@ -82,6 +83,7 @@ const DEFAULTS: Settings = {
   groqApiKey: "",
   mistralApiKey: "",
   qwenApiKey: "",
+  openrouterApiKey: "",
 };
 
 export function useSettings() {
@@ -119,6 +121,7 @@ export function useSettings() {
         groqApiKey,
         mistralApiKey,
         qwenApiKey,
+        openrouterApiKey,
       ] = await Promise.all([
         getSetting<boolean>("useLocalWhisper"),
         getSetting<string>("whisperModel"),
@@ -145,6 +148,7 @@ export function useSettings() {
         getApiKey("groq"),
         getApiKey("mistral"),
         getApiKey("qwen"),
+        getApiKey("openrouter"),
       ]);
 
       if (cancelled) return;
@@ -175,6 +179,7 @@ export function useSettings() {
         groqApiKey,
         mistralApiKey,
         qwenApiKey,
+        openrouterApiKey,
       };
 
       // Persist defaults to store for keys that were missing, so the

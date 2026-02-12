@@ -234,6 +234,7 @@ const API_KEY_MAP: Record<string, string> = {
   groq: "groqApiKey",
   mistral: "mistralApiKey",
   qwen: "qwenApiKey",
+  openrouter: "openrouterApiKey",
 };
 
 export async function getApiKey(provider: string): Promise<string> {

@@ -278,6 +278,7 @@ const API_KEY_MAP: Record<string, keyof import("@/hooks/useSettings").Settings> 
   groq: "groqApiKey",
   mistral: "mistralApiKey",
   qwen: "qwenApiKey",
+  openrouter: "openrouterApiKey",
 };
 
 function getApiKey(settings: import("@/hooks/useSettings").Settings, provider: string): string {
@@ -358,6 +359,7 @@ function getReasoningProviders(settings: import("@/hooks/useSettings").Settings)
     { id: "gemini", name: "Gemini", hasKey: !!settings.geminiApiKey },
     { id: "groq", name: "Groq", recommended: true, hasKey: !!settings.groqApiKey },
     { id: "qwen", name: "Qwen", hasKey: !!settings.qwenApiKey },
+    { id: "openrouter", name: "OpenRouter", hasKey: !!settings.openrouterApiKey },
   ];
 }
 
@@ -389,21 +391,37 @@ function AIModelsSection({ settings, update }: SectionProps) {
           />
           <div className="space-y-3">
             <SettingsRow label="Model">
-              <select
-                value={settings.reasoningModel}
-                onChange={(e) => update("reasoningModel", e.target.value)}
-                className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
-              >
-                {modelRegistry.cloudProviders
-                  .find((p) => p.id === settings.reasoningProvider)
-                  ?.models.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}{m.params ? ` (${m.params})` : ""}
-                    </option>
-                  ))}
-              </select>
+              {settings.reasoningProvider === "openrouter" ? (
+                <input
+                  type="text"
+                  value={settings.reasoningModel}
+                  onChange={(e) => update("reasoningModel", e.target.value)}
+                  placeholder="provider/model-name"
+                  className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground"
+                />
+              ) : (
+                <select
+                  value={settings.reasoningModel}
+                  onChange={(e) => update("reasoningModel", e.target.value)}
+                  className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
+                >
+                  {modelRegistry.cloudProviders
+                    .find((p) => p.id === settings.reasoningProvider)
+                    ?.models.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}{m.params ? ` (${m.params})` : ""}
+                      </option>
+                    ))}
+                </select>
+              )}
             </SettingsRow>
-            {(() => {
+            {settings.reasoningProvider === "openrouter" ? (
+              <p className="text-xs text-muted-foreground -mt-1 text-right">
+                Enter any model from{" "}
+                <span className="text-primary">openrouter.ai/models</span>
+                {" "}in <code className="text-primary/80">provider/model-name</code> format
+              </p>
+            ) : (() => {
               const selectedModel = modelRegistry.cloudProviders
                 .find((p) => p.id === settings.reasoningProvider)
                 ?.models.find((m) => m.id === settings.reasoningModel);

@@ -29,7 +29,7 @@ See [Supported Providers](#supported-providers) for the full list of models and 
 </p>
 
 - **Voice Transcription** — OpenAI, Groq, Mistral, and Qwen with model selection
-- **Text Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, Groq, or Qwen models to clean up grammar, punctuation, and formatting
+- **Text Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, Groq, Qwen, or any model via OpenRouter
 - **Auto-Paste** — Transcribed text is automatically pasted into the active window, including [CLI tools](#paste-anywhere--including-cli-tools)
 - **Custom Dictionary** — Add names, jargon, and technical terms to improve accuracy
 - **Transcribe & Chat Modes** — Cleans up speech by default; say the agent name to switch to a conversational AI chatbot
@@ -97,6 +97,7 @@ If you need more sophisticated enhancement (complex restructuring, tone adjustme
 | Google Gemini | Gemini 3 Pro, Gemini 3 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash              |
 | Groq          | LLaMA 4 Maverick, LLaMA 4 Scout, Qwen3 32B, GPT-OSS 120B/20B, LLaMA 3.3 70B |
 | Qwen          | Qwen3 235B (MoE), Qwen3 32B                                                  |
+| OpenRouter    | Any model — enter `provider/model-name` (e.g. `anthropic/claude-sonnet-4`)    |
 
 ## Example Prompts
 

@@ -5,7 +5,11 @@
 ### Features
 - Added Qwen (Alibaba Cloud) as a cloud transcription provider (SenseVoice, Paraformer v2)
 - Added Qwen as an AI enhancement provider (Qwen3 235B MoE, Qwen3 32B)
-- Recommended for CJK (Chinese, Japanese, Korean) dictation workflows
+- Added OpenRouter as an AI enhancement provider with free-text model input (supports any model via `provider/model-name` format)
+- Recommended Qwen for CJK (Chinese, Japanese, Korean) dictation workflows
+
+### Build
+- Upgraded Rust edition from 2021 to 2024
 
 ## [0.3.6] - 2026-02-12
 
