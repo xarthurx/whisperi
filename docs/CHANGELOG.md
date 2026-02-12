@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.7] - 2026-02-12
+
+### Features
+- Added Qwen (Alibaba Cloud) as a cloud transcription provider (SenseVoice, Paraformer v2)
+- Added Qwen as an AI enhancement provider (Qwen3 235B MoE, Qwen3 32B)
+- Recommended for CJK (Chinese, Japanese, Korean) dictation workflows
+
 ## [0.3.6] - 2026-02-12
 
 ### Improvements
