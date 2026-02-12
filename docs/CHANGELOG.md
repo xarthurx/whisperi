@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.5] - 2026-02-12
+
+### Fixes
+- Strip `<think>...</think>` tags from reasoning model output (DeepSeek, QwQ, etc.)
+- In debug mode, raw AI response with think tags shown under `[Raw AI Response]` label
+- Remove release body text from update notification (only show version number)
+- Persist overlay window position across restarts (no longer recenters on launch)
+
+### Docs
+- Updated Other Platforms section: added local model note, fixed stale Whispering link (now Epicenter)
+
 ## [0.3.4] - 2026-02-12
 
 ### Features
