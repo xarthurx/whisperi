@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.8] - 2026-02-12
+
+### Features
+- Added OpenRouter as a voice transcription provider via multimodal chat completions (requires audio-capable model)
+- Added Rust-side `log::info!`/`log::error!` logging for transcription and enhancement pipelines (visible in terminal with `bun run tauri dev`)
+
+### Fixes
+- Fixed OpenRouter API authentication: add required `HTTP-Referer` and `X-Title` headers to prevent "Failed to authenticate with Clerk" errors
+- Fixed OpenRouter transcription: use multimodal chat completions with `modalities: ["text"]` instead of unsupported `/audio/transcriptions` endpoint
+- Set sensible default models when switching to OpenRouter (transcription: `openai/gpt-audio-mini`, enhancement: `openai/gpt-4o`)
+- Reinforced Simplified Chinese (简体中文) output rule in auto-detect and Chinese language instructions
+
 ## [0.3.7] - 2026-02-12
 
 ### Features

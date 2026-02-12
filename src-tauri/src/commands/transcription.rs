@@ -44,6 +44,13 @@ pub async fn transcribe_cloud(
     language: Option<String>,
     dictionary: Vec<String>,
 ) -> Result<String, String> {
+    let key_preview = if api_key.len() > 8 {
+        format!("{}...{}", &api_key[..4], &api_key[api_key.len()-4..])
+    } else {
+        "(too short)".to_string()
+    };
+    log::info!("[Whisperi] Transcribing: provider={}, model={}, key={}", provider, model, key_preview);
+
     let prompt = if dictionary.is_empty() {
         None
     } else {
@@ -90,13 +97,12 @@ pub async fn transcribe_cloud(
         .await
         .str_err(),
 
-        "openrouter" => transcription::cloud::transcribe_openai(
+        "openrouter" => transcription::cloud::transcribe_openrouter(
             audio_data,
             &api_key,
             &model,
             language.as_deref(),
             prompt.as_deref(),
-            Some("https://openrouter.ai/api/v1"),
         )
         .await
         .str_err(),

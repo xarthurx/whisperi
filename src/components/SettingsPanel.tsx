@@ -310,9 +310,13 @@ function TranscriptionSection({ settings, update }: SectionProps) {
           onSelect={(id) => {
             update("cloudTranscriptionProvider", id);
             // Auto-select the first model for the new provider
-            const provider = modelRegistry.transcriptionProviders.find((p) => p.id === id);
-            if (provider?.models[0]) {
-              update("cloudTranscriptionModel", provider.models[0].id);
+            if (id === "openrouter") {
+              update("cloudTranscriptionModel", "openai/gpt-audio-mini");
+            } else {
+              const provider = modelRegistry.transcriptionProviders.find((p) => p.id === id);
+              if (provider?.models[0]) {
+                update("cloudTranscriptionModel", provider.models[0].id);
+              }
             }
           }}
         />
@@ -323,7 +327,7 @@ function TranscriptionSection({ settings, update }: SectionProps) {
                 type="text"
                 value={settings.cloudTranscriptionModel}
                 onChange={(e) => update("cloudTranscriptionModel", e.target.value)}
-                placeholder="provider/model-name"
+                placeholder="e.g. openai/gpt-audio-mini"
                 className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground"
               />
             ) : (
@@ -350,7 +354,7 @@ function TranscriptionSection({ settings, update }: SectionProps) {
                 onClick={() => import("@tauri-apps/plugin-opener").then((m) => m.openUrl("https://openrouter.ai/models"))}
                 className="text-primary hover:underline cursor-pointer"
               >openrouter.ai/models</button>
-              {" "}in <code className="text-primary/80">provider/model-name</code> format
+              {" "}in <code className="text-primary/80">provider/model-name</code> format (must be audio-capable)
             </p>
           ) : (() => {
             const selectedModel = modelRegistry.transcriptionProviders
@@ -404,9 +408,13 @@ function AIModelsSection({ settings, update }: SectionProps) {
             onSelect={(id) => {
               update("reasoningProvider", id);
               // Auto-select the first model for the new provider
-              const provider = modelRegistry.cloudProviders.find((p) => p.id === id);
-              if (provider?.models[0]) {
-                update("reasoningModel", provider.models[0].id);
+              if (id === "openrouter") {
+                update("reasoningModel", "openai/gpt-4o");
+              } else {
+                const provider = modelRegistry.cloudProviders.find((p) => p.id === id);
+                if (provider?.models[0]) {
+                  update("reasoningModel", provider.models[0].id);
+                }
               }
             }}
           />
@@ -417,7 +425,7 @@ function AIModelsSection({ settings, update }: SectionProps) {
                   type="text"
                   value={settings.reasoningModel}
                   onChange={(e) => update("reasoningModel", e.target.value)}
-                  placeholder="provider/model-name"
+                  placeholder="e.g. openai/gpt-4o"
                   className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground"
                 />
               ) : (

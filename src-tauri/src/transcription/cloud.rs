@@ -42,6 +42,7 @@ pub async fn transcribe_openai(
         }
     }
 
+    log::info!("[Whisperi] POST {}", url);
     let response = crate::HTTP_CLIENT
         .post(&url)
         .bearer_auth(api_key)
@@ -52,10 +53,12 @@ pub async fn transcribe_openai(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
+        log::error!("[Whisperi] Transcription API error ({}): {}", status, body);
         anyhow::bail!("Transcription API error ({}): {}", status, body);
     }
 
     let result: TranscriptionResponse = response.json().await?;
+    log::info!("[Whisperi] Transcription result: {} chars", result.text.len());
     Ok(result.text)
 }
 
@@ -126,6 +129,7 @@ pub async fn transcribe_qwen(
         stream: false,
     };
 
+    log::info!("[Whisperi] POST https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions");
     let response = crate::HTTP_CLIENT
         .post("https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions")
         .bearer_auth(api_key)
@@ -136,6 +140,7 @@ pub async fn transcribe_qwen(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
+        log::error!("[Whisperi] Qwen ASR API error ({}): {}", status, body);
         anyhow::bail!("Qwen ASR API error ({}): {}", status, body);
     }
 
@@ -160,6 +165,108 @@ pub async fn transcribe_qwen(
         .and_then(|c| c.message.content.clone())
         .unwrap_or_default();
 
+    Ok(text)
+}
+
+// --- OpenRouter multimodal types (chat completions with audio) ---
+
+#[derive(Serialize)]
+struct OpenRouterAsrRequest {
+    model: String,
+    modalities: Vec<String>,
+    messages: Vec<OpenRouterAsrMessage>,
+}
+
+#[derive(Serialize)]
+struct OpenRouterAsrMessage {
+    role: String,
+    content: Vec<serde_json::Value>,
+}
+
+/// Transcribe audio via OpenRouter multimodal chat completions
+pub async fn transcribe_openrouter(
+    audio_data: Vec<u8>,
+    api_key: &str,
+    model: &str,
+    language: Option<&str>,
+    prompt: Option<&str>,
+) -> Result<String> {
+    log::info!(
+        "[Whisperi] OpenRouter transcription: model={}, audio={} bytes ({:.1} KB base64)",
+        model,
+        audio_data.len(),
+        audio_data.len() as f64 * 4.0 / 3.0 / 1024.0
+    );
+    let b64 = BASE64.encode(&audio_data);
+
+    let mut instruction =
+        String::from("Transcribe this audio. Output only the transcribed text, nothing else.");
+    if let Some(lang) = language {
+        if lang != "auto" {
+            instruction.push_str(&format!(" Output language: {}.", lang));
+        }
+    }
+    if let Some(p) = prompt {
+        if !p.is_empty() {
+            instruction.push_str(&format!(" Context/vocabulary hints: {}", p));
+        }
+    }
+
+    let content = vec![
+        serde_json::json!({ "type": "text", "text": instruction }),
+        serde_json::json!({
+            "type": "input_audio",
+            "input_audio": { "data": b64, "format": "wav" }
+        }),
+    ];
+
+    let request = OpenRouterAsrRequest {
+        model: model.to_string(),
+        modalities: vec!["text".to_string()],
+        messages: vec![OpenRouterAsrMessage {
+            role: "user".to_string(),
+            content,
+        }],
+    };
+
+    log::info!("[Whisperi] POST https://openrouter.ai/api/v1/chat/completions (transcription)");
+    let response = crate::HTTP_CLIENT
+        .post("https://openrouter.ai/api/v1/chat/completions")
+        .bearer_auth(api_key)
+        .header("HTTP-Referer", "https://github.com/xarthurx/whisperi")
+        .header("X-Title", "Whisperi")
+        .json(&request)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        log::error!("[Whisperi] OpenRouter transcription API error ({}): {}", status, body);
+        anyhow::bail!("OpenRouter transcription API error ({}): {}", status, body);
+    }
+
+    #[derive(Deserialize)]
+    struct ChatResponse {
+        choices: Vec<ChatChoice>,
+    }
+    #[derive(Deserialize)]
+    struct ChatChoice {
+        message: ChatMsg,
+    }
+    #[derive(Deserialize)]
+    struct ChatMsg {
+        content: Option<String>,
+    }
+
+    let result: ChatResponse = response.json().await?;
+    let text = result
+        .choices
+        .first()
+        .and_then(|c| c.message.content.clone())
+        .unwrap_or_default();
+
+    log::info!("[Whisperi] OpenRouter transcription result: {:?}", text);
     Ok(text)
 }
 

@@ -169,9 +169,20 @@ async fn complete_chat(
         max_tokens,
     };
 
-    let response = client
-        .post(format!("{}/chat/completions", base_url))
-        .bearer_auth(api_key)
+    let url = format!("{}/chat/completions", base_url);
+    log::info!("[Whisperi] POST {} (model={})", url, model);
+    let mut req_builder = client
+        .post(&url)
+        .bearer_auth(api_key);
+
+    // OpenRouter requires these headers for proper authentication routing
+    if base_url.contains("openrouter.ai") {
+        req_builder = req_builder
+            .header("HTTP-Referer", "https://github.com/xarthurx/whisperi")
+            .header("X-Title", "Whisperi");
+    }
+
+    let response = req_builder
         .json(&request)
         .send()
         .await?;
@@ -179,7 +190,8 @@ async fn complete_chat(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        anyhow::bail!("OpenAI Chat API error ({}): {}", status, body);
+        log::error!("[Whisperi] Chat API error ({}): {}", status, body);
+        anyhow::bail!("Chat API error ({}): {}", status, body);
     }
 
     let result: ChatResponse = response.json().await?;

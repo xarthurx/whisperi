@@ -1,4 +1,3 @@
-use super::ResultExt;
 use crate::reasoning::{self, ReasoningRequest};
 
 #[tauri::command]
@@ -10,6 +9,13 @@ pub async fn process_reasoning(
     api_key: String,
     max_tokens: Option<u32>,
 ) -> Result<String, String> {
+    let key_preview = if api_key.len() > 8 {
+        format!("{}...{}", &api_key[..4], &api_key[api_key.len()-4..])
+    } else {
+        "(too short)".to_string()
+    };
+    log::info!("[Whisperi] Enhancing: provider={}, model={}, key={}", provider, model, key_preview);
+
     let req = ReasoningRequest {
         text,
         model,
@@ -19,6 +25,14 @@ pub async fn process_reasoning(
         max_tokens,
     };
 
-    let response = reasoning::process(&req).await.str_err()?;
-    Ok(response.text)
+    match reasoning::process(&req).await {
+        Ok(response) => {
+            log::info!("[Whisperi] Enhancement complete ({} chars)", response.text.len());
+            Ok(response.text)
+        }
+        Err(e) => {
+            log::error!("[Whisperi] Enhancement failed: {}", e);
+            Err(e.to_string())
+        }
+    }
 }
