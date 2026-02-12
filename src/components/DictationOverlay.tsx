@@ -31,10 +31,12 @@ function DictationOverlayInner() {
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for updates on startup and notify settings window
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   useEffect(() => {
     check()
       .then((update) => {
         if (update) {
+          setUpdateAvailable(true);
           emit("update-available", { version: update.version });
         }
       })
@@ -177,6 +179,9 @@ function DictationOverlayInner() {
               />
             )}
           </div>
+          {updateAvailable && (
+            <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-warning animate-pulse" title="Update available" />
+          )}
         </button>
       </div>
     </div>
