@@ -62,7 +62,7 @@ export function ProviderTabs({
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-wrap p-0.5 rounded-md bg-surface-1"
+      className="relative flex flex-wrap gap-y-1 p-0.5 rounded-md bg-surface-1"
     >
       <div
         className="absolute top-0.5 left-0 rounded-md bg-primary/15 border border-primary/30 transition-all duration-200 ease-out pointer-events-none"
