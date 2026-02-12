@@ -90,6 +90,17 @@ pub async fn transcribe_cloud(
         .await
         .str_err(),
 
+        "openrouter" => transcription::cloud::transcribe_openai(
+            audio_data,
+            &api_key,
+            &model,
+            language.as_deref(),
+            prompt.as_deref(),
+            Some("https://openrouter.ai/api/v1"),
+        )
+        .await
+        .str_err(),
+
         other => Err(format!("Unknown transcription provider: {}", other)),
     }
 }

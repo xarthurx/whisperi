@@ -87,6 +87,7 @@ If you need more sophisticated enhancement (complex restructuring, tone adjustme
 | Groq     | Whisper Large v3 Turbo                             |
 | Mistral  | Voxtral Mini                                       |
 | Qwen     | Qwen3 ASR Flash                                    |
+| OpenRouter | Any model — enter `provider/model-name`          |
 
 ### Text Enhancement
 

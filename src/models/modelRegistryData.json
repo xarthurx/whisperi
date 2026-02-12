@@ -150,6 +150,12 @@
           "description": "Fast multilingual ASR, excellent for CJK languages"
         }
       ]
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "models": []
     }
   ],
   "cloudProviders": [

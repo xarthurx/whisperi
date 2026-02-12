@@ -296,6 +296,7 @@ function getTranscriptionProviders(settings: import("@/hooks/useSettings").Setti
     { id: "groq", name: "Groq", recommended: true, hasKey: !!settings.groqApiKey },
     { id: "mistral", name: "Mistral", hasKey: !!settings.mistralApiKey },
     { id: "qwen", name: "Qwen", hasKey: !!settings.qwenApiKey },
+    { id: "openrouter", name: "OpenRouter", hasKey: !!settings.openrouterApiKey },
   ];
 }
 
@@ -317,21 +318,41 @@ function TranscriptionSection({ settings, update }: SectionProps) {
         />
         <div className="space-y-3">
           <SettingsRow label="Model">
-            <select
-              value={settings.cloudTranscriptionModel}
-              onChange={(e) => update("cloudTranscriptionModel", e.target.value)}
-              className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
-            >
-              {modelRegistry.transcriptionProviders
-                .find((p) => p.id === settings.cloudTranscriptionProvider)
-                ?.models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}{m.params ? ` (${m.params})` : ""}
-                  </option>
-                ))}
-            </select>
+            {settings.cloudTranscriptionProvider === "openrouter" ? (
+              <input
+                type="text"
+                value={settings.cloudTranscriptionModel}
+                onChange={(e) => update("cloudTranscriptionModel", e.target.value)}
+                placeholder="provider/model-name"
+                className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground"
+              />
+            ) : (
+              <select
+                value={settings.cloudTranscriptionModel}
+                onChange={(e) => update("cloudTranscriptionModel", e.target.value)}
+                className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
+              >
+                {modelRegistry.transcriptionProviders
+                  .find((p) => p.id === settings.cloudTranscriptionProvider)
+                  ?.models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}{m.params ? ` (${m.params})` : ""}
+                    </option>
+                  ))}
+              </select>
+            )}
           </SettingsRow>
-          {(() => {
+          {settings.cloudTranscriptionProvider === "openrouter" ? (
+            <p className="text-xs text-muted-foreground -mt-1 text-right">
+              Enter any model from{" "}
+              <button
+                type="button"
+                onClick={() => import("@tauri-apps/plugin-opener").then((m) => m.openUrl("https://openrouter.ai/models"))}
+                className="text-primary hover:underline cursor-pointer"
+              >openrouter.ai/models</button>
+              {" "}in <code className="text-primary/80">provider/model-name</code> format
+            </p>
+          ) : (() => {
             const selectedModel = modelRegistry.transcriptionProviders
               .find((p) => p.id === settings.cloudTranscriptionProvider)
               ?.models.find((m) => m.id === settings.cloudTranscriptionModel);
