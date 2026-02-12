@@ -607,7 +607,7 @@ type UpdateStatus =
   | { phase: "idle" }
   | { phase: "checking" }
   | { phase: "up-to-date" }
-  | { phase: "available"; version: string; body: string }
+  | { phase: "available"; version: string }
   | { phase: "downloading"; total: number; downloaded: number }
   | { phase: "installing" }
   | { phase: "error"; message: string };
@@ -628,14 +628,7 @@ function AboutSection() {
         setStatus({ phase: "up-to-date" });
         return;
       }
-      const rawBody = (update.body ?? "").trim();
-      // Filter out boilerplate release body (e.g. "See CHANGELOG for more details")
-      const body = rawBody.toLowerCase().includes("changelog") ? "" : rawBody;
-      setStatus({
-        phase: "available",
-        version: update.version,
-        body,
-      });
+      setStatus({ phase: "available", version: update.version });
     } catch (e) {
       const msg = String(e);
       if (msg.includes("valid release JSON") || msg.includes("status code")) {
@@ -720,11 +713,6 @@ function AboutSection() {
               <p className="text-sm text-foreground">
                 Version <span className="font-mono font-medium">{status.version}</span> is available.
               </p>
-              {status.body && (
-                <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-                  {status.body}
-                </p>
-              )}
               <Button variant="outline" size="sm" onClick={downloadAndInstall}>
                 <Download className="w-3 h-3" /> Download and install
               </Button>
