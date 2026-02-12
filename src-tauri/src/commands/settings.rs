@@ -15,6 +15,7 @@ pub fn get_setting(app: AppHandle, key: String) -> Result<Option<Value>, String>
 pub fn set_setting(app: AppHandle, key: String, value: Value) -> Result<(), String> {
     let store = app.store(STORE_FILE).str_err()?;
     store.set(&key, value);
+    store.save().str_err()?;
     Ok(())
 }
 

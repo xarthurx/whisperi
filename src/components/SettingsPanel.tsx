@@ -20,6 +20,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { setSetting } from "@/services/tauriApi";
 import { useSettings } from "@/hooks/useSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -718,6 +719,8 @@ function AboutSection() {
           setStatus({ phase: "installing" });
         }
       });
+      // Flag so the settings window reopens after the app restarts
+      await setSetting("openSettingsAfterUpdate", true);
       await relaunch();
     } catch (e) {
       setStatus({ phase: "error", message: String(e) });

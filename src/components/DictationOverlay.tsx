@@ -9,7 +9,7 @@ import { useAudioRecording } from "@/hooks/useAudioRecording";
 import { useSettings } from "@/hooks/useSettings";
 import { useHotkey } from "@/hooks/useHotkey";
 import { LoadingDots } from "@/components/ui/LoadingDots";
-import { showSettings, quitApp } from "@/services/tauriApi";
+import { showSettings, quitApp, getSetting, setSetting } from "@/services/tauriApi";
 
 function DictationOverlayInner() {
   // Use native OS notifications instead of in-window toasts (overlay is too small)
@@ -23,6 +23,7 @@ function DictationOverlayInner() {
   const { settings, loaded } = useSettings();
 
   // On first launch: open settings if no API keys are configured
+  // After in-app update: reopen settings so the user sees the About tab
   useEffect(() => {
     if (!loaded) return;
     const hasAnyKey =
@@ -31,7 +32,15 @@ function DictationOverlayInner() {
       settings.openrouterApiKey;
     if (!hasAnyKey) {
       showSettings();
+      return;
     }
+    // Check if we just came back from an in-app update
+    getSetting<boolean>("openSettingsAfterUpdate").then((flag) => {
+      if (flag) {
+        setSetting("openSettingsAfterUpdate", false);
+        showSettings();
+      }
+    });
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for updates on startup and notify settings window

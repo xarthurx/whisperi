@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0] - 2026-02-12
+
+### Fixes
+- Fixed settings not persisting immediately: added explicit `store.save()` after every `store.set()` call (was relying on auto-save timer, which could lose changes)
+
+### Features
+- Settings window now reopens automatically after an in-app update (does not affect normal startup behavior)
+
 ## [0.3.10] - 2026-02-12
 
 ### Fixes
