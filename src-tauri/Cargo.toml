@@ -37,6 +37,7 @@ hound = "3.5"
 log = "0.4"
 dirs = "6"
 anyhow = "1"
+base64 = "0.22"
 thiserror = "2"
 
 [target.'cfg(windows)'.dependencies]

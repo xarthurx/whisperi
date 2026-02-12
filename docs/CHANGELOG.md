@@ -4,10 +4,16 @@
 
 ### Features
 - Added Qwen (Alibaba Cloud) as an AI enhancement provider (Qwen3 235B MoE, Qwen3 32B) — recommended for CJK languages
+- Added Qwen as a cloud transcription provider (Qwen3 ASR Flash) via multimodal chat completions API
 - Added OpenRouter as an AI enhancement provider with free-text model input (supports any model via `provider/model-name` format)
+- Show `[Enhancement Error]` in debug mode output when AI reasoning fails (was previously silent)
+
+### Fixes
+- Fixed Qwen API endpoint: use international DashScope URL (`dashscope-intl`) instead of China-only endpoint
 
 ### Build
 - Upgraded Rust edition from 2021 to 2024
+- Added `base64` crate for Qwen ASR audio encoding
 
 ## [0.3.6] - 2026-02-12
 

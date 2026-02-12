@@ -28,7 +28,7 @@ See [Supported Providers](#supported-providers) for the full list of models and 
   <img src="assets/overlay-states.svg" alt="Overlay button states: Idle → Recording → Processing" width="700"/>
 </p>
 
-- **Voice Transcription** — OpenAI, Groq, and Mistral with model selection
+- **Voice Transcription** — OpenAI, Groq, Mistral, and Qwen with model selection
 - **Text Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, Groq, Qwen, or any model via OpenRouter
 - **Auto-Paste** — Transcribed text is automatically pasted into the active window, including [CLI tools](#paste-anywhere--including-cli-tools)
 - **Custom Dictionary** — Add names, jargon, and technical terms to improve accuracy
@@ -77,7 +77,7 @@ Both models run on Groq's inference engine, so you only need **a single API key*
 
 If you need more sophisticated enhancement (complex restructuring, tone adjustments, or nuanced formatting), switch to **LLaMA 4 Maverick** or **LLaMA 4 Scout** on Groq. These models produce higher-quality rewrites but take noticeably longer per request.
 
-> **Tip for Asian languages:** If you primarily dictate in Chinese, Japanese, Korean, or other Asian languages, consider using **Qwen** (Alibaba Cloud) for text enhancement. Qwen's reasoning models have stronger understanding of Asian language grammar, idioms, and punctuation conventions compared to English-centric models.
+> **Tip for Asian languages:** If you primarily dictate in Chinese, Japanese, Korean, or other Asian languages, consider using **Qwen** (Alibaba Cloud) for both transcription and text enhancement. Qwen3 ASR Flash delivers superior CJK speech recognition, and Qwen's reasoning models have stronger understanding of Asian language grammar, idioms, and punctuation conventions compared to English-centric models.
 
 ### Voice Transcription
 
@@ -86,6 +86,7 @@ If you need more sophisticated enhancement (complex restructuring, tone adjustme
 | OpenAI   | GPT-4o Mini Transcribe, GPT-4o Transcribe, Whisper |
 | Groq     | Whisper Large v3 Turbo                             |
 | Mistral  | Voxtral Mini                                       |
+| Qwen     | Qwen3 ASR Flash                                    |
 
 ### Text Enhancement
 

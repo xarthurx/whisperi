@@ -138,6 +138,18 @@
           "description": "Fast multilingual transcription, 13 languages"
         }
       ]
+    },
+    {
+      "id": "qwen",
+      "name": "Qwen",
+      "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      "models": [
+        {
+          "id": "qwen3-asr-flash",
+          "name": "Qwen3 ASR Flash",
+          "description": "Fast multilingual ASR, excellent for CJK languages"
+        }
+      ]
     }
   ],
   "cloudProviders": [

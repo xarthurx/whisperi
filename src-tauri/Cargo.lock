@@ -6046,9 +6046,10 @@ dependencies = [
 
 [[package]]
 name = "whisperi"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "cpal",
  "dirs 6.0.0",
  "futures-util",
