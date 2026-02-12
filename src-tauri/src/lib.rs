@@ -78,11 +78,7 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        .plugin(
-            tauri_plugin_window_state::Builder::new()
-                .with_denylist(&["main"])
-                .build(),
-        )
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())

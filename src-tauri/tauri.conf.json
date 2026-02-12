@@ -22,8 +22,7 @@
         "transparent": true,
         "shadow": false,
         "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "center": true
+        "skipTaskbar": true
       },
       {
         "label": "settings",
