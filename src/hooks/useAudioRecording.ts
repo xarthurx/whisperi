@@ -193,6 +193,9 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
           }
         } catch (e) {
           console.warn("Reasoning failed, using raw transcription:", e);
+          if (debugMode) {
+            finalText = `${rawText}\n\n[Enhancement Error]\n${e}`;
+          }
         }
       }
 

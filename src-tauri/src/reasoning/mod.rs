@@ -37,7 +37,7 @@ pub async fn process(req: &ReasoningRequest) -> Result<ReasoningResponse> {
         "qwen" => {
             openai::complete(
                 &req.api_key, &req.model, &req.system_prompt, &req.text,
-                req.max_tokens, Some("https://dashscope.aliyuncs.com/compatible-mode/v1"),
+                req.max_tokens, Some("https://dashscope-intl.aliyuncs.com/compatible-mode/v1"),
             ).await?
         }
         "openrouter" => {
