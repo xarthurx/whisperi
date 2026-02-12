@@ -24,7 +24,7 @@ function DictationOverlayInner() {
     if (!loaded) return;
     const hasAnyKey =
       settings.openaiApiKey || settings.anthropicApiKey || settings.geminiApiKey ||
-      settings.groqApiKey || settings.mistralApiKey;
+      settings.groqApiKey || settings.mistralApiKey || settings.qwenApiKey;
     if (!hasAnyKey) {
       showSettings();
     }

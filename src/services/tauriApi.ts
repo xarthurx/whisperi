@@ -233,6 +233,7 @@ const API_KEY_MAP: Record<string, string> = {
   gemini: "geminiApiKey",
   groq: "groqApiKey",
   mistral: "mistralApiKey",
+  qwen: "qwenApiKey",
 };
 
 export async function getApiKey(provider: string): Promise<string> {

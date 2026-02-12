@@ -18,7 +18,7 @@
 
 ## Why Cloud-First?
 
-Whisperi primarily relies on **cloud transcription services** (OpenAI, Groq, Mistral) rather than local models. While local speech-to-text models like `whisper.cpp` exist, they require significant computational resources to achieve acceptable speed and accuracy. For most users, cloud APIs deliver **near-instant, high-quality transcription** that local models on consumer hardware simply cannot match.
+Whisperi primarily relies on **cloud transcription services** (OpenAI, Groq, Mistral, Qwen) rather than local models. While local speech-to-text models like `whisper.cpp` exist, they require significant computational resources to achieve acceptable speed and accuracy. For most users, cloud APIs deliver **near-instant, high-quality transcription** that local models on consumer hardware simply cannot match.
 
 See [Supported Providers](#supported-providers) for the full list of models and our recommended setup.
 
@@ -29,7 +29,7 @@ See [Supported Providers](#supported-providers) for the full list of models and 
 </p>
 
 - **Voice Transcription** — OpenAI, Groq, and Mistral with model selection
-- **Text Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, or Groq models to clean up grammar, punctuation, and formatting
+- **Text Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, Groq, or Qwen models to clean up grammar, punctuation, and formatting
 - **Auto-Paste** — Transcribed text is automatically pasted into the active window, including [CLI tools](#paste-anywhere--including-cli-tools)
 - **Custom Dictionary** — Add names, jargon, and technical terms to improve accuracy
 - **Transcribe & Chat Modes** — Cleans up speech by default; say the agent name to switch to a conversational AI chatbot
@@ -77,6 +77,8 @@ Both models run on Groq's inference engine, so you only need **a single API key*
 
 If you need more sophisticated enhancement (complex restructuring, tone adjustments, or nuanced formatting), switch to **LLaMA 4 Maverick** or **LLaMA 4 Scout** on Groq. These models produce higher-quality rewrites but take noticeably longer per request.
 
+> **Tip for Asian languages:** If you primarily dictate in Chinese, Japanese, Korean, or other Asian languages, consider using **Qwen** (Alibaba Cloud) for text enhancement. Qwen models have stronger understanding of Asian language grammar, idioms, and punctuation conventions compared to English-centric models.
+
 ### Voice Transcription
 
 | Provider | Models                                             |
@@ -93,6 +95,7 @@ If you need more sophisticated enhancement (complex restructuring, tone adjustme
 | Anthropic     | Claude Opus 4.6, Claude Sonnet 4.5, Claude Haiku 4.5                        |
 | Google Gemini | Gemini 3 Pro, Gemini 3 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash              |
 | Groq          | LLaMA 4 Maverick, LLaMA 4 Scout, Qwen3 32B, GPT-OSS 120B/20B, LLaMA 3.3 70B |
+| Qwen          | Qwen3 235B (MoE), Qwen3 32B                                                  |
 
 ## Example Prompts
 

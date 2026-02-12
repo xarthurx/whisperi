@@ -53,6 +53,7 @@ export interface Settings {
   geminiApiKey: string;
   groqApiKey: string;
   mistralApiKey: string;
+  qwenApiKey: string;
 }
 
 const DEFAULTS: Settings = {
@@ -80,6 +81,7 @@ const DEFAULTS: Settings = {
   geminiApiKey: "",
   groqApiKey: "",
   mistralApiKey: "",
+  qwenApiKey: "",
 };
 
 export function useSettings() {
@@ -116,6 +118,7 @@ export function useSettings() {
         geminiApiKey,
         groqApiKey,
         mistralApiKey,
+        qwenApiKey,
       ] = await Promise.all([
         getSetting<boolean>("useLocalWhisper"),
         getSetting<string>("whisperModel"),
@@ -141,6 +144,7 @@ export function useSettings() {
         getApiKey("gemini"),
         getApiKey("groq"),
         getApiKey("mistral"),
+        getApiKey("qwen"),
       ]);
 
       if (cancelled) return;
@@ -170,6 +174,7 @@ export function useSettings() {
         geminiApiKey,
         groqApiKey,
         mistralApiKey,
+        qwenApiKey,
       };
 
       // Persist defaults to store for keys that were missing, so the

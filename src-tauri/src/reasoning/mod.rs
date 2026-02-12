@@ -34,6 +34,12 @@ pub async fn process(req: &ReasoningRequest) -> Result<ReasoningResponse> {
                 req.max_tokens, Some("https://api.groq.com/openai/v1"),
             ).await?
         }
+        "qwen" => {
+            openai::complete(
+                &req.api_key, &req.model, &req.system_prompt, &req.text,
+                req.max_tokens, Some("https://dashscope.aliyuncs.com/compatible-mode/v1"),
+            ).await?
+        }
         "anthropic" => {
             anthropic::complete(&req.api_key, &req.model, &req.system_prompt, &req.text, req.max_tokens).await?
         }

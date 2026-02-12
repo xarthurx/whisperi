@@ -277,6 +277,7 @@ const API_KEY_MAP: Record<string, keyof import("@/hooks/useSettings").Settings> 
   gemini: "geminiApiKey",
   groq: "groqApiKey",
   mistral: "mistralApiKey",
+  qwen: "qwenApiKey",
 };
 
 function getApiKey(settings: import("@/hooks/useSettings").Settings, provider: string): string {
@@ -355,6 +356,7 @@ function getReasoningProviders(settings: import("@/hooks/useSettings").Settings)
     { id: "anthropic", name: "Anthropic", hasKey: !!settings.anthropicApiKey },
     { id: "gemini", name: "Gemini", hasKey: !!settings.geminiApiKey },
     { id: "groq", name: "Groq", recommended: true, hasKey: !!settings.groqApiKey },
+    { id: "qwen", name: "Qwen", hasKey: !!settings.qwenApiKey },
   ];
 }
 
