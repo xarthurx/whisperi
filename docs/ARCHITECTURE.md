@@ -70,10 +70,10 @@ Two Tauri windows render the same React bundle but show different views based on
 
 | Window | Size | Traits | Purpose |
 |--------|------|--------|---------|
-| `main` | 150×150 | always-on-top, transparent, no taskbar, no decorations | Floating mic button |
-| `settings` | 900×680 | hidden by default, resizable, no decorations | Full settings panel + history |
+| `main` | 100×100 | always-on-top, transparent, no taskbar, no decorations, position persisted | Floating mic button |
+| `settings` | 760×800 | hidden by default, resizable, no decorations, position/size persisted | Full settings panel + history |
 
-The system tray toggles visibility of the settings window. This keeps the overlay minimal and unobtrusive while still providing a full configuration surface.
+Both windows persist their position via `tauri-plugin-window-state`. The system tray toggles visibility of the settings window. This keeps the overlay minimal and unobtrusive while still providing a full configuration surface.
 
 ### 5. Minimal State, Maximum Persistence
 
@@ -120,7 +120,7 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 |-------|---------|----------------|
 | **Views** | `App.tsx` | Window-label router: overlay vs settings |
 | **Overlay** | `components/DictationOverlay.tsx` | Mic button, audio-level ring, status text, drag handle, hotkey response |
-| **Settings** | `components/SettingsPanel.tsx` | Tabbed settings: audio, transcription, AI, dictionary, agent, developer |
+| **Settings** | `components/SettingsPanel.tsx` | Tabbed settings: general (language, hotkey, mic, behavior), transcription, enhancement, dictionary, agent, developer, about |
 | **Hooks** | `hooks/useAudioRecording.ts` | Full dictation pipeline state machine (idle → recording → processing → idle) |
 | | `hooks/useSettings.ts` | Load/save all settings from plugin-store with defaults |
 | | `hooks/useHotkey.ts` | Global shortcut registration, tap vs push-to-talk modes |
@@ -155,6 +155,7 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
         ↓
 7.  Enhancement (optional):
     invoke("process_reasoning", { text, provider, model, system_prompt, api_key })
+    → Strip <think>...</think> tags from output (reasoning model artifacts)
         ↓
 8.  invoke("save_transcription", { original, processed, method, agent })
         ↓
@@ -259,7 +260,7 @@ Triggered on version tags (`v*`). Builds the NSIS installer via `tauri-apps/taur
 
 | Crate / Package | Purpose |
 |-----------------|---------|
-| `tauri 2.x` | App framework, IPC, windows, tray, plugins |
+| `tauri 2.x` | App framework, IPC, windows, tray, plugins (autostart, store, updater, etc.) |
 | `cpal 0.15` | Cross-platform audio capture |
 | `hound 3.5` | WAV encoding |
 | `reqwest 0.12` | HTTP client (multipart uploads, streaming downloads) |
