@@ -14,6 +14,12 @@ export default defineConfig({
     },
   },
 
+  // Only scan the real entry point — prevents Vite from crawling into
+  // src-tauri/target/doc/ which contains thousands of Rust doc HTML files.
+  optimizeDeps: {
+    entries: ["index.html"],
+  },
+
   clearScreen: false,
 
   server: {

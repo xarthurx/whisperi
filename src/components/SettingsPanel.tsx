@@ -32,6 +32,11 @@ import { ProviderTabs, type ProviderTabItem } from "@/components/ui/ProviderTabs
 import { HotkeyInput } from "@/components/ui/HotkeyInput";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
 import {
+  enable as enableAutostart,
+  disable as disableAutostart,
+  isEnabled as isAutostartEnabled,
+} from "@tauri-apps/plugin-autostart";
+import {
   listAudioDevices,
   type AudioDevice,
   clearTranscriptions,
@@ -178,9 +183,11 @@ interface SectionProps {
 
 function GeneralSection({ settings, update }: SectionProps) {
   const [devices, setDevices] = useState<AudioDevice[]>([]);
+  const [launchAtStartup, setLaunchAtStartup] = useState(false);
 
   useEffect(() => {
     listAudioDevices().then(setDevices).catch(() => {});
+    isAutostartEnabled().then(setLaunchAtStartup).catch(() => {});
   }, []);
 
   return (
@@ -234,7 +241,19 @@ function GeneralSection({ settings, update }: SectionProps) {
         </select>
       </SettingsSection>
 
-      <SettingsSection title="Output" description="What happens after transcription">
+      <SettingsSection title="Behavior">
+        <SettingsRow label="Launch at startup" description="Start Whisperi when you log in to Windows">
+          <Toggle
+            checked={launchAtStartup}
+            onChange={async (v) => {
+              try {
+                if (v) await enableAutostart();
+                else await disableAutostart();
+                setLaunchAtStartup(v);
+              } catch { /* ignore */ }
+            }}
+          />
+        </SettingsRow>
         <SettingsRow label="Auto-paste to clipboard" description="Copy transcribed text to clipboard and paste into the active window">
           <Toggle
             checked={settings.autoPaste}
