@@ -62,7 +62,7 @@ Every dictation flows through a linear pipeline:
 Hotkey → Record → WAV Encode → Transcribe → [Enhance] → Save → Paste
 ```
 
-Each stage is independently configurable: transcription can be local (whisper.cpp sidecar) or cloud (OpenAI / Groq / Mistral); AI enhancement is optional (OpenAI / Anthropic / Gemini); paste can be toggled off. The pipeline lives in the `useAudioRecording` hook on the frontend side, calling into Rust commands for each stage.
+Each stage is independently configurable: transcription can be local (whisper.cpp sidecar) or cloud (OpenAI / Groq / Mistral / Qwen / OpenRouter); AI enhancement is optional (OpenAI / Anthropic / Gemini / Groq / Qwen / OpenRouter); paste can be toggled off. The pipeline lives in the `useAudioRecording` hook on the frontend side, calling into Rust commands for each stage.
 
 ### 4. Dual-Window, Single App
 
@@ -104,8 +104,8 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 | Module | File(s) | Responsibility |
 |--------|---------|----------------|
 | **audio** | `audio/recorder.rs` | Device enumeration, recording lifecycle, sample-rate negotiation (16k → 44.1k → 48k → default), WAV encoding (16-bit PCM mono), audio-level events |
-| **transcription** | `transcription/whisper.rs`, `cloud.rs` | Local whisper.cpp sidecar invocation; cloud providers (OpenAI Whisper, Groq, Mistral Voxtral) via multipart HTTP |
-| **reasoning** | `reasoning/openai.rs`, `anthropic.rs`, `gemini.rs` | AI text enhancement. OpenAI tries Responses API then Chat Completions; Anthropic uses Messages API; Gemini uses Generative API |
+| **transcription** | `transcription/whisper.rs`, `cloud.rs` | Local whisper.cpp sidecar invocation; cloud providers (OpenAI, Groq, Mistral, Qwen, OpenRouter) — multipart HTTP or multimodal chat completions |
+| **reasoning** | `reasoning/openai.rs`, `anthropic.rs`, `gemini.rs` | AI text enhancement. OpenAI-compatible (OpenAI, Groq, Qwen, OpenRouter) via Chat Completions; Anthropic via Messages API; Gemini via Generative API |
 | **clipboard** | `clipboard/mod.rs` | Win32 clipboard get/set, foreground-window terminal detection, paste via `SendInput` with terminal-aware key combos |
 | **database** | `database/mod.rs`, `migrations.rs` | SQLite via rusqlite. Single `transcriptions` table. Auto-migrates on startup. `Mutex<Connection>` for thread safety |
 | **settings** | `commands/settings.rs` | Thin wrapper over `tauri-plugin-store` — get/set/get-all |
