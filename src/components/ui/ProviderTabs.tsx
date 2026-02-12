@@ -44,7 +44,7 @@ export function ProviderTabs({
     setIndicatorStyle({
       width: buttonRect.width,
       height: buttonRect.height,
-      transform: `translateX(${buttonRect.left - containerRect.left}px)`,
+      transform: `translate(${buttonRect.left - containerRect.left}px, ${buttonRect.top - containerRect.top}px)`,
       opacity: 1,
     });
   }, [providers, selectedId]);
@@ -62,7 +62,7 @@ export function ProviderTabs({
   return (
     <div
       ref={containerRef}
-      className="relative flex p-0.5 rounded-md bg-surface-1"
+      className="relative flex flex-wrap p-0.5 rounded-md bg-surface-1"
     >
       <div
         className="absolute top-0.5 left-0 rounded-md bg-primary/15 border border-primary/30 transition-all duration-200 ease-out pointer-events-none"
@@ -75,7 +75,7 @@ export function ProviderTabs({
             key={provider.id}
             data-tab-button
             onClick={() => onSelect(provider.id)}
-            className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md font-medium text-sm transition-all duration-150 border ${
+            className={`relative z-10 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md font-medium text-sm transition-all duration-150 border ${
               isSelected ? "text-primary font-semibold border-transparent" : "text-muted-foreground hover:text-foreground border-transparent"
             }`}
           >
