@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.10] - 2026-02-12
+
+### Fixes
+- Strengthened Simplified Chinese (简体中文) enforcement across all prompt paths with concrete character examples (国/说/会/时/对 vs 國/說/會/時/對)
+- Added mandatory Simplified Chinese rule to `CHAT_SYSTEM_PROMPT` (was missing — caused Traditional Chinese output in chat mode)
+- Reinforced `AUTO_DETECT_INSTRUCTION` and `INTERNAL_SYSTEM_PROMPT` with stronger "MUST/NEVER" wording and explicit character pairs
+
 ## [0.3.9] - 2026-02-12
 
 ### Improvements

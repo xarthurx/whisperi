@@ -53,7 +53,7 @@ const AUTO_DETECT_INSTRUCTION =
   "If the user spoke English, output English. If the user spoke Chinese, output Chinese. If the user spoke French, output French.\n" +
   "The system prompt may be written in any language — ignore its language entirely when deciding your output language.\n" +
   "Detect the language from the [TRANSCRIBED_SPEECH] content only. If the text contains multiple languages, use the dominant language.\n" +
-  "When outputting Chinese, always use Simplified Chinese characters (简体中文), not Traditional Chinese (繁體中文).\n" +
+  "IMPORTANT — CHINESE OUTPUT: When outputting Chinese, you MUST use Simplified Chinese characters (简体中文). NEVER use Traditional Chinese (繁體中文). This is mandatory — always output 简体字, never 繁體字. For example: use 国/说/会/时/对, NOT 國/說/會/時/對.\n" +
   "Preserve any technical terms or proper nouns as-is regardless of language.";
 
 export function getLanguageInstruction(language: string | undefined): string {

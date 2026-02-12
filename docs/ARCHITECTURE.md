@@ -125,9 +125,9 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 | | `hooks/useSettings.ts` | Load/save all settings from plugin-store with defaults |
 | | `hooks/useHotkey.ts` | Global shortcut registration, tap vs push-to-talk modes |
 | **Services** | `services/tauriApi.ts` | Typed `invoke()` wrappers for every Rust command, event listeners |
-| **Config** | `config/constants.ts`, `prompts.ts` | Default values, prompt templates with agent-name and language interpolation |
+| **Config** | `config/constants.ts`, `prompts.ts`, `promptData.json`, `languageRegistry.json` | Default values, prompt templates with agent-name and language interpolation, language-specific instructions |
 | **Models** | `models/modelRegistryData.json` | Static registry of all supported transcription and reasoning models per provider |
-| **Utils** | `utils/sounds.ts`, `languageSupport.ts` | Web Audio API tone generation (no static assets); Whisper language compatibility matrix |
+| **Utils** | `utils/sounds.ts`, `languageSupport.ts` | Web Audio API tone generation (no static assets); language support validation, auto-detect and per-language instruction assembly |
 | **UI Kit** | `components/ui/*` | shadcn/ui primitives (button, input, toggle, toast, settings section) |
 
 ---
@@ -294,12 +294,14 @@ whisperi/
 │   │   └── tauriApi.ts                # Typed Tauri command wrappers
 │   ├── config/
 │   │   ├── constants.ts               # App defaults
-│   │   └── prompts.ts                 # AI prompt templates
+│   │   ├── prompts.ts                 # AI prompt assembly (system + language + dictionary)
+│   │   ├── promptData.json            # System prompt templates (internal, user-visible, chat)
+│   │   └── languageRegistry.json      # Per-language instructions and punctuation rules
 │   ├── models/
 │   │   └── modelRegistryData.json     # Provider/model catalog
 │   └── utils/
 │       ├── sounds.ts                  # Web Audio tone generation
-│       └── languageSupport.ts         # Whisper language matrix
+│       └── languageSupport.ts         # Language support validation and instruction assembly
 │
 ├── src-tauri/                          # Backend
 │   ├── src/
