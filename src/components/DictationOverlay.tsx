@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen, emit } from "@tauri-apps/api/event";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
@@ -14,15 +14,8 @@ import { showSettings, quitApp } from "@/services/tauriApi";
 function DictationOverlayInner() {
   const { toast } = useToast();
 
-  const toastCallback = useCallback(
-    (props: { title: string; description: string; variant: "default" | "destructive" | "success" }) => {
-      toast(props);
-    },
-    [toast]
-  );
-
   const { phase, isRecording, isProcessing, audioLevel, start, stop, toggle, cancel } =
-    useAudioRecording({ onToast: toastCallback });
+    useAudioRecording({ onToast: toast });
 
   const { settings, loaded } = useSettings();
 
@@ -174,22 +167,16 @@ function DictationOverlayInner() {
                 : "Start recording"
           }
         >
-          {isProcessing ? (
-            <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center">
+            {isProcessing ? (
               <LoadingDots />
-            </div>
-          ) : isRecording ? (
-            <div className="flex items-center justify-center">
+            ) : (
               <Mic
-                className="w-7 h-7 text-destructive-foreground"
-                style={{ animation: "pulse-mic 1.2s ease-in-out infinite" }}
+                className={`w-7 h-7 ${isRecording ? "text-destructive-foreground" : "text-primary"}`}
+                style={isRecording ? { animation: "pulse-mic 1.2s ease-in-out infinite" } : undefined}
               />
-            </div>
-          ) : (
-            <div className="flex items-center justify-center">
-              <Mic className="w-7 h-7 text-primary" />
-            </div>
-          )}
+            )}
+          </div>
         </button>
       </div>
     </div>

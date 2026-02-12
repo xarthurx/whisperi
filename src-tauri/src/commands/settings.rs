@@ -21,11 +21,10 @@ pub fn set_setting(app: AppHandle, key: String, value: Value) -> Result<(), Stri
 #[tauri::command]
 pub fn get_all_settings(app: AppHandle) -> Result<Value, String> {
     let store = app.store(STORE_FILE).str_err()?;
-    let mut map = serde_json::Map::new();
-    for key in store.keys() {
-        if let Some(val) = store.get(&key) {
-            map.insert(key, val);
-        }
-    }
+    let map: serde_json::Map<String, Value> = store
+        .keys()
+        .into_iter()
+        .filter_map(|key| store.get(&key).map(|val| (key, val)))
+        .collect();
     Ok(Value::Object(map))
 }

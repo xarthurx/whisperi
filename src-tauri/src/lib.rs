@@ -113,7 +113,6 @@ pub fn run() {
             let show = CheckMenuItemBuilder::with_id("show", "Show Whisperi")
                 .checked(true)
                 .build(app)?;
-            let show_ref = show.clone();
             let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
@@ -136,11 +135,11 @@ pub fn run() {
                                 let visible = window.is_visible().unwrap_or(false);
                                 if visible {
                                     let _ = window.hide();
-                                    let _ = show_ref.set_checked(false);
+                                    let _ = show.set_checked(false);
                                 } else {
                                     let _ = window.show();
                                     let _ = window.set_focus();
-                                    let _ = show_ref.set_checked(true);
+                                    let _ = show.set_checked(true);
                                 }
                             }
                         }

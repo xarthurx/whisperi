@@ -138,8 +138,8 @@ async fn complete_responses(
         .filter_map(|item| item.content.as_ref())
         .flatten()
         .filter(|block| block.block_type == "output_text")
-        .filter_map(|block| block.text.clone())
-        .collect::<Vec<String>>()
+        .filter_map(|block| block.text.as_deref())
+        .collect::<Vec<_>>()
         .join("");
 
     Ok(text)

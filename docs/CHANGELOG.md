@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.4] - 2026-02-12
+
+### Features
+- Launch at startup toggle (General > Behavior) via `tauri-plugin-autostart`
+- Grouped startup, auto-paste, and sound toggles under unified "Behavior" section
+
+### Code simplification
+- Rust: extracted `set_recording_error()` helper, replaced 5 duplicated lock-set patterns
+- Rust: iterator-based collect in database and settings, removed redundant clones
+- Rust: used `as_deref()` instead of `.clone()` in reasoning filter chains
+- TypeScript: extracted shared `playTone()` in sounds.ts (40 → 20 lines)
+- TypeScript: added `API_KEY_MAP` helper to eliminate nested ternary chains in SettingsPanel
+- TypeScript: consolidated button icon rendering in DictationOverlay, removed unnecessary toast wrapper
+- Net reduction: −45 lines across 11 files
+
+### Build
+- Restricted Vite dep scanner to `index.html` entry point (prevents EMFILE errors from Rust doc HTML)
+
 ## [0.3.3] - 2026-02-11
 
 ### First-launch experience

@@ -42,7 +42,17 @@ Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, Rust, cp
 
 ## Workflow Rules
 
-- **Before version bump or tag creation** — update `docs/CHANGELOG.md` first
-- **Before context compression** — re-read and update `docs/CHANGELOG.md` with any work done so far
-- **After context compression** — re-read this file (`CLAUDE.md`) to restore project context
-- **End of each conversation** — update any relevant markdown files (`docs/CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/CONTINUE.md`) to reflect changes made during the session
+- **Version bump** — update `docs/CHANGELOG.md` first, then create a git tag (`vX.Y.Z`) after bumping
+- **Context compression** — re-read this file (`CLAUDE.md`) after compression to restore context
+- **End of conversation** — update relevant markdown files (`docs/CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/CONTINUE.md`) to reflect changes made
+
+### Superpowers Plugin Usage
+
+Use the superpowers skills at the appropriate workflow stages:
+
+- **New features / creative work** — `/brainstorm` first to explore requirements and design
+- **Non-trivial tasks** — `/write-plan` to create an implementation plan, then `/execute-plan` to execute it
+- **Debugging** — use `systematic-debugging` skill: gather evidence before attempting fixes
+- **Before claiming done** — use `verification-before-completion` skill: run checks and confirm output
+- **Multiple independent issues** — use `dispatching-parallel-agents` skill to investigate in parallel
+- **After completing a feature branch** — use `finishing-a-development-branch` skill for merge/PR/cleanup

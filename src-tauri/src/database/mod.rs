@@ -93,12 +93,7 @@ impl Database {
             })
         })?;
 
-        let mut transcriptions = Vec::new();
-        for row in rows {
-            transcriptions.push(row?);
-        }
-
-        Ok(transcriptions)
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
     pub fn delete_transcription(&self, id: i64) -> Result<()> {

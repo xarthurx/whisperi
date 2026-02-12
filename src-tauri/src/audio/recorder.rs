@@ -113,10 +113,11 @@ impl AudioRecorder {
         if let Ok(input_devices) = host.input_devices() {
             for (i, device) in input_devices.enumerate() {
                 let name = device.name().unwrap_or_else(|_| format!("Device {}", i));
+                let is_default = name == default_name;
                 devices.push(AudioDevice {
                     id: name.clone(),
-                    name: name.clone(),
-                    is_default: name == default_name,
+                    name,
+                    is_default,
                 });
             }
         }
@@ -198,9 +199,7 @@ impl AudioRecorder {
 
                 if result.is_err() {
                     log::error!("Audio recording thread panicked");
-                    if let Ok(mut err) = recording_error_thread.lock() {
-                        *err = Some("Recording thread panicked unexpectedly".to_string());
-                    }
+                    set_recording_error(&recording_error_thread, "Recording thread panicked unexpectedly".to_string());
                 }
 
                 // Always reset is_recording, even after panic
@@ -249,10 +248,7 @@ impl AudioRecorder {
             log::warn!("Device error during recording: {}", err_msg);
         }
 
-        let samples = {
-            let guard = state.samples.lock().unwrap();
-            guard.clone()
-        };
+        let samples = state.samples.lock().unwrap().clone();
 
         if samples.is_empty() {
             if state.get_error().is_some() {
@@ -320,6 +316,13 @@ struct RecordingThreadParams {
     recording_error: Arc<Mutex<Option<String>>>,
 }
 
+/// Store an error message in the shared recording error state.
+fn set_recording_error(recording_error: &Mutex<Option<String>>, msg: String) {
+    if let Ok(mut err) = recording_error.lock() {
+        *err = Some(msg);
+    }
+}
+
 /// The actual recording loop that runs on the dedicated thread.
 fn run_recording_thread(device: &cpal::Device, params: RecordingThreadParams) {
     let RecordingThreadParams {
@@ -336,10 +339,7 @@ fn run_recording_thread(device: &cpal::Device, params: RecordingThreadParams) {
 
     let err_callback = move |err: cpal::StreamError| {
         log::error!("Audio stream error: {}", err);
-        if let Ok(mut e) = error_flag.lock() {
-            *e = Some(format!("{}", err));
-        }
-        // Stop recording on device errors
+        set_recording_error(&error_flag, err.to_string());
         is_rec_err.store(false, Ordering::SeqCst);
     };
 
@@ -375,9 +375,7 @@ fn run_recording_thread(device: &cpal::Device, params: RecordingThreadParams) {
             device, &config, Arc::clone(&samples), Arc::clone(&peak_level), channels, err_callback,
         ),
         _ => {
-            if let Ok(mut e) = recording_error.lock() {
-                *e = Some(format!("Unsupported sample format: {:?}", sample_format));
-            }
+            set_recording_error(&recording_error, format!("Unsupported sample format: {:?}", sample_format));
             return;
         }
     };
@@ -386,18 +384,14 @@ fn run_recording_thread(device: &cpal::Device, params: RecordingThreadParams) {
         Ok(s) => s,
         Err(e) => {
             log::error!("Failed to build stream: {}", e);
-            if let Ok(mut err) = recording_error.lock() {
-                *err = Some(e.to_string());
-            }
+            set_recording_error(&recording_error, e.to_string());
             return;
         }
     };
 
     if let Err(e) = stream.play() {
         log::error!("Failed to play stream: {}", e);
-        if let Ok(mut err) = recording_error.lock() {
-            *err = Some(e.to_string());
-        }
+        set_recording_error(&recording_error, e.to_string());
         return;
     }
 

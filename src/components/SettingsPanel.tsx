@@ -271,6 +271,23 @@ function GeneralSection({ settings, update }: SectionProps) {
   );
 }
 
+const API_KEY_MAP: Record<string, keyof import("@/hooks/useSettings").Settings> = {
+  openai: "openaiApiKey",
+  anthropic: "anthropicApiKey",
+  gemini: "geminiApiKey",
+  groq: "groqApiKey",
+  mistral: "mistralApiKey",
+};
+
+function getApiKey(settings: import("@/hooks/useSettings").Settings, provider: string): string {
+  const key = API_KEY_MAP[provider];
+  return key ? (settings[key] as string) || "" : "";
+}
+
+function getApiKeyField(provider: string): keyof import("@/hooks/useSettings").Settings {
+  return API_KEY_MAP[provider] ?? "openaiApiKey";
+}
+
 function getTranscriptionProviders(settings: import("@/hooks/useSettings").Settings): ProviderTabItem[] {
   return [
     { id: "openai", name: "OpenAI", hasKey: !!settings.openaiApiKey },
@@ -320,20 +337,8 @@ function TranscriptionSection({ settings, update }: SectionProps) {
             ) : null;
           })()}
           <ApiKeyInput
-            apiKey={
-              settings.cloudTranscriptionProvider === "openai"
-                ? settings.openaiApiKey
-                : settings.cloudTranscriptionProvider === "groq"
-                  ? settings.groqApiKey
-                  : settings.mistralApiKey
-            }
-            setApiKey={(key) => {
-              const p = settings.cloudTranscriptionProvider;
-              update(
-                p === "openai" ? "openaiApiKey" : p === "groq" ? "groqApiKey" : "mistralApiKey",
-                key
-              );
-            }}
+            apiKey={getApiKey(settings, settings.cloudTranscriptionProvider)}
+            setApiKey={(key) => update(getApiKeyField(settings.cloudTranscriptionProvider), key)}
             placeholder="sk-..."
             label={`${settings.cloudTranscriptionProvider} API Key`}
             helpText={`Enter your ${settings.cloudTranscriptionProvider} API key`}
@@ -404,28 +409,8 @@ function AIModelsSection({ settings, update }: SectionProps) {
               ) : null;
             })()}
             <ApiKeyInput
-              apiKey={
-                settings.reasoningProvider === "openai"
-                  ? settings.openaiApiKey
-                  : settings.reasoningProvider === "anthropic"
-                    ? settings.anthropicApiKey
-                    : settings.reasoningProvider === "gemini"
-                      ? settings.geminiApiKey
-                      : settings.groqApiKey
-              }
-              setApiKey={(key) => {
-                const p = settings.reasoningProvider;
-                update(
-                  p === "openai"
-                    ? "openaiApiKey"
-                    : p === "anthropic"
-                      ? "anthropicApiKey"
-                      : p === "gemini"
-                        ? "geminiApiKey"
-                        : "groqApiKey",
-                  key
-                );
-              }}
+              apiKey={getApiKey(settings, settings.reasoningProvider)}
+              setApiKey={(key) => update(getApiKeyField(settings.reasoningProvider), key)}
               label={`${settings.reasoningProvider} API Key`}
               helpText={`Enter your ${settings.reasoningProvider} API key`}
             />

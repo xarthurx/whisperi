@@ -65,8 +65,8 @@ pub async fn complete(
         .content
         .iter()
         .filter(|block| block.block_type == "text")
-        .filter_map(|block| block.text.clone())
-        .collect::<Vec<String>>()
+        .filter_map(|block| block.text.as_deref())
+        .collect::<Vec<_>>()
         .join("");
 
     Ok(text)

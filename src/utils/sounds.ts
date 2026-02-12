@@ -7,7 +7,11 @@ function getAudioContext(): AudioContext {
   return audioCtx;
 }
 
-export function playStartSound(): void {
+function playTone(
+  startFreq: number,
+  endFreq: number,
+  duration: number,
+): void {
   try {
     const ctx = getAudioContext();
     const oscillator = ctx.createOscillator();
@@ -17,38 +21,23 @@ export function playStartSound(): void {
     gain.connect(ctx.destination);
 
     oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(600, ctx.currentTime);
-    oscillator.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.12);
+    oscillator.frequency.setValueAtTime(startFreq, ctx.currentTime);
+    oscillator.frequency.linearRampToValueAtTime(endFreq, ctx.currentTime + duration);
 
     gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
 
     oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.15);
+    oscillator.stop(ctx.currentTime + duration);
   } catch {
     // Audio not available, silently skip
   }
 }
 
+export function playStartSound(): void {
+  playTone(600, 900, 0.15);
+}
+
 export function playStopSound(): void {
-  try {
-    const ctx = getAudioContext();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(900, ctx.currentTime);
-    oscillator.frequency.linearRampToValueAtTime(500, ctx.currentTime + 0.15);
-
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
-
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.2);
-  } catch {
-    // Audio not available, silently skip
-  }
+  playTone(900, 500, 0.2);
 }

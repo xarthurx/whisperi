@@ -44,8 +44,5 @@ pub async fn download_file(
     // Rename .part to final destination
     tokio::fs::rename(&temp_dest, dest).await?;
 
-    // Final progress callback
-    on_progress(downloaded, total_size);
-
     Ok(())
 }
