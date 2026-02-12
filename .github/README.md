@@ -70,7 +70,7 @@ After testing across providers, the following combination delivers the best bala
 
 | Stage             | Provider | Model                  | Why                                                 |
 | ----------------- | -------- | ---------------------- | --------------------------------------------------- |
-| **Transcription** | Groq     | Whisper Large v3 Turbo | Fastest cloud transcription with excellent accuracy |
+| **Transcription** | Groq     | Whisper Large v3       | Highest accuracy cloud transcription at 299x real-time speed |
 | **Enhancement**   | Groq     | LLaMA 3.3 70B          | Best speed-to-quality ratio for text cleanup        |
 
 Both models run on Groq's inference engine, so you only need **a single API key**. Transcription + enhancement typically completes in **under 2 seconds** end-to-end.
@@ -84,7 +84,7 @@ If you need more sophisticated enhancement (complex restructuring, tone adjustme
 | Provider | Models                                             |
 | -------- | -------------------------------------------------- |
 | OpenAI   | GPT-4o Mini Transcribe, GPT-4o Transcribe, Whisper |
-| Groq     | Whisper Large v3 Turbo                             |
+| Groq     | Whisper Large v3, Whisper Large v3 Turbo            |
 | Mistral  | Voxtral Mini                                       |
 | Qwen     | Qwen3 ASR Flash                                    |
 | OpenRouter | Any model — enter `provider/model-name`          |

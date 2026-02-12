@@ -122,7 +122,13 @@
           "id": "whisper-large-v3-turbo",
           "name": "Whisper Large v3 Turbo",
           "params": "809M",
-          "description": "216x real-time speed"
+          "description": "216x real-time, good balance of speed and quality"
+        },
+        {
+          "id": "whisper-large-v3",
+          "name": "Whisper Large v3",
+          "params": "1.55B",
+          "description": "299x real-time, highest accuracy, multilingual"
         }
       ]
     },

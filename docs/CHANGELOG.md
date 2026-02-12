@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.9] - 2026-02-12
+
+### Improvements
+- Added Whisper Large v3 (1.55B) to Groq transcription model dropdown
+- Updated recommended transcription model to Whisper Large v3 (highest accuracy) in README
+
 ## [0.3.8] - 2026-02-12
 
 ### Features
