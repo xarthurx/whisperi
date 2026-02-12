@@ -294,6 +294,7 @@ function getTranscriptionProviders(settings: import("@/hooks/useSettings").Setti
     { id: "openai", name: "OpenAI", hasKey: !!settings.openaiApiKey },
     { id: "groq", name: "Groq", recommended: true, hasKey: !!settings.groqApiKey },
     { id: "mistral", name: "Mistral", hasKey: !!settings.mistralApiKey },
+    { id: "qwen", name: "Qwen", hasKey: !!settings.qwenApiKey },
   ];
 }
 

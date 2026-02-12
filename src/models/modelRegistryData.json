@@ -138,6 +138,23 @@
           "description": "Fast multilingual transcription, 13 languages"
         }
       ]
+    },
+    {
+      "id": "qwen",
+      "name": "Qwen",
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "models": [
+        {
+          "id": "sensevoice-v1",
+          "name": "SenseVoice",
+          "description": "High-accuracy multilingual ASR, excellent for CJK languages"
+        },
+        {
+          "id": "paraformer-v2",
+          "name": "Paraformer v2",
+          "description": "Optimized for Chinese and English transcription"
+        }
+      ]
     }
   ],
   "cloudProviders": [
