@@ -100,10 +100,10 @@ To use a custom prompt, go to **Settings > Enhancement > System Prompt**, switch
 
 Whisperi currently targets **Windows only**, but it is built with [Tauri](https://tauri.app/), which supports macOS and Linux as well. If you'd like to see support for other platforms, please [open an issue](https://github.com/xarthurx/whisperi/issues).
 
-In the meantime, check out these cross-platform alternatives:
+If you need **local/offline transcription** (no cloud API keys), check out these alternatives that bundle Whisper models for on-device processing:
 
-- [OpenWhispr](https://openwhispr.com) — cross-platform dictation tool
-- [Whispering](https://github.com/EpicenterHQ/epicenter) — open-source speech-to-text
+- [OpenWhispr](https://openwhispr.com) — cross-platform dictation with local and cloud models
+- [Epicenter (formerly Whispering)](https://github.com/EpicenterHQ/epicenter) — local-first open-source speech-to-text ecosystem
 
 ## Contributing
 
