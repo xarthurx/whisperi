@@ -18,6 +18,11 @@ import {
 import { getSystemPrompt, getChatSystemPrompt, getUserPrompt, detectChatMode } from "@/config/prompts";
 import { playStartSound, playStopSound } from "@/utils/sounds";
 
+/** Strip <think>...</think> blocks from reasoning model output. */
+function stripThinkTags(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+}
+
 type RecordingPhase = "idle" | "recording" | "processing";
 
 interface UseAudioRecordingOptions {
@@ -166,6 +171,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
 
       // AI reasoning (post-processing)
       let finalText = rawText;
+      let rawAiResponse: string | null = null;
       if (useReasoning && reasoningModel && reasoningProvider) {
         try {
           const rApiKey = await getApiKey(reasoningProvider);
@@ -176,13 +182,14 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
               : getSystemPrompt(agentName, dictionary, language ?? undefined,
                   useCustomPrompt && customSystemPrompt ? customSystemPrompt : undefined);
             const userPrompt = getUserPrompt(rawText);
-            finalText = await processReasoning(
+            rawAiResponse = await processReasoning(
               userPrompt,
               reasoningModel,
               reasoningProvider,
               systemPrompt,
               rApiKey
             );
+            finalText = stripThinkTags(rawAiResponse);
           }
         } catch (e) {
           console.warn("Reasoning failed, using raw transcription:", e);
@@ -190,8 +197,9 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       }
 
       // In debug mode, output both raw and enhanced with labels
+      // Show the raw AI response (with <think> tags) so the user can inspect reasoning
       const outputText = debugMode && finalText !== rawText
-        ? `[Transcription]\n${rawText}\n\n[Enhanced]\n${finalText}`
+        ? `[Transcription]\n${rawText}\n\n[Enhanced]\n${finalText}${rawAiResponse && rawAiResponse !== finalText ? `\n\n[Raw AI Response]\n${rawAiResponse}` : ""}`
         : finalText;
 
       setTranscript(outputText);
