@@ -3,19 +3,22 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen, emit } from "@tauri-apps/api/event";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { check } from "@tauri-apps/plugin-updater";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 import { Mic } from "lucide-react";
 import { useAudioRecording } from "@/hooks/useAudioRecording";
 import { useSettings } from "@/hooks/useSettings";
 import { useHotkey } from "@/hooks/useHotkey";
-import { useToast, ToastProvider } from "@/components/ui/Toast";
 import { LoadingDots } from "@/components/ui/LoadingDots";
 import { showSettings, quitApp } from "@/services/tauriApi";
 
 function DictationOverlayInner() {
-  const { toast } = useToast();
+  // Use native OS notifications instead of in-window toasts (overlay is too small)
+  const notifyError = useCallback((props: { title?: string; description?: string }) => {
+    sendNotification({ title: props.title ?? "Whisperi", body: props.description ?? "" });
+  }, []);
 
   const { phase, isRecording, isProcessing, audioLevel, start, stop, toggle, cancel } =
-    useAudioRecording({ onToast: toast });
+    useAudioRecording({ onToast: notifyError });
 
   const { settings, loaded } = useSettings();
 
@@ -191,9 +194,5 @@ function DictationOverlayInner() {
 }
 
 export default function DictationOverlay() {
-  return (
-    <ToastProvider>
-      <DictationOverlayInner />
-    </ToastProvider>
-  );
+  return <DictationOverlayInner />;
 }

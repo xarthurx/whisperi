@@ -151,6 +151,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         const provider = cloudProvider ?? "openai";
         const apiKey = await getApiKey(provider);
         if (!apiKey) {
+          console.warn(`[Whisperi] No API key for transcription provider: ${provider}`);
           onToast?.({
             title: "API Key Missing",
             description: `No API key configured for ${provider}. Set it in Settings.`,
@@ -159,15 +160,18 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
           setPhase("idle");
           return;
         }
+        const model = cloudModel ?? "gpt-4o-mini-transcribe";
+        console.log(`[Whisperi] Transcribing with ${provider}/${model}...`);
         rawText = await transcribeCloud(
           audioData,
           provider,
           apiKey,
-          cloudModel ?? "gpt-4o-mini-transcribe",
+          model,
           language ?? undefined,
           transcriptionDict
         );
       }
+      console.log("[Whisperi] Transcription:", rawText);
 
       // AI reasoning (post-processing)
       let finalText = rawText;
@@ -176,6 +180,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         try {
           const rApiKey = await getApiKey(reasoningProvider);
           if (rApiKey) {
+            console.log(`[Whisperi] Enhancing with ${reasoningProvider}/${reasoningModel}...`);
             const isChatMode = detectChatMode(rawText, agentName, agentAliases);
             const systemPrompt = isChatMode
               ? getChatSystemPrompt(agentName, dictionary, language ?? undefined)
@@ -190,9 +195,12 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
               rApiKey
             );
             finalText = stripThinkTags(rawAiResponse);
+            console.log("[Whisperi] Enhanced:", finalText);
+          } else {
+            console.warn(`[Whisperi] No API key for enhancement provider: ${reasoningProvider}`);
           }
         } catch (e) {
-          console.warn("Reasoning failed, using raw transcription:", e);
+          console.error("[Whisperi] Enhancement error:", e);
           if (debugMode) {
             finalText = `${rawText}\n\n[Enhancement Error]\n${e}`;
           }
@@ -223,6 +231,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
 
       setPhase("idle");
     } catch (e) {
+      console.error("[Whisperi] Transcription failed:", e);
       onToast?.({
         title: "Transcription Failed",
         description: String(e),
