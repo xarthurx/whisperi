@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.6] - 2026-02-12
+
+### Improvements
+- Improved custom dictionary prompt: enhancement model now actively corrects phonetically similar mistranscriptions (e.g. "cloud" → "CLAUDE")
+
+### UI
+- Added GitHub badges (CI, release, license, platform, Tauri) to README header
+- Added update-available yellow dot on overlay mic button
+- Increased text sizes in overlay-states SVG diagram
+
 ## [0.3.5] - 2026-02-12
 
 ### Fixes
