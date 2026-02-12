@@ -40,7 +40,7 @@ fn override_min_window_size(window: &tauri::WebviewWindow, logical_w: i32, logic
         hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM,
     ) -> LRESULT {
         if msg == WM_GETMINMAXINFO && lparam.0 != 0 {
-            let info = &mut *(lparam.0 as *mut MINMAXINFO);
+            let info = unsafe { &mut *(lparam.0 as *mut MINMAXINFO) };
             let dpi = unsafe { GetDpiForWindow(hwnd) };
             let scale = dpi as f64 / 96.0;
             info.ptMinTrackSize.x = (MIN_W.load(Ordering::Relaxed) as f64 * scale) as i32;
