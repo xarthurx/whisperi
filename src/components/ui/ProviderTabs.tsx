@@ -59,10 +59,12 @@ export function ProviderTabs({
     return () => observer.disconnect();
   }, [updateIndicator]);
 
+  const multiRow = providers.length > 4;
+
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-wrap gap-y-1 p-0.5 rounded-md bg-surface-1"
+      className={`relative flex p-0.5 rounded-md bg-surface-1 ${multiRow ? "flex-wrap gap-y-1" : ""}`}
     >
       <div
         className="absolute top-0.5 left-0 rounded-md bg-primary/15 border border-primary/30 transition-all duration-200 ease-out pointer-events-none"
@@ -77,7 +79,8 @@ export function ProviderTabs({
             onClick={() => onSelect(provider.id)}
             className={`relative z-10 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md font-medium text-sm transition-all duration-150 border ${
               isSelected ? "text-primary font-semibold border-transparent" : "text-muted-foreground hover:text-foreground border-transparent"
-            }`}
+            } ${multiRow ? "" : "flex-1"}`}
+            style={multiRow ? { flex: "1 1 30%" } : undefined}
           >
             {renderIcon ? renderIcon(provider.id) : <ProviderIcon provider={provider.id} className="w-4 h-4" />}
             <span>{provider.name}</span>
