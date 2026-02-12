@@ -418,7 +418,11 @@ function AIModelsSection({ settings, update }: SectionProps) {
             {settings.reasoningProvider === "openrouter" ? (
               <p className="text-xs text-muted-foreground -mt-1 text-right">
                 Enter any model from{" "}
-                <span className="text-primary">openrouter.ai/models</span>
+                <button
+                  type="button"
+                  onClick={() => import("@tauri-apps/plugin-opener").then((m) => m.openUrl("https://openrouter.ai/models"))}
+                  className="text-primary hover:underline cursor-pointer"
+                >openrouter.ai/models</button>
                 {" "}in <code className="text-primary/80">provider/model-name</code> format
               </p>
             ) : (() => {
