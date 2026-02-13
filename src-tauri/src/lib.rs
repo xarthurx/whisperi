@@ -47,6 +47,21 @@ fn override_min_window_size(window: &tauri::WebviewWindow, logical_w: i32, logic
             info.ptMinTrackSize.y = (MIN_H.load(Ordering::Relaxed) as f64 * scale) as i32;
             return LRESULT(0);
         }
+        // After sleep/wake the compositor drops the transparent window surface.
+        // Re-assert the window state so DWM redraws it.
+        const PBT_APMRESUMEAUTOMATIC: usize = 0x0012;
+        if msg == WM_POWERBROADCAST && wparam.0 == PBT_APMRESUMEAUTOMATIC {
+            if unsafe { IsWindowVisible(hwnd) }.as_bool() {
+                let _ = unsafe {
+                    SetWindowPos(
+                        hwnd,
+                        HWND_TOPMOST,
+                        0, 0, 0, 0,
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+                    )
+                };
+            }
+        }
         let old: WNDPROC = unsafe { std::mem::transmute(OLD_WNDPROC.load(Ordering::Relaxed)) };
         unsafe { CallWindowProcW(old, hwnd, msg, wparam, lparam) }
     }
