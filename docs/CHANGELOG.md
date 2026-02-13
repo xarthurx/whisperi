@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.1] - 2026-02-12
+
+### Fixes
+- Fixed overlay window disappearing after sleep/wake: intercept `WM_POWERBROADCAST` to re-assert window state and force compositor redraw
+- Disabled default browser context menu in settings window
+
 ## [0.4.0] - 2026-02-12
 
 ### Fixes
