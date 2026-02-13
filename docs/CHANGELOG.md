@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.1] - 2026-02-12
+## [0.4.1] - 2026-02-13
 
 ### Fixes
 - Fixed overlay window disappearing after sleep/wake: intercept `WM_POWERBROADCAST` to re-assert window state and force compositor redraw
