@@ -97,7 +97,7 @@ function SettingsPanelInner() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background" onContextMenu={(e) => e.preventDefault()}>
       {/* Custom titlebar */}
       <div
         data-tauri-drag-region
