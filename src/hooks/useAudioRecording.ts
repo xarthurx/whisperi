@@ -23,6 +23,22 @@ function stripThinkTags(text: string): string {
   return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 }
 
+/** Check if transcription is empty or just dictionary words echoed back (Whisper hallucination on silence). */
+function isEmptyTranscription(text: string, dictionary: string[]): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  if (dictionary.length === 0) return false;
+
+  // Normalize: lowercase, strip punctuation, split into words
+  const normalize = (s: string) =>
+    s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").split(/\s+/).filter(Boolean);
+  const textWords = normalize(trimmed);
+  if (textWords.length === 0) return true;
+
+  const dictWords = new Set(dictionary.flatMap((entry) => normalize(entry)));
+  return textWords.every((w) => dictWords.has(w));
+}
+
 type RecordingPhase = "idle" | "recording" | "processing";
 
 interface UseAudioRecordingOptions {
@@ -172,6 +188,13 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         );
       }
       console.log("[Whisperi] Transcription:", rawText);
+
+      // Skip when transcription is empty or just dictionary words echoed back (silence hallucination)
+      if (isEmptyTranscription(rawText, transcriptionDict)) {
+        console.log("[Whisperi] Empty transcription (silence or dictionary echo), skipping.");
+        setPhase("idle");
+        return;
+      }
 
       // AI reasoning (post-processing)
       let finalText = rawText;
