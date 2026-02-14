@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import DictationOverlay from "@/components/DictationOverlay";
-import SettingsPanel from "@/components/SettingsPanel";
+import SettingsPanel from "@/components/settings/SettingsPanel";
 
 type AppView = "overlay" | "settings";
 
