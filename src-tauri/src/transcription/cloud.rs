@@ -8,6 +8,16 @@ struct TranscriptionResponse {
     text: String,
 }
 
+/// Log transcription result with a note when likely no voice was detected.
+fn log_transcription_result(provider: &str, text: &str) {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        log::warn!("[Whisperi] {} transcription result: empty (no voice detected)", provider);
+    } else {
+        log::info!("[Whisperi] {} transcription result: {} chars", provider, text.len());
+    }
+}
+
 /// Transcribe audio via OpenAI Whisper API
 pub async fn transcribe_openai(
     audio_data: Vec<u8>,
@@ -58,7 +68,7 @@ pub async fn transcribe_openai(
     }
 
     let result: TranscriptionResponse = response.json().await?;
-    log::info!("[Whisperi] Transcription result: {} chars", result.text.len());
+    log_transcription_result("Cloud", &result.text);
     Ok(result.text)
 }
 
@@ -165,6 +175,7 @@ pub async fn transcribe_qwen(
         .and_then(|c| c.message.content.clone())
         .unwrap_or_default();
 
+    log_transcription_result("Qwen", &text);
     Ok(text)
 }
 
@@ -266,7 +277,7 @@ pub async fn transcribe_openrouter(
         .and_then(|c| c.message.content.clone())
         .unwrap_or_default();
 
-    log::info!("[Whisperi] OpenRouter transcription result: {:?}", text);
+    log_transcription_result("OpenRouter", &text);
     Ok(text)
 }
 

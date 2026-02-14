@@ -85,6 +85,7 @@ pub fn run() {
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
                 .level_for("tao", log::LevelFilter::Error)
+                .with_colors(tauri_plugin_log::fern::colors::ColoredLevelConfig::default())
                 .build(),
         )
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {

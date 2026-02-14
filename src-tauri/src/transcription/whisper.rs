@@ -82,6 +82,11 @@ pub async fn transcribe(
     }
 
     let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if text.is_empty() {
+        log::warn!("[Whisperi] Local transcription result: empty (no voice detected)");
+    } else {
+        log::info!("[Whisperi] Local transcription result: {} chars", text.len());
+    }
     Ok(text)
 }
 
