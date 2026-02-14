@@ -2,26 +2,20 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   startRecording as apiStartRecording,
   stopRecording as apiStopRecording,
-  transcribeLocal,
-  transcribeCloud,
-  processReasoning,
   pasteText,
   onAudioLevel,
   onRecordingError,
-  getApiKey,
-  getAgentName,
-  getAgentAliases,
-  getCustomDictionary,
   getSetting,
   saveTranscription,
 } from "@/services/tauriApi";
-import { getSystemPrompt, getChatSystemPrompt, getUserPrompt, detectChatMode } from "@/config/prompts";
 import { playStartSound, playStopSound } from "@/utils/sounds";
-
-/** Strip <think>...</think> blocks from reasoning model output. */
-function stripThinkTags(text: string): string {
-  return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-}
+import {
+  loadTranscriptionSettings,
+  buildTranscriptionDictionary,
+  transcribe,
+  enhance,
+  formatOutput,
+} from "./useTranscriptionPipeline";
 
 /** Check if transcription is empty or just dictionary words echoed back (Whisper hallucination on silence). */
 function isEmptyTranscription(text: string, dictionary: string[]): boolean {
@@ -111,145 +105,46 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       const audioData = await apiStopRecording();
       setAudioLevel(0);
 
-      // Load settings for transcription
-      const [
-        useLocal,
-        whisperModel,
-        cloudProvider,
-        cloudModel,
-        language,
-        dictionary,
-        useReasoning,
-        reasoningModel,
-        reasoningProvider,
-        autoPaste,
-        useCustomPrompt,
-        customSystemPrompt,
-        agentName,
-        agentAliases,
-        debugMode,
-      ] = await Promise.all([
-        getSetting<boolean>("useLocalWhisper"),
-        getSetting<string>("whisperModel"),
-        getSetting<string>("cloudTranscriptionProvider"),
-        getSetting<string>("cloudTranscriptionModel"),
-        getSetting<string>("preferredLanguage"),
-        getCustomDictionary(),
-        getSetting<boolean>("useReasoningModel"),
-        getSetting<string>("reasoningModel"),
-        getSetting<string>("reasoningProvider"),
-        getSetting<boolean>("autoPaste"),
-        getSetting<boolean>("useCustomPrompt"),
-        getSetting<string>("customSystemPrompt"),
-        getAgentName(),
-        getAgentAliases(),
-        getSetting<boolean>("debugMode"),
-      ]);
+      const settings = await loadTranscriptionSettings();
+      const transcriptionDict = buildTranscriptionDictionary(
+        settings.dictionary, settings.agentName, settings.agentAliases,
+      );
 
-      // Include agent name + aliases in transcription dictionary so STT recognizes them
-      const extraWords = [agentName, ...agentAliases]
-        .filter((w): w is string => !!w?.trim())
-        .filter((w) => !dictionary.includes(w));
-      const transcriptionDict = extraWords.length > 0
-        ? [...dictionary, ...extraWords]
-        : dictionary;
-
-      // Transcribe
-      let rawText: string;
-      if (useLocal) {
-        rawText = await transcribeLocal(
-          audioData,
-          whisperModel ?? "base",
-          language ?? undefined,
-          transcriptionDict
-        );
-      } else {
-        const provider = cloudProvider ?? "openai";
-        const apiKey = await getApiKey(provider);
-        if (!apiKey) {
-          console.warn(`[Whisperi] No API key for transcription provider: ${provider}`);
-          onToast?.({
-            title: "API Key Missing",
-            description: `No API key configured for ${provider}. Set it in Settings.`,
-            variant: "destructive",
-          });
-          setPhase("idle");
-          return;
-        }
-        const model = cloudModel ?? "gpt-4o-mini-transcribe";
-        console.log(`[Whisperi] Transcribing with ${provider}/${model}...`);
-        rawText = await transcribeCloud(
-          audioData,
-          provider,
-          apiKey,
-          model,
-          language ?? undefined,
-          transcriptionDict
-        );
-      }
+      const rawText = await transcribe(audioData, settings, transcriptionDict);
       console.log("[Whisperi] Transcription:", rawText);
 
-      // Skip when transcription is empty or just dictionary words echoed back (silence hallucination)
       if (isEmptyTranscription(rawText, transcriptionDict)) {
         console.log("[Whisperi] Empty transcription (silence or dictionary echo), skipping.");
         setPhase("idle");
         return;
       }
 
-      // AI reasoning (post-processing)
       let finalText = rawText;
       let rawAiResponse: string | null = null;
-      if (useReasoning && reasoningModel && reasoningProvider) {
-        try {
-          const rApiKey = await getApiKey(reasoningProvider);
-          if (rApiKey) {
-            console.log(`[Whisperi] Enhancing with ${reasoningProvider}/${reasoningModel}...`);
-            const isChatMode = detectChatMode(rawText, agentName, agentAliases);
-            const systemPrompt = isChatMode
-              ? getChatSystemPrompt(agentName, dictionary, language ?? undefined)
-              : getSystemPrompt(agentName, dictionary, language ?? undefined,
-                  useCustomPrompt && customSystemPrompt ? customSystemPrompt : undefined);
-            const userPrompt = getUserPrompt(rawText);
-            rawAiResponse = await processReasoning(
-              userPrompt,
-              reasoningModel,
-              reasoningProvider,
-              systemPrompt,
-              rApiKey
-            );
-            finalText = stripThinkTags(rawAiResponse);
-            console.log("[Whisperi] Enhanced:", finalText);
-          } else {
-            console.warn(`[Whisperi] No API key for enhancement provider: ${reasoningProvider}`);
-          }
-        } catch (e) {
-          console.error("[Whisperi] Enhancement error:", e);
-          if (debugMode) {
-            finalText = `${rawText}\n\n[Enhancement Error]\n${e}`;
-          }
+      try {
+        const result = await enhance(rawText, settings, settings.dictionary);
+        finalText = result.finalText;
+        rawAiResponse = result.rawAiResponse;
+      } catch (e) {
+        console.error("[Whisperi] Enhancement error:", e);
+        if (settings.debugMode) {
+          finalText = `${rawText}\n\n[Enhancement Error]\n${e}`;
         }
       }
 
-      // In debug mode, output both raw and enhanced with labels
-      // Show the raw AI response (with <think> tags) so the user can inspect reasoning
-      const outputText = debugMode && finalText !== rawText
-        ? `[Transcription]\n${rawText}\n\n[Enhanced]\n${finalText}${rawAiResponse && rawAiResponse !== finalText ? `\n\n[Raw AI Response]\n${rawAiResponse}` : ""}`
-        : finalText;
-
+      const outputText = formatOutput(rawText, finalText, rawAiResponse, !!settings.debugMode);
       setTranscript(outputText);
 
-      // Copy to clipboard and paste into focused app (if enabled)
-      if (autoPaste !== false) {
+      if (settings.autoPaste !== false) {
         await pasteText(outputText);
       }
 
-      // Save to database
       await saveTranscription(
         rawText,
         finalText !== rawText ? finalText : null,
-        useReasoning ? "ai" : "none",
-        agentName,
-        null
+        settings.useReasoning ? "ai" : "none",
+        settings.agentName,
+        null,
       );
 
       setPhase("idle");
