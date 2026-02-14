@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2] - 2026-02-14
+
+### Improvements
+- Added WARN-level "no voice detected" log message when transcription returns empty text (cloud, Qwen, OpenRouter, and local whisper paths)
+- Enabled colored console logging via `tauri-plugin-log` `colored` feature — log levels (ERROR, WARN, INFO) now render with ANSI colors in the terminal
+- Added consistent `log_transcription_result()` helper across all cloud transcription providers (was missing for Qwen)
+
 ## [0.4.1] - 2026-02-13
 
 ### Fixes
