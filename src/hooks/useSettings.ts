@@ -86,6 +86,18 @@ const DEFAULTS: Settings = {
   openrouterApiKey: "",
 };
 
+/** Keys stored via setSetting() (not special handlers like agent name / API keys). */
+const STORE_KEYS = [
+  "useLocalWhisper", "whisperModel", "preferredLanguage",
+  "cloudTranscriptionProvider", "cloudTranscriptionModel",
+  "useReasoningModel", "reasoningModel", "reasoningProvider",
+  "useCustomPrompt", "customSystemPrompt",
+  "autoPaste", "soundEnabled", "dictationKey", "activationMode",
+  "selectedMicDeviceId", "debugMode",
+] as const satisfies readonly (keyof Settings)[];
+
+const API_PROVIDERS = ["openai", "anthropic", "gemini", "groq", "mistral", "qwen", "openrouter"] as const;
+
 export function useSettings() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [loaded, setLoaded] = useState(false);
@@ -95,117 +107,43 @@ export function useSettings() {
     let cancelled = false;
 
     async function load() {
-      const [
-        useLocalWhisper,
-        whisperModel,
-        preferredLanguage,
-        cloudTranscriptionProvider,
-        cloudTranscriptionModel,
-        useReasoningModel,
-        reasoningModel,
-        reasoningProvider,
-        useCustomPrompt,
-        customSystemPrompt,
-        autoPaste,
-        soundEnabled,
-        dictationKey,
-        activationMode,
-        selectedMicDeviceId,
-        debugMode,
-        agentNameVal,
-        agentAliases,
-        customDictionary,
-        openaiApiKey,
-        anthropicApiKey,
-        geminiApiKey,
-        groqApiKey,
-        mistralApiKey,
-        qwenApiKey,
-        openrouterApiKey,
-      ] = await Promise.all([
-        getSetting<boolean>("useLocalWhisper"),
-        getSetting<string>("whisperModel"),
-        getSetting<string>("preferredLanguage"),
-        getSetting<string>("cloudTranscriptionProvider"),
-        getSetting<string>("cloudTranscriptionModel"),
-        getSetting<boolean>("useReasoningModel"),
-        getSetting<string>("reasoningModel"),
-        getSetting<string>("reasoningProvider"),
-        getSetting<boolean>("useCustomPrompt"),
-        getSetting<string>("customSystemPrompt"),
-        getSetting<boolean>("autoPaste"),
-        getSetting<boolean>("soundEnabled"),
-        getSetting<string>("dictationKey"),
-        getSetting<"tap" | "push">("activationMode"),
-        getSetting<string>("selectedMicDeviceId"),
-        getSetting<boolean>("debugMode"),
+      // Fetch store-backed settings in parallel
+      const storeResults = await Promise.all(
+        STORE_KEYS.map((key) => getSetting<Settings[typeof key]>(key)),
+      );
+
+      // Fetch special settings
+      const [agentNameVal, agentAliases, customDictionary, ...apiKeys] = await Promise.all([
         getAgentName(),
         getAgentAliases(),
         getCustomDictionary(),
-        getApiKey("openai"),
-        getApiKey("anthropic"),
-        getApiKey("gemini"),
-        getApiKey("groq"),
-        getApiKey("mistral"),
-        getApiKey("qwen"),
-        getApiKey("openrouter"),
+        ...API_PROVIDERS.map((p) => getApiKey(p)),
       ]);
 
       if (cancelled) return;
 
-      const resolved: Settings = {
-        useLocalWhisper: useLocalWhisper ?? DEFAULTS.useLocalWhisper,
-        whisperModel: whisperModel ?? DEFAULTS.whisperModel,
-        preferredLanguage: preferredLanguage ?? DEFAULTS.preferredLanguage,
-        cloudTranscriptionProvider: cloudTranscriptionProvider ?? DEFAULTS.cloudTranscriptionProvider,
-        cloudTranscriptionModel: cloudTranscriptionModel ?? DEFAULTS.cloudTranscriptionModel,
-        useReasoningModel: useReasoningModel ?? DEFAULTS.useReasoningModel,
-        reasoningModel: reasoningModel ?? DEFAULTS.reasoningModel,
-        reasoningProvider: reasoningProvider ?? DEFAULTS.reasoningProvider,
-        useCustomPrompt: useCustomPrompt ?? DEFAULTS.useCustomPrompt,
-        customSystemPrompt: customSystemPrompt ?? DEFAULTS.customSystemPrompt,
-        autoPaste: autoPaste ?? DEFAULTS.autoPaste,
-        soundEnabled: soundEnabled ?? DEFAULTS.soundEnabled,
-        dictationKey: dictationKey ?? DEFAULTS.dictationKey,
-        activationMode: activationMode ?? DEFAULTS.activationMode,
-        selectedMicDeviceId: selectedMicDeviceId ?? DEFAULTS.selectedMicDeviceId,
-        debugMode: debugMode ?? DEFAULTS.debugMode,
-        agentName: agentNameVal,
-        agentAliases,
-        customDictionary,
-        openaiApiKey,
-        anthropicApiKey,
-        geminiApiKey,
-        groqApiKey,
-        mistralApiKey,
-        qwenApiKey,
-        openrouterApiKey,
-      };
+      // Build resolved settings object
+      const resolved: Settings = { ...DEFAULTS };
+      STORE_KEYS.forEach((key, i) => {
+        if (storeResults[i] != null) {
+          (resolved as unknown as Record<string, unknown>)[key] = storeResults[i];
+        }
+      });
+      resolved.agentName = agentNameVal;
+      resolved.agentAliases = agentAliases;
+      resolved.customDictionary = customDictionary;
+      API_PROVIDERS.forEach((provider, i) => {
+        (resolved as unknown as Record<string, unknown>)[`${provider}ApiKey`] = apiKeys[i];
+      });
 
       // Persist defaults to store for keys that were missing, so the
       // recording pipeline (which reads from the store independently)
       // always sees the same values the UI shows.
-      const keysToCheck: { stored: unknown; key: keyof Settings }[] = [
-        { stored: useLocalWhisper, key: "useLocalWhisper" },
-        { stored: whisperModel, key: "whisperModel" },
-        { stored: preferredLanguage, key: "preferredLanguage" },
-        { stored: cloudTranscriptionProvider, key: "cloudTranscriptionProvider" },
-        { stored: cloudTranscriptionModel, key: "cloudTranscriptionModel" },
-        { stored: useReasoningModel, key: "useReasoningModel" },
-        { stored: reasoningModel, key: "reasoningModel" },
-        { stored: reasoningProvider, key: "reasoningProvider" },
-        { stored: useCustomPrompt, key: "useCustomPrompt" },
-        { stored: customSystemPrompt, key: "customSystemPrompt" },
-        { stored: autoPaste, key: "autoPaste" },
-        { stored: soundEnabled, key: "soundEnabled" },
-        { stored: debugMode, key: "debugMode" },
-        { stored: activationMode, key: "activationMode" },
-      ];
-      for (const { stored, key } of keysToCheck) {
-        if (stored == null) {
+      STORE_KEYS.forEach((key, i) => {
+        if (storeResults[i] == null) {
           setSetting(key, resolved[key]);
         }
-      }
+      });
 
       setSettings(resolved);
       setLoaded(true);
