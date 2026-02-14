@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.3] - 2026-02-14
+
+### Refactoring
+- Extracted shared HTTP helper (`http.rs`) with `check_response()` to deduplicate error handling across 4 Rust modules
+- Deduplicated `ChatCompletionsResponse` types into shared struct in `http.rs`
+- Split `useAudioRecording` hook — extracted transcription pipeline logic into `useTranscriptionPipeline.ts`
+- Split 829-line `SettingsPanel.tsx` into 7 focused section components under `components/settings/`
+- Extracted shared `ProviderModelSelector` component to deduplicate provider/model UI
+- Deduplicated prompt building with `appendPromptExtras()` helper in `prompts.ts`
+- Simplified settings loading with data-driven `STORE_KEYS` array in `useSettings.ts`
+
 ## [0.4.2] - 2026-02-14
 
 ### Improvements
