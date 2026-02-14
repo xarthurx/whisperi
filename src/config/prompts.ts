@@ -23,6 +23,23 @@ export function detectChatMode(text: string, agentName: string | null, aliases?:
   return false;
 }
 
+/** Append optional language instruction and dictionary to a base prompt. */
+function appendPromptExtras(
+  prompt: string,
+  customDictionary?: string[],
+  language?: string,
+): string {
+  let result = prompt;
+  const langInstruction = getLanguageInstruction(language);
+  if (langInstruction) {
+    result += "\n\n" + langInstruction;
+  }
+  if (customDictionary && customDictionary.length > 0) {
+    result += DICTIONARY_SUFFIX + customDictionary.join(", ");
+  }
+  return result;
+}
+
 /**
  * Build the system prompt for AI reasoning (cleanup mode).
  * The internal system prompt is always prepended (never shown to users).
@@ -35,24 +52,10 @@ export function getSystemPrompt(
   customPrompt?: string,
 ): string {
   const name = agentName?.trim() || "Assistant";
-
-  // Internal prompt: always included, never user-visible
-  let prompt = INTERNAL_SYSTEM_PROMPT.replace(/\{\{agentName\}\}/g, name);
-
-  // User-facing prompt: default or custom
   const userPart = customPrompt || USER_VISIBLE_PROMPT;
-  prompt += "\n\n" + userPart.replace(/\{\{agentName\}\}/g, name);
-
-  const langInstruction = getLanguageInstruction(language);
-  if (langInstruction) {
-    prompt += "\n\n" + langInstruction;
-  }
-
-  if (customDictionary && customDictionary.length > 0) {
-    prompt += DICTIONARY_SUFFIX + customDictionary.join(", ");
-  }
-
-  return prompt;
+  const prompt = INTERNAL_SYSTEM_PROMPT.replace(/\{\{agentName\}\}/g, name)
+    + "\n\n" + userPart.replace(/\{\{agentName\}\}/g, name);
+  return appendPromptExtras(prompt, customDictionary, language);
 }
 
 /**
@@ -65,19 +68,8 @@ export function getChatSystemPrompt(
   language?: string,
 ): string {
   const name = agentName?.trim() || "Assistant";
-
-  let prompt = CHAT_SYSTEM_PROMPT.replace(/\{\{agentName\}\}/g, name);
-
-  const langInstruction = getLanguageInstruction(language);
-  if (langInstruction) {
-    prompt += "\n\n" + langInstruction;
-  }
-
-  if (customDictionary && customDictionary.length > 0) {
-    prompt += DICTIONARY_SUFFIX + customDictionary.join(", ");
-  }
-
-  return prompt;
+  const prompt = CHAT_SYSTEM_PROMPT.replace(/\{\{agentName\}\}/g, name);
+  return appendPromptExtras(prompt, customDictionary, language);
 }
 
 export function getUserPrompt(text: string): string {
