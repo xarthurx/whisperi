@@ -52,21 +52,6 @@ struct ChatMessage {
     content: String,
 }
 
-#[derive(Deserialize)]
-struct ChatResponse {
-    choices: Vec<ChatChoice>,
-}
-
-#[derive(Deserialize)]
-struct ChatChoice {
-    message: ChatChoiceMessage,
-}
-
-#[derive(Deserialize)]
-struct ChatChoiceMessage {
-    content: Option<String>,
-}
-
 pub async fn complete(
     api_key: &str,
     model: &str,
@@ -185,13 +170,7 @@ async fn complete_chat(
 
     let response = crate::http::check_response(response, "Chat API error").await?;
 
-    let result: ChatResponse = response.json().await?;
+    let result: crate::http::ChatCompletionsResponse = response.json().await?;
 
-    let text = result
-        .choices
-        .first()
-        .and_then(|c| c.message.content.clone())
-        .unwrap_or_default();
-
-    Ok(text)
+    Ok(result.text())
 }

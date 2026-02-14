@@ -144,26 +144,8 @@ pub async fn transcribe_qwen(
 
     let response = crate::http::check_response(response, "Qwen ASR API error").await?;
 
-    #[derive(Deserialize)]
-    struct ChatResponse {
-        choices: Vec<ChatChoice>,
-    }
-    #[derive(Deserialize)]
-    struct ChatChoice {
-        message: ChatMsg,
-    }
-    #[derive(Deserialize)]
-    struct ChatMsg {
-        content: Option<String>,
-    }
-
-    let result: ChatResponse = response.json().await?;
-
-    let text = result
-        .choices
-        .first()
-        .and_then(|c| c.message.content.clone())
-        .unwrap_or_default();
+    let result: crate::http::ChatCompletionsResponse = response.json().await?;
+    let text = result.text();
 
     log_transcription_result("Qwen", &text);
     Ok(text)
@@ -242,25 +224,8 @@ pub async fn transcribe_openrouter(
 
     let response = crate::http::check_response(response, "OpenRouter transcription API error").await?;
 
-    #[derive(Deserialize)]
-    struct ChatResponse {
-        choices: Vec<ChatChoice>,
-    }
-    #[derive(Deserialize)]
-    struct ChatChoice {
-        message: ChatMsg,
-    }
-    #[derive(Deserialize)]
-    struct ChatMsg {
-        content: Option<String>,
-    }
-
-    let result: ChatResponse = response.json().await?;
-    let text = result
-        .choices
-        .first()
-        .and_then(|c| c.message.content.clone())
-        .unwrap_or_default();
+    let result: crate::http::ChatCompletionsResponse = response.json().await?;
+    let text = result.text();
 
     log_transcription_result("OpenRouter", &text);
     Ok(text)
