@@ -75,7 +75,7 @@ pub async fn complete(
     max_tokens: Option<u32>,
     base_url: Option<&str>,
 ) -> Result<String> {
-    let client = &*crate::HTTP_CLIENT;
+    let client = &*crate::http::HTTP_CLIENT;
     let base = base_url.unwrap_or("https://api.openai.com/v1");
 
     // Try Responses API first (newer models) — only for OpenAI
@@ -123,11 +123,7 @@ async fn complete_responses(
         .send()
         .await?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        anyhow::bail!("OpenAI Responses API error ({}): {}", status, body);
-    }
+    let response = crate::http::check_response(response, "OpenAI Responses API error").await?;
 
     let result: ResponsesResponse = response.json().await?;
 
@@ -187,12 +183,7 @@ async fn complete_chat(
         .send()
         .await?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        log::error!("[Whisperi] Chat API error ({}): {}", status, body);
-        anyhow::bail!("Chat API error ({}): {}", status, body);
-    }
+    let response = crate::http::check_response(response, "Chat API error").await?;
 
     let result: ChatResponse = response.json().await?;
 

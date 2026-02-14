@@ -53,19 +53,14 @@ pub async fn transcribe_openai(
     }
 
     log::info!("[Whisperi] POST {}", url);
-    let response = crate::HTTP_CLIENT
+    let response = crate::http::HTTP_CLIENT
         .post(&url)
         .bearer_auth(api_key)
         .multipart(form)
         .send()
         .await?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        log::error!("[Whisperi] Transcription API error ({}): {}", status, body);
-        anyhow::bail!("Transcription API error ({}): {}", status, body);
-    }
+    let response = crate::http::check_response(response, "Transcription API error").await?;
 
     let result: TranscriptionResponse = response.json().await?;
     log_transcription_result("Cloud", &result.text);
@@ -140,19 +135,14 @@ pub async fn transcribe_qwen(
     };
 
     log::info!("[Whisperi] POST https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions");
-    let response = crate::HTTP_CLIENT
+    let response = crate::http::HTTP_CLIENT
         .post("https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions")
         .bearer_auth(api_key)
         .json(&request)
         .send()
         .await?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        log::error!("[Whisperi] Qwen ASR API error ({}): {}", status, body);
-        anyhow::bail!("Qwen ASR API error ({}): {}", status, body);
-    }
+    let response = crate::http::check_response(response, "Qwen ASR API error").await?;
 
     #[derive(Deserialize)]
     struct ChatResponse {
@@ -241,7 +231,7 @@ pub async fn transcribe_openrouter(
     };
 
     log::info!("[Whisperi] POST https://openrouter.ai/api/v1/chat/completions (transcription)");
-    let response = crate::HTTP_CLIENT
+    let response = crate::http::HTTP_CLIENT
         .post("https://openrouter.ai/api/v1/chat/completions")
         .bearer_auth(api_key)
         .header("HTTP-Referer", "https://github.com/xarthurx/whisperi")
@@ -250,12 +240,7 @@ pub async fn transcribe_openrouter(
         .send()
         .await?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        log::error!("[Whisperi] OpenRouter transcription API error ({}): {}", status, body);
-        anyhow::bail!("OpenRouter transcription API error ({}): {}", status, body);
-    }
+    let response = crate::http::check_response(response, "OpenRouter transcription API error").await?;
 
     #[derive(Deserialize)]
     struct ChatResponse {

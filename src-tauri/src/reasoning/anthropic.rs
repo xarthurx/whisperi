@@ -44,7 +44,7 @@ pub async fn complete(
         }],
     };
 
-    let response = crate::HTTP_CLIENT
+    let response = crate::http::HTTP_CLIENT
         .post("https://api.anthropic.com/v1/messages")
         .header("x-api-key", api_key)
         .header("anthropic-version", "2023-06-01")
@@ -53,11 +53,7 @@ pub async fn complete(
         .send()
         .await?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        anyhow::bail!("Anthropic API error ({}): {}", status, body);
-    }
+    let response = crate::http::check_response(response, "Anthropic API error").await?;
 
     let result: MessagesResponse = response.json().await?;
 

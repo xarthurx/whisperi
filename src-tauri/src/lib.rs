@@ -2,17 +2,10 @@ mod audio;
 mod clipboard;
 mod commands;
 mod database;
+pub(crate) mod http;
 mod models;
 mod reasoning;
 mod transcription;
-
-pub(crate) static HTTP_CLIENT: std::sync::LazyLock<reqwest::Client> =
-    std::sync::LazyLock::new(|| {
-        reqwest::Client::builder()
-            .user_agent("Whisperi")
-            .build()
-            .expect("Failed to build HTTP client")
-    });
 
 use tauri::Manager;
 use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder};
