@@ -1,10 +1,8 @@
 import { Toggle } from "@/components/ui/toggle";
-import ApiKeyInput from "@/components/ui/ApiKeyInput";
 import { SettingsSection, SettingsRow } from "@/components/ui/SettingsSection";
-import { ProviderTabs } from "@/components/ui/ProviderTabs";
-import modelRegistry from "@/models/modelRegistryData.json";
 import { USER_VISIBLE_PROMPT } from "@/config/prompts";
-import { getApiKey, getApiKeyField, getReasoningProviders } from "./providerHelpers";
+import { getReasoningProviders } from "./providerHelpers";
+import ProviderModelSelector from "./ProviderModelSelector";
 import type { SectionProps } from "./types";
 
 export default function AIModelsSection({ settings, update }: SectionProps) {
@@ -21,72 +19,17 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
 
       {settings.useReasoningModel && (
         <SettingsSection title="AI Provider">
-          <ProviderTabs
+          <ProviderModelSelector
             providers={getReasoningProviders(settings)}
-            selectedId={settings.reasoningProvider}
-            onSelect={(id) => {
-              update("reasoningProvider", id);
-              if (id === "openrouter") {
-                update("reasoningModel", "openai/gpt-4o");
-              } else {
-                const provider = modelRegistry.cloudProviders.find((p) => p.id === id);
-                if (provider?.models[0]) {
-                  update("reasoningModel", provider.models[0].id);
-                }
-              }
-            }}
+            selectedProvider={settings.reasoningProvider}
+            selectedModel={settings.reasoningModel}
+            registryKey="cloudProviders"
+            openRouterDefault="openai/gpt-4o"
+            onProviderChange={(id) => update("reasoningProvider", id)}
+            onModelChange={(model) => update("reasoningModel", model)}
+            settings={settings}
+            update={update}
           />
-          <div className="space-y-3">
-            <SettingsRow label="Model">
-              {settings.reasoningProvider === "openrouter" ? (
-                <input
-                  type="text"
-                  value={settings.reasoningModel}
-                  onChange={(e) => update("reasoningModel", e.target.value)}
-                  placeholder="e.g. openai/gpt-4o"
-                  className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground"
-                />
-              ) : (
-                <select
-                  value={settings.reasoningModel}
-                  onChange={(e) => update("reasoningModel", e.target.value)}
-                  className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
-                >
-                  {modelRegistry.cloudProviders
-                    .find((p) => p.id === settings.reasoningProvider)
-                    ?.models.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}{m.params ? ` (${m.params})` : ""}
-                      </option>
-                    ))}
-                </select>
-              )}
-            </SettingsRow>
-            {settings.reasoningProvider === "openrouter" ? (
-              <p className="text-xs text-muted-foreground -mt-1 text-right">
-                Enter any model from{" "}
-                <button
-                  type="button"
-                  onClick={() => import("@tauri-apps/plugin-opener").then((m) => m.openUrl("https://openrouter.ai/models"))}
-                  className="text-primary hover:underline cursor-pointer"
-                >openrouter.ai/models</button>
-                {" "}in <code className="text-primary/80">provider/model-name</code> format
-              </p>
-            ) : (() => {
-              const selectedModel = modelRegistry.cloudProviders
-                .find((p) => p.id === settings.reasoningProvider)
-                ?.models.find((m) => m.id === settings.reasoningModel);
-              return selectedModel?.description ? (
-                <p className="text-xs text-muted-foreground -mt-1 text-right">{selectedModel.description}</p>
-              ) : null;
-            })()}
-            <ApiKeyInput
-              apiKey={getApiKey(settings, settings.reasoningProvider)}
-              setApiKey={(key) => update(getApiKeyField(settings.reasoningProvider), key)}
-              label={`${settings.reasoningProvider} API Key`}
-              helpText={`Enter your ${settings.reasoningProvider} API key`}
-            />
-          </div>
         </SettingsSection>
       )}
 
