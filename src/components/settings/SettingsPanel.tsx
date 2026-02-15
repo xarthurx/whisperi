@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -31,19 +32,20 @@ type Section =
   | "developer"
   | "about";
 
-const SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
-  { id: "general", label: "General", icon: Settings },
-  { id: "transcription", label: "Transcription", icon: Mic },
-  { id: "ai-models", label: "Enhancement", icon: Brain },
-  { id: "dictionary", label: "Dictionary", icon: BookOpen },
-  { id: "agent", label: "Agent", icon: Bot },
-  { id: "developer", label: "Developer", icon: Wrench },
-  { id: "about", label: "About", icon: Info },
+const SECTION_DEFS: { id: Section; labelKey: string; icon: React.ElementType }[] = [
+  { id: "general", labelKey: "nav.general", icon: Settings },
+  { id: "transcription", labelKey: "nav.transcription", icon: Mic },
+  { id: "ai-models", labelKey: "nav.enhancement", icon: Brain },
+  { id: "dictionary", labelKey: "nav.dictionary", icon: BookOpen },
+  { id: "agent", labelKey: "nav.agent", icon: Bot },
+  { id: "developer", labelKey: "nav.developer", icon: Wrench },
+  { id: "about", labelKey: "nav.about", icon: Info },
 ];
 
 function SettingsPanelInner() {
   const [section, setSection] = useState<Section>("general");
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const { t } = useTranslation();
   const { settings, update, loaded } = useSettings();
   const { toast } = useToast();
 
@@ -65,7 +67,7 @@ function SettingsPanelInner() {
   if (!loaded) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
-        <span className="text-sm text-muted-foreground">Loading settings...</span>
+        <span className="text-sm text-muted-foreground">{t("settings.loading")}</span>
       </div>
     );
   }
@@ -79,7 +81,7 @@ function SettingsPanelInner() {
       >
         <div className="flex items-center gap-2">
           <img src="/app-icon.png" alt="" className="w-4 h-4" draggable={false} />
-          <span className="text-[13px] font-medium tracking-wide text-muted-foreground">Whisperi Settings</span>
+          <span className="text-[13px] font-medium tracking-wide text-muted-foreground">{t("settings.title")}</span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -100,7 +102,7 @@ function SettingsPanelInner() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <nav className="w-60 bg-background border-r border-border-subtle p-2 space-y-0.5 shrink-0">
-          {SECTIONS.map(({ id, label, icon: Icon }) => (
+          {SECTION_DEFS.map(({ id, labelKey, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setSection(id)}
@@ -111,9 +113,9 @@ function SettingsPanelInner() {
               }`}
             >
               <Icon className="w-4 h-4" />
-              {label}
+              {t(labelKey)}
               {id === "about" && updateAvailable && (
-                <span className="ml-auto w-2 h-2 rounded-full bg-warning animate-pulse" title="Update available" />
+                <span className="ml-auto w-2 h-2 rounded-full bg-warning animate-pulse" title={t("nav.updateAvailable")} />
               )}
             </button>
           ))}
