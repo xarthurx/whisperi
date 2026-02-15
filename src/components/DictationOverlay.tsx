@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen, emit } from "@tauri-apps/api/event";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
@@ -12,10 +13,11 @@ import { LoadingDots } from "@/components/ui/LoadingDots";
 import { showSettings, quitApp, getSetting, setSetting } from "@/services/tauriApi";
 
 function DictationOverlayInner() {
+  const { t } = useTranslation();
   // Use native OS notifications instead of in-window toasts (overlay is too small)
   const notifyError = useCallback((props: { title?: string; description?: string }) => {
-    sendNotification({ title: props.title ?? "Whisperi", body: props.description ?? "" });
-  }, []);
+    sendNotification({ title: props.title ?? t("overlay.notification.title"), body: props.description ?? "" });
+  }, [t]);
 
   const { phase, isRecording, isProcessing, audioLevel, start, stop, toggle, cancel } =
     useAudioRecording({ onToast: notifyError });
@@ -80,19 +82,19 @@ function DictationOverlayInner() {
     async (e: React.MouseEvent) => {
       e.preventDefault();
       const items: (MenuItem | PredefinedMenuItem)[] = [
-        await MenuItem.new({ id: "settings", text: "Settings", action: () => showSettings() }),
+        await MenuItem.new({ id: "settings", text: t("overlay.menu.settings"), action: () => showSettings() }),
       ];
       if (isRecording) {
         items.push(
-          await MenuItem.new({ id: "cancel", text: "Cancel Recording", action: () => cancel() }),
+          await MenuItem.new({ id: "cancel", text: t("overlay.menu.cancel"), action: () => cancel() }),
         );
       }
       items.push(await PredefinedMenuItem.new({ item: "Separator" }));
-      items.push(await MenuItem.new({ id: "quit", text: "Quit", action: () => quitApp() }));
+      items.push(await MenuItem.new({ id: "quit", text: t("overlay.menu.quit"), action: () => quitApp() }));
       const menu = await Menu.new({ items });
       await menu.popup();
     },
-    [isRecording, cancel]
+    [isRecording, cancel, t]
   );
 
   // Drag-vs-click detection on the recording button
@@ -176,10 +178,10 @@ function DictationOverlayInner() {
           }`}
           aria-label={
             isProcessing
-              ? "Processing..."
+              ? t("overlay.processing")
               : isRecording
-                ? "Stop recording"
-                : "Start recording"
+                ? t("overlay.stopRecording")
+                : t("overlay.startRecording")
           }
         >
           <div className="flex items-center justify-center">
@@ -193,7 +195,7 @@ function DictationOverlayInner() {
             )}
           </div>
           {updateAvailable && (
-            <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-warning animate-pulse" title="Update available" />
+            <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-warning animate-pulse" title={t("overlay.updateAvailable")} />
           )}
         </button>
       </div>
