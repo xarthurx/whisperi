@@ -47,6 +47,9 @@ export interface Settings {
   // Developer
   debugMode: boolean;
 
+  // UI Language
+  uiLanguage: string;
+
   // API keys
   openaiApiKey: string;
   anthropicApiKey: string;
@@ -77,6 +80,7 @@ const DEFAULTS: Settings = {
   agentName: "Whisperi",
   agentAliases: [],
   debugMode: false,
+  uiLanguage: "",  // Empty string = auto-detect
   openaiApiKey: "",
   anthropicApiKey: "",
   geminiApiKey: "",
@@ -93,7 +97,7 @@ const STORE_KEYS = [
   "useReasoningModel", "reasoningModel", "reasoningProvider",
   "useCustomPrompt", "customSystemPrompt",
   "autoPaste", "soundEnabled", "dictationKey", "activationMode",
-  "selectedMicDeviceId", "debugMode",
+  "selectedMicDeviceId", "debugMode", "uiLanguage",
 ] as const satisfies readonly (keyof Settings)[];
 
 const API_PROVIDERS = ["openai", "anthropic", "gemini", "groq", "mistral", "qwen", "openrouter"] as const;
