@@ -120,7 +120,7 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 |-------|---------|----------------|
 | **Views** | `App.tsx` | Window-label router: overlay vs settings |
 | **Overlay** | `components/DictationOverlay.tsx` | Mic button, audio-level ring, status text, drag handle, hotkey response |
-| **Settings** | `components/SettingsPanel.tsx`, `components/settings/*` | Tabbed settings shell + 7 section components: general (UI language, hotkey, mic, behavior), transcription, enhancement, dictionary, agent, developer, about |
+| **Settings** | `components/settings/*` | Tabbed settings shell (`SettingsPanel.tsx`) + 7 section components: general (UI language, output language, hotkey, mic, behavior), transcription, enhancement, dictionary, agent, developer, about. Shared `ProviderModelSelector` for provider/model dropdowns |
 | **Hooks** | `hooks/useAudioRecording.ts` | Full dictation pipeline state machine (idle → recording → processing → idle) |
 | | `hooks/useSettings.ts` | Load/save all settings from plugin-store with defaults |
 | | `hooks/useHotkey.ts` | Global shortcut registration, tap vs push-to-talk modes |
@@ -129,7 +129,23 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 | **Models** | `models/modelRegistryData.json` | Static registry of all supported transcription and reasoning models per provider |
 | **Utils** | `utils/sounds.ts`, `languageSupport.ts` | Web Audio API tone generation (no static assets); language support validation, auto-detect and per-language instruction assembly |
 | **i18n** | `i18n/index.ts`, `i18n/i18next.d.ts`, `i18n/locales/*.json` | i18next initialization, typed translation keys, 9 locale files (en, zh, ja, ko, de, fr, es, pt, ru) |
-| **UI Kit** | `components/ui/*` | shadcn/ui primitives (button, input, toggle, toast, settings section) |
+| **UI Kit** | `components/ui/*` | shadcn/ui primitives + custom components: StyledSelect, LanguageSelector, ProviderTabs, HotkeyInput, ApiKeyInput, ProviderIcon, Toast, SettingsSection |
+
+---
+
+## Design Tokens
+
+Border radii use two semantic CSS custom properties defined in `@theme` in `src/index.css`:
+
+| Token | Tailwind Class | Default | Usage |
+|-------|---------------|---------|-------|
+| `--radius-control` | `rounded-control` | 0.375rem (6px) | Buttons, inputs, dropdowns, toasts, tab bars, nav items |
+| `--radius-inner` | `rounded-inner` | 0.25rem (4px) | Option rows, tab buttons, kbd keys, search inputs inside dropdowns |
+| *(built-in)* | `rounded-full` | 50% | Toggles, indicator dots, progress bars, circular buttons |
+
+To adjust corner radii app-wide, change the two `--radius-*` values in `index.css`. No component files need editing.
+
+Language codes from `languageRegistry.json` use locale format (`en-US`, `en-GB`). The Rust command layer normalizes these to ISO 639-1 (`en`) before passing to transcription APIs.
 
 ---
 
@@ -295,11 +311,14 @@ whisperi/
 │   │   │   ├── AgentSection.tsx
 │   │   │   ├── DeveloperSection.tsx
 │   │   │   └── AboutSection.tsx
-│   │   ├── ApiKeyInput.tsx             # Masked API key input
-│   │   ├── HotkeyInput.tsx            # Key binding capture
-│   │   ├── LanguageSelector.tsx        # Whisper language picker
-│   │   ├── ProviderModelSelector.tsx   # Shared provider/model dropdown
-│   │   └── ui/                         # shadcn/ui primitives
+│   │   └── ui/                         # Shared UI components + shadcn/ui primitives
+│   │       ├── StyledSelect.tsx        # Generic styled dropdown (no search)
+│   │       ├── LanguageSelector.tsx    # Language picker with search + flags
+│   │       ├── ApiKeyInput.tsx         # Masked API key input
+│   │       ├── HotkeyInput.tsx         # Key binding capture
+│   │       ├── ProviderTabs.tsx        # Provider tab bar with sliding indicator
+│   │       ├── ProviderIcon.tsx        # Provider letter/icon badges
+│   │       └── ...                     # button, input, toggle, badge, toast
 │   ├── i18n/
 │   │   ├── index.ts                   # i18next init, SUPPORTED_LANGUAGES
 │   │   ├── i18next.d.ts               # Typed translation keys

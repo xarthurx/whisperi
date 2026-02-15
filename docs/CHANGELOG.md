@@ -2,10 +2,13 @@
 
 ## [0.5.2] - 2026-02-15
 
+### Fixes
+- Fixed English output language breaking transcription — locale codes like `en-US` are now normalized to ISO 639-1 (`en`) before reaching transcription APIs
+- Fixed English missing from interface language selector (prefix matching for locale codes)
+
 ### Improvements
 - Unified all dropdown menus to custom styled components (replaced native OS `<select>` for mic device and model selectors)
 - Renamed "Language" to "Output Language" across all 9 locales for clarity
-- Fixed English missing from interface language selector (prefix matching for locale codes)
 - Introduced semantic border-radius tokens (`--radius-control`, `--radius-inner`) — all corner radii can now be tuned from two CSS variables in `index.css`
 - Unified rounded corners across all UI components (buttons, inputs, dropdowns, tabs, toasts, badges)
 
