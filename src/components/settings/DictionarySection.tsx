@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { SettingsSection } from "@/components/ui/SettingsSection";
 import type { SectionProps } from "./types";
 
 export default function DictionarySection({ settings, update }: SectionProps) {
+  const { t } = useTranslation();
   const [newWord, setNewWord] = useState("");
   const [duplicateWarning, setDuplicateWarning] = useState("");
 
@@ -14,7 +16,7 @@ export default function DictionarySection({ settings, update }: SectionProps) {
     const word = newWord.trim();
     if (!word) return;
     if (settings.customDictionary.includes(word)) {
-      setDuplicateWarning(`"${word}" is already in the dictionary`);
+      setDuplicateWarning(t("dictionary.duplicate", { word }));
       setTimeout(() => setDuplicateWarning(""), 3000);
       return;
     }
@@ -32,19 +34,19 @@ export default function DictionarySection({ settings, update }: SectionProps) {
 
   return (
     <SettingsSection
-      title="Custom Dictionary"
-      description="Words the transcription model should recognize (names, jargon, etc.)"
+      title={t("dictionary.title")}
+      description={t("dictionary.description")}
     >
       <div className="flex gap-2">
         <Input
           value={newWord}
           onChange={(e) => setNewWord(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addWord()}
-          placeholder="Add a word..."
+          placeholder={t("dictionary.placeholder")}
           className="h-9 text-sm flex-1"
         />
         <Button variant="outline" size="sm" onClick={addWord} disabled={!newWord.trim()}>
-          <Plus className="w-3 h-3" /> Add
+          <Plus className="w-3 h-3" /> {t("dictionary.add")}
         </Button>
       </div>
         {duplicateWarning && (
@@ -66,7 +68,7 @@ export default function DictionarySection({ settings, update }: SectionProps) {
         </div>
       ) : (
         <p className="text-xs text-muted-foreground mt-2">
-          No custom words added. Add names, technical terms, or brand names to improve accuracy.
+          {t("dictionary.empty")}
         </p>
       )}
     </SettingsSection>
