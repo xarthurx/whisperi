@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0] - 2026-02-15
+
+### Features
+- Added multi-language interface (i18n) with 9 supported languages: English, Simplified Chinese, Japanese, Korean, German, French, Spanish, Portuguese, Russian
+- Added Interface Language selector in Settings > General (first section)
+- Auto-detects language from OS locale on first launch, persists user choice
+- Cross-window language sync — changing language in settings instantly updates the overlay
+
+### Technical
+- Added i18next, react-i18next, and i18next-browser-languagedetector
+- All UI strings extracted to translation JSON files (~90 translation keys)
+- New `uiLanguage` setting in tauri-plugin-store
+
 ## [0.4.4] - 2026-02-15
 
 ### Improvements
