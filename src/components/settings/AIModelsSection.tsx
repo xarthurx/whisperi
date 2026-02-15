@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Toggle } from "@/components/ui/toggle";
 import { SettingsSection, SettingsRow } from "@/components/ui/SettingsSection";
 import { USER_VISIBLE_PROMPT } from "@/config/prompts";
@@ -6,10 +7,11 @@ import ProviderModelSelector from "./ProviderModelSelector";
 import type { SectionProps } from "./types";
 
 export default function AIModelsSection({ settings, update }: SectionProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <SettingsSection title="AI Enhancement" description="Post-process transcriptions with an AI reasoning model">
-        <SettingsRow label="Enable AI processing" description="Clean up grammar, punctuation, and formatting">
+      <SettingsSection title={t("enhancement.title")} description={t("enhancement.description")}>
+        <SettingsRow label={t("enhancement.enable")} description={t("enhancement.enableDesc")}>
           <Toggle
             checked={settings.useReasoningModel}
             onChange={(v) => update("useReasoningModel", v)}
@@ -18,7 +20,7 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
       </SettingsSection>
 
       {settings.useReasoningModel && (
-        <SettingsSection title="AI Provider">
+        <SettingsSection title={t("enhancement.provider")}>
           <ProviderModelSelector
             providers={getReasoningProviders(settings)}
             selectedProvider={settings.reasoningProvider}
@@ -33,7 +35,7 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
         </SettingsSection>
       )}
 
-      <SettingsSection title="System Prompt" description="Cleanup instructions sent to the AI model. Core behavior rules are applied automatically.">
+      <SettingsSection title={t("enhancement.prompt.title")} description={t("enhancement.prompt.description")}>
         <div className="flex flex-col flex-1 min-h-0">
           <div className="relative flex p-0.5 rounded-lg bg-surface-1 shrink-0">
             {(["default", "custom"] as const).map((tab) => {
@@ -48,7 +50,7 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
                       : "text-muted-foreground hover:text-foreground border border-transparent"
                   }`}
                 >
-                  {tab === "default" ? "Default Prompt" : "Custom Prompt"}
+                  {tab === "default" ? t("enhancement.prompt.default") : t("enhancement.prompt.custom")}
                 </button>
               );
             })}
@@ -58,7 +60,7 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
             <textarea
               value={settings.customSystemPrompt}
               onChange={(e) => update("customSystemPrompt", e.target.value)}
-              placeholder="Enter your custom cleanup instructions here. Core behavior rules (agent activation, output format) are always applied automatically."
+              placeholder={t("enhancement.prompt.placeholder")}
               className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground/60 resize-y min-h-[280px] flex-1 focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-border-active"
             />
           ) : (
