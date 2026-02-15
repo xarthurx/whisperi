@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   enable as enableAutostart,
   disable as disableAutostart,
@@ -9,9 +10,11 @@ import { Toggle } from "@/components/ui/toggle";
 import LanguageSelector from "@/components/ui/LanguageSelector";
 import { SettingsSection, SettingsRow } from "@/components/ui/SettingsSection";
 import { HotkeyInput } from "@/components/ui/HotkeyInput";
+import i18n, { SUPPORTED_LANGUAGES } from "@/i18n";
 import type { SectionProps } from "./types";
 
 export default function GeneralSection({ settings, update }: SectionProps) {
+  const { t } = useTranslation();
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [launchAtStartup, setLaunchAtStartup] = useState(false);
 
@@ -22,7 +25,25 @@ export default function GeneralSection({ settings, update }: SectionProps) {
 
   return (
     <>
-      <SettingsSection title="Language" description="Select 'Auto' for multi-language auto-detection. Choose a specific language to ensure output is always in that language.">
+      <SettingsSection title={t("general.uiLanguage.title")} description={t("general.uiLanguage.description")}>
+        <select
+          value={settings.uiLanguage || i18n.language.split("-")[0]}
+          onChange={(e) => {
+            const lang = e.target.value;
+            update("uiLanguage", lang);
+            i18n.changeLanguage(lang);
+          }}
+          className="w-48 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
+        >
+          {SUPPORTED_LANGUAGES.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.name}
+            </option>
+          ))}
+        </select>
+      </SettingsSection>
+
+      <SettingsSection title={t("general.language.title")} description={t("general.language.description")}>
         <LanguageSelector
           value={settings.preferredLanguage}
           onChange={(v) => update("preferredLanguage", v)}
@@ -30,13 +51,13 @@ export default function GeneralSection({ settings, update }: SectionProps) {
         />
       </SettingsSection>
 
-      <SettingsSection title="Hotkey" description="Keyboard shortcut for dictation">
+      <SettingsSection title={t("general.hotkey.title")} description={t("general.hotkey.description")}>
         <div className="space-y-3">
           <HotkeyInput
             value={settings.dictationKey}
             onChange={(hotkey) => update("dictationKey", hotkey)}
           />
-          <SettingsRow label="Activation mode">
+          <SettingsRow label={t("general.hotkey.activationMode")}>
             <div className="flex p-0.5 rounded-lg bg-surface-1">
               {(["tap", "push"] as const).map((mode) => (
                 <button
@@ -48,7 +69,7 @@ export default function GeneralSection({ settings, update }: SectionProps) {
                       : "text-muted-foreground hover:text-foreground border border-transparent"
                   }`}
                 >
-                  {mode === "tap" ? "Tap to toggle" : "Push to talk"}
+                  {mode === "tap" ? t("general.hotkey.tap") : t("general.hotkey.push")}
                 </button>
               ))}
             </div>
@@ -56,23 +77,23 @@ export default function GeneralSection({ settings, update }: SectionProps) {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Microphone" description="Audio input device">
+      <SettingsSection title={t("general.mic.title")} description={t("general.mic.description")}>
         <select
           value={settings.selectedMicDeviceId}
           onChange={(e) => update("selectedMicDeviceId", e.target.value)}
           className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
         >
-          <option value="">System default</option>
+          <option value="">{t("general.mic.systemDefault")}</option>
           {devices.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.name} {d.is_default ? "(Default)" : ""}
+              {d.name} {d.is_default ? t("general.mic.default") : ""}
             </option>
           ))}
         </select>
       </SettingsSection>
 
-      <SettingsSection title="Behavior">
-        <SettingsRow label="Launch at startup" description="Start Whisperi when you log in to Windows">
+      <SettingsSection title={t("general.behavior.title")}>
+        <SettingsRow label={t("general.behavior.launchStartup")} description={t("general.behavior.launchStartupDesc")}>
           <Toggle
             checked={launchAtStartup}
             onChange={async (v) => {
@@ -84,13 +105,13 @@ export default function GeneralSection({ settings, update }: SectionProps) {
             }}
           />
         </SettingsRow>
-        <SettingsRow label="Auto-paste to clipboard" description="Copy transcribed text to clipboard and paste into the active window">
+        <SettingsRow label={t("general.behavior.autoPaste")} description={t("general.behavior.autoPasteDesc")}>
           <Toggle
             checked={settings.autoPaste}
             onChange={(v) => update("autoPaste", v)}
           />
         </SettingsRow>
-        <SettingsRow label="Sound effects" description="Play a sound when recording starts and stops">
+        <SettingsRow label={t("general.behavior.soundEffects")} description={t("general.behavior.soundEffectsDesc")}>
           <Toggle
             checked={settings.soundEnabled}
             onChange={(v) => update("soundEnabled", v)}
