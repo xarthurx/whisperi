@@ -39,7 +39,7 @@
 
 Whisperi is split into two processes connected by Tauri's IPC bridge:
 
-- **Frontend** — React 19 + TypeScript (strict) + Tailwind CSS v4 + shadcn/ui. Runs in a Webview. Handles all user interaction, audio-level visualization, settings forms, and transcription history.
+- **Frontend** — React 19 + TypeScript (strict) + Tailwind CSS v4 + shadcn/ui + i18next. Runs in a Webview. Handles all user interaction, audio-level visualization, settings forms, transcription history, and multi-language UI (9 locales).
 - **Backend** — Rust. Owns audio capture, transcription orchestration, AI enhancement, native clipboard access, database persistence, and the system tray. Exposes ~20 Tauri commands that the frontend invokes.
 
 ---
@@ -120,7 +120,7 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 |-------|---------|----------------|
 | **Views** | `App.tsx` | Window-label router: overlay vs settings |
 | **Overlay** | `components/DictationOverlay.tsx` | Mic button, audio-level ring, status text, drag handle, hotkey response |
-| **Settings** | `components/SettingsPanel.tsx` | Tabbed settings: general (language, hotkey, mic, behavior), transcription, enhancement, dictionary, agent, developer, about |
+| **Settings** | `components/SettingsPanel.tsx`, `components/settings/*` | Tabbed settings shell + 7 section components: general (UI language, hotkey, mic, behavior), transcription, enhancement, dictionary, agent, developer, about |
 | **Hooks** | `hooks/useAudioRecording.ts` | Full dictation pipeline state machine (idle → recording → processing → idle) |
 | | `hooks/useSettings.ts` | Load/save all settings from plugin-store with defaults |
 | | `hooks/useHotkey.ts` | Global shortcut registration, tap vs push-to-talk modes |
@@ -128,6 +128,7 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 | **Config** | `config/constants.ts`, `prompts.ts`, `promptData.json`, `languageRegistry.json` | Default values, prompt templates with agent-name and language interpolation, language-specific instructions |
 | **Models** | `models/modelRegistryData.json` | Static registry of all supported transcription and reasoning models per provider |
 | **Utils** | `utils/sounds.ts`, `languageSupport.ts` | Web Audio API tone generation (no static assets); language support validation, auto-detect and per-language instruction assembly |
+| **i18n** | `i18n/index.ts`, `i18n/i18next.d.ts`, `i18n/locales/*.json` | i18next initialization, typed translation keys, 9 locale files (en, zh, ja, ko, de, fr, es, pt, ru) |
 | **UI Kit** | `components/ui/*` | shadcn/ui primitives (button, input, toggle, toast, settings section) |
 
 ---
@@ -169,9 +170,12 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 App mount → useSettings loads all keys from plugin-store
          → back-fills defaults for any missing keys
          → returns { settings, update(key, value) }
+         → App.tsx reads uiLanguage from store, calls i18n.changeLanguage()
+         → listens for "settings-changed" events to sync language across windows
 
 User changes a setting → update() writes to store immediately
                        → React state updated, component re-renders
+                       → emits "settings-changed" event (cross-window sync)
 ```
 
 ### Model Download Flow
@@ -269,6 +273,7 @@ Triggered on version tags (`v*`). Builds the NSIS installer via `tauri-apps/taur
 | `react 19` | Frontend UI |
 | `tailwindcss 4` | Styling |
 | `@radix-ui/*` | Accessible UI primitives (via shadcn/ui) |
+| `i18next` + `react-i18next` | Internationalization (9 locales) |
 
 ---
 
@@ -281,11 +286,24 @@ whisperi/
 │   ├── main.tsx                        # React entry point
 │   ├── components/
 │   │   ├── DictationOverlay.tsx        # Floating mic overlay
-│   │   ├── SettingsPanel.tsx           # Full settings UI
+│   │   ├── SettingsPanel.tsx           # Tabbed settings shell
+│   │   ├── settings/                   # Individual settings sections
+│   │   │   ├── GeneralSection.tsx     # Language, hotkey, mic, behavior
+│   │   │   ├── TranscriptionSection.tsx
+│   │   │   ├── AIModelsSection.tsx    # Enhancement provider/model
+│   │   │   ├── DictionarySection.tsx
+│   │   │   ├── AgentSection.tsx
+│   │   │   ├── DeveloperSection.tsx
+│   │   │   └── AboutSection.tsx
 │   │   ├── ApiKeyInput.tsx             # Masked API key input
 │   │   ├── HotkeyInput.tsx            # Key binding capture
 │   │   ├── LanguageSelector.tsx        # Whisper language picker
+│   │   ├── ProviderModelSelector.tsx   # Shared provider/model dropdown
 │   │   └── ui/                         # shadcn/ui primitives
+│   ├── i18n/
+│   │   ├── index.ts                   # i18next init, SUPPORTED_LANGUAGES
+│   │   ├── i18next.d.ts               # Typed translation keys
+│   │   └── locales/                   # 9 locale JSON files (en, zh, ja, ko, de, fr, es, pt, ru)
 │   ├── hooks/
 │   │   ├── useAudioRecording.ts        # Recording state machine
 │   │   ├── useSettings.ts             # Persistent settings
