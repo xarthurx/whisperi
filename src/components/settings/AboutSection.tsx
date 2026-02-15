@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -17,6 +18,7 @@ type UpdateStatus =
   | { phase: "error"; message: string };
 
 export default function AboutSection() {
+  const { t } = useTranslation();
   const [version, setVersion] = useState("");
   const [status, setStatus] = useState<UpdateStatus>({ phase: "idle" });
 
@@ -36,7 +38,7 @@ export default function AboutSection() {
     } catch (e) {
       const msg = String(e);
       if (msg.includes("valid release JSON") || msg.includes("status code")) {
-        setStatus({ phase: "error", message: "Could not reach the update server. The repository may be private or the network is unavailable." });
+        setStatus({ phase: "error", message: t("about.updates.networkError") });
       } else {
         setStatus({ phase: "error", message: msg });
       }
@@ -83,32 +85,32 @@ export default function AboutSection() {
   return (
     <>
       <SettingsSection
-        title={<>Whisperi <span className="font-mono font-normal text-sm text-muted-foreground ml-2">v{version}</span></>}
-        description="Desktop dictation with cloud and local transcription. Built with Tauri and React."
+        title={<>{t("about.title")} <span className="font-mono font-normal text-sm text-muted-foreground ml-2">v{version}</span></>}
+        description={t("about.description")}
       />
 
-      <SettingsSection title="Updates" description="Check for new versions">
+      <SettingsSection title={t("about.updates.title")} description={t("about.updates.description")}>
         <div className="space-y-3">
           {status.phase === "idle" && (
             <Button variant="outline" size="sm" onClick={checkForUpdates}>
-              <RefreshCw className="w-3 h-3" /> Check for updates
+              <RefreshCw className="w-3 h-3" /> {t("about.updates.check")}
             </Button>
           )}
 
           {status.phase === "checking" && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              Checking for updates...
+              {t("about.updates.checking")}
             </div>
           )}
 
           {status.phase === "up-to-date" && (
             <div className="space-y-2">
               <p className="text-sm text-success">
-                You're on the latest version.
+                {t("about.updates.upToDate")}
               </p>
               <Button variant="outline" size="sm" onClick={checkForUpdates}>
-                <RefreshCw className="w-3 h-3" /> Check again
+                <RefreshCw className="w-3 h-3" /> {t("about.updates.checkAgain")}
               </Button>
             </div>
           )}
@@ -116,10 +118,10 @@ export default function AboutSection() {
           {status.phase === "available" && (
             <div className="space-y-2">
               <p className="text-sm text-foreground">
-                Version <span className="font-mono font-medium">{status.version}</span> is available.
+                {t("about.updates.available", { version: status.version })}
               </p>
               <Button variant="outline" size="sm" onClick={downloadAndInstall}>
-                <Download className="w-3 h-3" /> Download and install
+                <Download className="w-3 h-3" /> {t("about.updates.download")}
               </Button>
             </div>
           )}
@@ -128,7 +130,7 @@ export default function AboutSection() {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                Downloading...
+                {t("about.updates.downloading")}
               </div>
               <div className="w-full h-2 bg-surface-1 rounded-full overflow-hidden">
                 <div
@@ -150,7 +152,7 @@ export default function AboutSection() {
           {status.phase === "installing" && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              Installing update — app will restart...
+              {t("about.updates.installing")}
             </div>
           )}
 
@@ -158,7 +160,7 @@ export default function AboutSection() {
             <div className="space-y-2">
               <p className="text-sm text-destructive">{status.message}</p>
               <Button variant="outline" size="sm" onClick={checkForUpdates}>
-                <RefreshCw className="w-3 h-3" /> Try again
+                <RefreshCw className="w-3 h-3" /> {t("about.updates.tryAgain")}
               </Button>
             </div>
           )}
