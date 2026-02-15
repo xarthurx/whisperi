@@ -3,6 +3,11 @@ use crate::transcription;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
+/// Normalize locale codes like "en-US" to ISO 639-1 "en" for transcription APIs.
+fn normalize_language(lang: Option<String>) -> Option<String> {
+    lang.map(|l| l.split('-').next().unwrap_or(&l).to_string())
+}
+
 #[derive(Debug, Serialize)]
 pub struct WhisperModelStatus {
     pub id: String,
@@ -23,6 +28,7 @@ pub async fn transcribe_local(
     dictionary: Vec<String>,
 ) -> Result<String, String> {
     let file_name = format!("ggml-{}.bin", model);
+    let language = normalize_language(language);
 
     transcription::whisper::transcribe(
         &app,
@@ -51,6 +57,7 @@ pub async fn transcribe_cloud(
     };
     log::info!("[Whisperi] Transcribing: provider={}, model={}, key={}", provider, model, key_preview);
 
+    let language = normalize_language(language);
     let prompt = if dictionary.is_empty() {
         None
     } else {
