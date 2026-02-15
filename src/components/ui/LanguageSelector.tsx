@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { ChevronDown, Search, X, Check } from "lucide-react";
 import registry from "@/config/languageRegistry.json";
@@ -20,6 +21,7 @@ export default function LanguageSelector({
   onChange,
   className = "",
 }: LanguageSelectorProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -168,7 +170,7 @@ export default function LanguageSelector({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Search..."
+                  placeholder={t("languageSelector.search")}
                   className="w-full h-8 pl-7 pr-6 text-sm bg-surface-2 border-border rounded text-foreground focus:outline-none placeholder:text-muted-foreground"
                 />
                 {searchQuery && (
@@ -185,7 +187,7 @@ export default function LanguageSelector({
 
             <div className="max-h-48 overflow-y-auto px-1 pb-1">
               {filteredLanguages.length === 0 ? (
-                <div className="px-2.5 py-2 text-sm text-muted-foreground">No languages found</div>
+                <div className="px-2.5 py-2 text-sm text-muted-foreground">{t("languageSelector.empty")}</div>
               ) : (
                 <div role="listbox" className="space-y-0.5 pt-1">
                   {filteredLanguages.map((language, index) => {

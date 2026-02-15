@@ -1,4 +1,5 @@
 import { ReactNode, useRef, useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ProviderIcon } from "./ProviderIcon";
 
 export interface ProviderTabItem {
@@ -21,6 +22,7 @@ export function ProviderTabs({
   onSelect,
   renderIcon,
 }: ProviderTabsProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState<React.CSSProperties>({ opacity: 0 });
 
@@ -85,7 +87,7 @@ export function ProviderTabs({
             {renderIcon ? renderIcon(provider.id) : <ProviderIcon provider={provider.id} className="w-4 h-4" />}
             <span>{provider.name}</span>
             {provider.hasKey && (
-              <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" title="API key configured" />
+              <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" title={t("providerModel.apiKeyConfigured")} />
             )}
             {provider.recommended && (
               <span className="text-[11px] text-primary/70 font-medium">Recommended</span>

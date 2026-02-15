@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { emit } from "@tauri-apps/api/event";
 
 interface HotkeyInputProps {
@@ -68,6 +69,7 @@ function formatHotkeyDisplay(hotkey: string): { parts: string[] } {
 }
 
 export function HotkeyInput({ value, onChange, disabled }: HotkeyInputProps) {
+  const { t } = useTranslation();
   const [listening, setListening] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -131,7 +133,7 @@ export function HotkeyInput({ value, onChange, disabled }: HotkeyInputProps) {
     >
       {listening ? (
         <span className="text-sm text-muted-foreground animate-pulse">
-          Press a key combination...
+          {t("hotkey.listening")}
         </span>
       ) : parts.length > 0 ? (
         <div className="flex items-center gap-1.5">
@@ -146,7 +148,7 @@ export function HotkeyInput({ value, onChange, disabled }: HotkeyInputProps) {
         </div>
       ) : (
         <span className="text-sm text-muted-foreground/60">
-          Click to set hotkey...
+          {t("hotkey.empty")}
         </span>
       )}
     </div>

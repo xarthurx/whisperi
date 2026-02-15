@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import modelRegistry from "@/models/modelRegistryData.json";
 import ApiKeyInput from "@/components/ui/ApiKeyInput";
 import { SettingsRow } from "@/components/ui/SettingsSection";
@@ -28,6 +29,7 @@ export default function ProviderModelSelector({
   settings,
   update,
 }: ProviderModelSelectorProps) {
+  const { t } = useTranslation();
   const registry = modelRegistry[registryKey];
 
   return (
@@ -48,7 +50,7 @@ export default function ProviderModelSelector({
         }}
       />
       <div className="space-y-3">
-        <SettingsRow label="Model">
+        <SettingsRow label={t("providerModel.model")}>
           {selectedProvider === "openrouter" ? (
             <input
               type="text"
@@ -75,13 +77,13 @@ export default function ProviderModelSelector({
         </SettingsRow>
         {selectedProvider === "openrouter" ? (
           <p className="text-xs text-muted-foreground -mt-1 text-right">
-            Enter any model from{" "}
+            {t("providerModel.openRouterHelp")}{" "}
             <button
               type="button"
               onClick={() => import("@tauri-apps/plugin-opener").then((m) => m.openUrl("https://openrouter.ai/models"))}
               className="text-primary hover:underline cursor-pointer"
             >openrouter.ai/models</button>
-            {" "}in <code className="text-primary/80">provider/model-name</code> format
+            {" "}in <code className="text-primary/80">provider/model-name</code> {t("providerModel.openRouterFormat")}
           </p>
         ) : (() => {
           const selectedModelData = registry
@@ -94,8 +96,8 @@ export default function ProviderModelSelector({
         <ApiKeyInput
           apiKey={getApiKey(settings, selectedProvider)}
           setApiKey={(key) => update(getApiKeyField(selectedProvider), key)}
-          label={`${selectedProvider} API Key`}
-          helpText={`Enter your ${selectedProvider} API key`}
+          label={t("providerModel.apiKeyLabel", { provider: selectedProvider })}
+          helpText={t("providerModel.apiKeyHelp", { provider: selectedProvider })}
         />
       </div>
     </>
