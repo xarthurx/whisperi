@@ -1,9 +1,13 @@
 # Changelog
 
-## [0.5.2] - 2026-02-15
+## [0.5.3] - 2026-02-15
 
 ### Fixes
 - Fixed English output language breaking transcription — locale codes like `en-US` are now normalized to ISO 639-1 (`en`) before reaching transcription APIs
+
+## [0.5.2] - 2026-02-15
+
+### Fixes
 - Fixed English missing from interface language selector (prefix matching for locale codes)
 
 ### Improvements
