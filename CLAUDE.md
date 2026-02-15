@@ -19,20 +19,21 @@ cd src-tauri && cargo clippy # lint
 
 **Backend** (Rust, `src-tauri/src/`): `audio/` `transcription/` `reasoning/` `clipboard/` `database/` `models/` `commands/`
 
-**Frontend** (React+TS, `src/`): `App.tsx` (dual-view router) | `components/` | `hooks/` | `services/tauriApi.ts` | `config/` | `models/`
+**Frontend** (React+TS, `src/`): `App.tsx` (dual-view router) | `components/` | `components/settings/` | `hooks/` | `services/tauriApi.ts` | `config/` | `models/` | `i18n/`
 
 ## Key Constraints
 
 - **cpal Stream is !Send** — recording runs on dedicated thread, state shared via `Arc<Mutex<>>` + `AtomicBool`
-- **Dual window** — 120x120 transparent overlay (always-on-top) + 900x680 settings (hidden by default)
-- **Dark mode only** — no light theme, system font (Segoe UI)
+- **Dual window** — 100x100 transparent overlay (always-on-top) + 760x800 settings (hidden by default)
+- **Dark mode only** — Nord color palette, Geist font
 - **Tauri 2.x sidecar scope** — goes in `capabilities/default.json`, NOT in `plugins.shell`
 - **System tray** — built programmatically in `lib.rs` (no `trayIcon` in tauri.conf.json)
+- **i18n** — all UI strings in `src/i18n/locales/*.json`, typed via `i18next.d.ts`; add new keys to `en.json` first, then all 8 other locales; cross-window sync via `settings-changed` event
 - **Package manager** — bun (not npm/yarn)
 
 ## Tech Stack
 
-Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, Rust, cpal, hound, reqwest, rusqlite
+Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, i18next + react-i18next (9 locales), Rust, cpal, hound, reqwest, rusqlite
 
 ## Data
 
