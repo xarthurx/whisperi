@@ -77,13 +77,18 @@ export default function ProviderModelSelector({
         </SettingsRow>
         {selectedProvider === "openrouter" ? (
           <p className="text-xs text-muted-foreground -mt-1 text-right">
-            {t("providerModel.openRouterHelp")}{" "}
-            <button
-              type="button"
-              onClick={() => import("@tauri-apps/plugin-opener").then((m) => m.openUrl("https://openrouter.ai/models"))}
-              className="text-primary hover:underline cursor-pointer"
-            >openrouter.ai/models</button>
-            {" "}in <code className="text-primary/80">provider/model-name</code> {t("providerModel.openRouterFormat")}
+            {t("providerModel.openRouterHint", { format: "provider/model-name" }).split("<link>").map((part, i) =>
+              i === 0 ? part : (
+                <span key={i}>
+                  <button
+                    type="button"
+                    onClick={() => import("@tauri-apps/plugin-opener").then((m) => m.openUrl("https://openrouter.ai/models"))}
+                    className="text-primary hover:underline cursor-pointer"
+                  >openrouter.ai/models</button>
+                  {part}
+                </span>
+              )
+            )}
           </p>
         ) : (() => {
           const selectedModelData = registry

@@ -102,9 +102,8 @@
   "languageSelector.empty": "言語が見つかりません",
 
   "providerModel.model": "モデル",
-  "providerModel.openRouterHelp": "以下からモデルを入力",
-  "providerModel.openRouterLink": "openrouter.ai/models",
-  "providerModel.openRouterFormat": "形式",
+  "providerModel.openRouterHint": "<link> から任意のモデルを {{format}} 形式で入力",
+  "providerModel.recommended": "推奨",
   "providerModel.apiKeyLabel": "{{provider}} API キー",
   "providerModel.apiKeyHelp": "{{provider}} の API キーを入力",
   "providerModel.apiKeyConfigured": "API キー設定済み"

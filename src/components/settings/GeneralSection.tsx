@@ -27,7 +27,7 @@ export default function GeneralSection({ settings, update }: SectionProps) {
     <>
       <SettingsSection title={t("general.uiLanguage.title")} description={t("general.uiLanguage.description")}>
         <select
-          value={settings.uiLanguage || i18n.language.split("-")[0]}
+          value={settings.uiLanguage || i18n.resolvedLanguage || "en"}
           onChange={(e) => {
             const lang = e.target.value;
             update("uiLanguage", lang);

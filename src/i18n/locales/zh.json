@@ -102,9 +102,8 @@
   "languageSelector.empty": "未找到语言",
 
   "providerModel.model": "模型",
-  "providerModel.openRouterHelp": "输入来自",
-  "providerModel.openRouterLink": "openrouter.ai/models",
-  "providerModel.openRouterFormat": "格式",
+  "providerModel.openRouterHint": "输入 <link> 上的任意模型，使用 {{format}} 格式",
+  "providerModel.recommended": "推荐",
   "providerModel.apiKeyLabel": "{{provider}} API 密钥",
   "providerModel.apiKeyHelp": "输入您的 {{provider}} API 密钥",
   "providerModel.apiKeyConfigured": "API 密钥已配置"

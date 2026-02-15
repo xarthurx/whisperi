@@ -90,7 +90,7 @@ export function ProviderTabs({
               <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" title={t("providerModel.apiKeyConfigured")} />
             )}
             {provider.recommended && (
-              <span className="text-[11px] text-primary/70 font-medium">Recommended</span>
+              <span className="text-[11px] text-primary/70 font-medium">{t("providerModel.recommended")}</span>
             )}
           </button>
         );

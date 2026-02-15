@@ -102,9 +102,8 @@
   "languageSelector.empty": "No se encontraron idiomas",
 
   "providerModel.model": "Modelo",
-  "providerModel.openRouterHelp": "Introduzca cualquier modelo de",
-  "providerModel.openRouterLink": "openrouter.ai/models",
-  "providerModel.openRouterFormat": "formato",
+  "providerModel.openRouterHint": "Introduzca cualquier modelo de <link> en formato {{format}}",
+  "providerModel.recommended": "Recomendado",
   "providerModel.apiKeyLabel": "Clave API de {{provider}}",
   "providerModel.apiKeyHelp": "Introduzca su clave API de {{provider}}",
   "providerModel.apiKeyConfigured": "Clave API configurada"

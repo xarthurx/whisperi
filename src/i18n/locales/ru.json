@@ -102,9 +102,8 @@
   "languageSelector.empty": "Языки не найдены",
 
   "providerModel.model": "Модель",
-  "providerModel.openRouterHelp": "Введите модель из",
-  "providerModel.openRouterLink": "openrouter.ai/models",
-  "providerModel.openRouterFormat": "формат",
+  "providerModel.openRouterHint": "Введите любую модель с <link> в формате {{format}}",
+  "providerModel.recommended": "Рекомендуется",
   "providerModel.apiKeyLabel": "API-ключ {{provider}}",
   "providerModel.apiKeyHelp": "Введите ваш API-ключ {{provider}}",
   "providerModel.apiKeyConfigured": "API-ключ настроен"

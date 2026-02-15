@@ -32,14 +32,14 @@ type Section =
   | "developer"
   | "about";
 
-const SECTION_DEFS: { id: Section; labelKey: string; icon: React.ElementType }[] = [
-  { id: "general", labelKey: "nav.general", icon: Settings },
-  { id: "transcription", labelKey: "nav.transcription", icon: Mic },
-  { id: "ai-models", labelKey: "nav.enhancement", icon: Brain },
-  { id: "dictionary", labelKey: "nav.dictionary", icon: BookOpen },
-  { id: "agent", labelKey: "nav.agent", icon: Bot },
-  { id: "developer", labelKey: "nav.developer", icon: Wrench },
-  { id: "about", labelKey: "nav.about", icon: Info },
+const SECTION_DEFS = [
+  { id: "general" as Section, labelKey: "nav.general" as const, icon: Settings },
+  { id: "transcription" as Section, labelKey: "nav.transcription" as const, icon: Mic },
+  { id: "ai-models" as Section, labelKey: "nav.enhancement" as const, icon: Brain },
+  { id: "dictionary" as Section, labelKey: "nav.dictionary" as const, icon: BookOpen },
+  { id: "agent" as Section, labelKey: "nav.agent" as const, icon: Bot },
+  { id: "developer" as Section, labelKey: "nav.developer" as const, icon: Wrench },
+  { id: "about" as Section, labelKey: "nav.about" as const, icon: Info },
 ];
 
 function SettingsPanelInner() {

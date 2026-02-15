@@ -23,7 +23,7 @@ function App() {
   useEffect(() => {
     getSetting<string>("uiLanguage").then((lang) => {
       if (lang) i18n.changeLanguage(lang);
-    });
+    }).catch(() => {});
 
     const unlisten = listen<{ key: string; value: unknown }>(
       "settings-changed",
