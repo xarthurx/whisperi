@@ -14,7 +14,7 @@
   "general.uiLanguage.title": "Oberflächensprache",
   "general.uiLanguage.description": "Sprache der App-Oberfläche",
   "general.language.title": "Sprache",
-  "general.language.description": "Wählen Sie „Automatisch" für mehrsprachige Erkennung. Wählen Sie eine bestimmte Sprache, um die Ausgabe immer in dieser Sprache zu erhalten.",
+  "general.language.description": "Wählen Sie 'Automatisch' für mehrsprachige Erkennung. Wählen Sie eine bestimmte Sprache, um die Ausgabe immer in dieser Sprache zu erhalten.",
   "general.hotkey.title": "Tastenkürzel",
   "general.hotkey.description": "Tastenkombination für Diktat",
   "general.hotkey.activationMode": "Aktivierungsmodus",
