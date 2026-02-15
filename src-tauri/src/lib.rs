@@ -68,6 +68,9 @@ fn override_min_window_size(window: &tauri::WebviewWindow, logical_w: i32, logic
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Force ANSI colors even when stdout is piped (bun → cargo → app).
+    colored::control::set_override(true);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
@@ -78,7 +81,10 @@ pub fn run() {
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
                 .level_for("tao", log::LevelFilter::Error)
-                .with_colors(tauri_plugin_log::fern::colors::ColoredLevelConfig::default())
+                .with_colors(
+                    tauri_plugin_log::fern::colors::ColoredLevelConfig::default()
+                        .info(tauri_plugin_log::fern::colors::Color::Green),
+                )
                 .build(),
         )
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {

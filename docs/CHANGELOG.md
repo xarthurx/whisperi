@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4] - 2026-02-15
+
+### Improvements
+- Fixed colored log output on Windows: force ANSI colors through piped stdout, set INFO level to green
+- Transcription logs now show the actual text (e.g., `"hello world" (11 chars)`) instead of just char count
+- Added dictionary echo detection: when silence causes Whisper to echo back dictionary words, logs now show WARN with "(dictionary echo, no voice detected)"
+
 ## [0.4.3] - 2026-02-14
 
 ### Refactoring

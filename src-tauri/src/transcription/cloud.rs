@@ -8,13 +8,41 @@ struct TranscriptionResponse {
     text: String,
 }
 
-/// Log transcription result with a note when likely no voice was detected.
-fn log_transcription_result(provider: &str, text: &str) {
+/// Split text into lowercase word tokens (letters + numbers only).
+fn tokenize(s: &str) -> Vec<String> {
+    s.to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(String::from)
+        .collect()
+}
+
+/// Check if every word in `text` appears in `prompt` (dictionary echo detection).
+fn is_dictionary_echo(text: &str, prompt: &str) -> bool {
+    let text_words = tokenize(text);
+    if text_words.is_empty() {
+        return true;
+    }
+    let prompt_words: std::collections::HashSet<String> = tokenize(prompt).into_iter().collect();
+    text_words.iter().all(|w| prompt_words.contains(w))
+}
+
+/// Log transcription result, detecting silence (empty or dictionary echo).
+pub fn log_transcription_result(provider: &str, text: &str, prompt: Option<&str>) {
     let trimmed = text.trim();
     if trimmed.is_empty() {
-        log::warn!("[Whisperi] {} transcription result: empty (no voice detected)", provider);
+        log::warn!("[Whisperi] {} transcription: empty (no voice detected)", provider);
+    } else if let Some(p) = prompt {
+        if !p.is_empty() && is_dictionary_echo(trimmed, p) {
+            log::warn!(
+                "[Whisperi] {} transcription: \"{}\" (dictionary echo, no voice detected)",
+                provider, trimmed
+            );
+        } else {
+            log::info!("[Whisperi] {} transcription: \"{}\" ({} chars)", provider, trimmed, trimmed.len());
+        }
     } else {
-        log::info!("[Whisperi] {} transcription result: {} chars", provider, text.len());
+        log::info!("[Whisperi] {} transcription: \"{}\" ({} chars)", provider, trimmed, trimmed.len());
     }
 }
 
@@ -63,7 +91,7 @@ pub async fn transcribe_openai(
     let response = crate::http::check_response(response, "Transcription API error").await?;
 
     let result: TranscriptionResponse = response.json().await?;
-    log_transcription_result("Cloud", &result.text);
+    log_transcription_result("Cloud", &result.text, prompt);
     Ok(result.text)
 }
 
@@ -147,7 +175,7 @@ pub async fn transcribe_qwen(
     let result: crate::http::ChatCompletionsResponse = response.json().await?;
     let text = result.text();
 
-    log_transcription_result("Qwen", &text);
+    log_transcription_result("Qwen", &text, None);
     Ok(text)
 }
 
@@ -227,7 +255,7 @@ pub async fn transcribe_openrouter(
     let result: crate::http::ChatCompletionsResponse = response.json().await?;
     let text = result.text();
 
-    log_transcription_result("OpenRouter", &text);
+    log_transcription_result("OpenRouter", &text, prompt);
     Ok(text)
 }
 
