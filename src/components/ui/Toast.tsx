@@ -151,7 +151,7 @@ const ToastItem: React.FC<ToastState & { onClose?: () => void }> = ({
       className={cn(
         "pointer-events-auto relative flex items-start gap-2.5 w-[360px] max-w-[calc(100vw-1.5rem)]",
         "px-3 py-2.5 pr-8 overflow-hidden",
-        "rounded border backdrop-blur-xl",
+        "rounded-control border backdrop-blur-xl",
         "transition-all duration-200 ease-out",
         isExiting
           ? "opacity-0 translate-x-2 scale-[0.98]"
@@ -176,7 +176,7 @@ const ToastItem: React.FC<ToastState & { onClose?: () => void }> = ({
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute right-1.5 top-1.5 p-1 rounded opacity-50 hover:opacity-100 hover:bg-white/10 transition-all duration-150"
+          className="absolute right-1.5 top-1.5 p-1 rounded-inner opacity-50 hover:opacity-100 hover:bg-white/10 transition-all duration-150"
         >
           <X className="size-3.5" />
         </button>

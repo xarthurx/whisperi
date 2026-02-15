@@ -24,7 +24,7 @@ export function ProviderIcon({ provider, className = "w-5 h-5" }: ProviderIconPr
   if (label) {
     return (
       <span
-        className={`inline-flex items-center justify-center rounded bg-surface-raised text-[10px] font-bold text-foreground/70 ${className}`}
+        className={`inline-flex items-center justify-center rounded-inner bg-surface-raised text-[10px] font-bold text-foreground/70 ${className}`}
       >
         {label}
       </span>

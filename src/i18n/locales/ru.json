@@ -13,8 +13,8 @@
 
   "general.uiLanguage.title": "Язык интерфейса",
   "general.uiLanguage.description": "Язык интерфейса приложения",
-  "general.language.title": "Язык",
-  "general.language.description": "Выберите «Авто» для автоматического определения языка. Выберите конкретный язык, чтобы вывод всегда был на этом языке.",
+  "general.language.title": "Язык вывода",
+  "general.language.description": "Выберите «Авто» для автоматического определения языка. Выберите конкретный язык, чтобы вывод транскрипции всегда был на этом языке.",
   "general.hotkey.title": "Горячая клавиша",
   "general.hotkey.description": "Сочетание клавиш для диктовки",
   "general.hotkey.activationMode": "Режим активации",

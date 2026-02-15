@@ -13,8 +13,8 @@
 
   "general.uiLanguage.title": "界面语言",
   "general.uiLanguage.description": "应用界面使用的语言",
-  "general.language.title": "语言",
-  "general.language.description": "选择「自动」以启用多语言自动检测。选择特定语言以确保输出始终使用该语言。",
+  "general.language.title": "输出语言",
+  "general.language.description": "选择「自动」以启用多语言自动检测。选择特定语言以确保转录输出始终使用该语言。",
   "general.hotkey.title": "快捷键",
   "general.hotkey.description": "听写的键盘快捷键",
   "general.hotkey.activationMode": "激活模式",

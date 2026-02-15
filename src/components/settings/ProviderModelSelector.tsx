@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import modelRegistry from "@/models/modelRegistryData.json";
 import ApiKeyInput from "@/components/ui/ApiKeyInput";
+import StyledSelect from "@/components/ui/StyledSelect";
 import { SettingsRow } from "@/components/ui/SettingsSection";
 import { ProviderTabs, type ProviderTabItem } from "@/components/ui/ProviderTabs";
 import type { Settings } from "@/hooks/useSettings";
@@ -57,22 +58,22 @@ export default function ProviderModelSelector({
               value={selectedModel}
               onChange={(e) => onModelChange(e.target.value)}
               placeholder={`e.g. ${openRouterDefault}`}
-              className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground placeholder:text-muted-foreground"
+              className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-control text-foreground placeholder:text-muted-foreground"
             />
           ) : (
-            <select
+            <StyledSelect
               value={selectedModel}
-              onChange={(e) => onModelChange(e.target.value)}
-              className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
-            >
-              {registry
-                .find((p) => p.id === selectedProvider)
-                ?.models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}{m.params ? ` (${m.params})` : ""}
-                  </option>
-                ))}
-            </select>
+              onChange={onModelChange}
+              options={
+                registry
+                  .find((p) => p.id === selectedProvider)
+                  ?.models.map((m) => ({
+                    value: m.id,
+                    label: `${m.name}${m.params ? ` (${m.params})` : ""}`,
+                  })) ?? []
+              }
+              className="w-72"
+            />
           )}
         </SettingsRow>
         {selectedProvider === "openrouter" ? (

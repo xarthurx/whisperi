@@ -123,7 +123,7 @@ export function HotkeyInput({ value, onChange, disabled }: HotkeyInputProps) {
     <div
       ref={containerRef}
       onClick={startListening}
-      className={`flex items-center justify-center gap-2 px-4 py-3 min-h-[48px] rounded-lg border cursor-pointer transition-all duration-150 ${
+      className={`flex items-center justify-center gap-2 px-4 py-3 min-h-[48px] rounded-control border cursor-pointer transition-all duration-150 ${
         listening
           ? "border-primary bg-surface-2 ring-1 ring-primary/30"
           : disabled
@@ -140,7 +140,7 @@ export function HotkeyInput({ value, onChange, disabled }: HotkeyInputProps) {
           {parts.map((part, i) => (
             <span key={i} className="flex items-center gap-1.5">
               {i > 0 && <span className="text-xs text-muted-foreground/50">+</span>}
-              <kbd className="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-md bg-surface-2 border border-border text-sm font-medium text-foreground shadow-sm">
+              <kbd className="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-inner bg-surface-2 border border-border text-sm font-medium text-foreground shadow-sm">
                 {part}
               </kbd>
             </span>

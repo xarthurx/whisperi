@@ -13,8 +13,8 @@
 
   "general.uiLanguage.title": "Interface Language",
   "general.uiLanguage.description": "Language used for the app interface",
-  "general.language.title": "Language",
-  "general.language.description": "Select 'Auto' for multi-language auto-detection. Choose a specific language to ensure output is always in that language.",
+  "general.language.title": "Output Language",
+  "general.language.description": "Select 'Auto' for multi-language auto-detection. Choose a specific language to ensure transcription output is always in that language.",
   "general.hotkey.title": "Hotkey",
   "general.hotkey.description": "Keyboard shortcut for dictation",
   "general.hotkey.activationMode": "Activation mode",

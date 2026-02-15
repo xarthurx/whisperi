@@ -14,16 +14,25 @@ interface LanguageSelectorProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  /** When provided, only show languages whose code is in this array */
+  filterCodes?: string[];
 }
 
 export default function LanguageSelector({
   value,
   onChange,
   className = "",
+  filterCodes,
 }: LanguageSelectorProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const baseOptions = filterCodes
+    ? LANGUAGE_OPTIONS.filter((lang) =>
+        filterCodes.some((code) => lang.value === code || lang.value.startsWith(code + "-"))
+      )
+    : LANGUAGE_OPTIONS;
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,7 +40,7 @@ export default function LanguageSelector({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredLanguages = LANGUAGE_OPTIONS.filter(
+  const filteredLanguages = baseOptions.filter(
     (lang) =>
       lang.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lang.value.toLowerCase().includes(searchQuery.toLowerCase())
@@ -128,7 +137,7 @@ export default function LanguageSelector({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className={`group relative w-full flex items-center justify-between gap-2 h-8 px-2.5 text-left rounded text-sm font-medium border shadow-sm backdrop-blur-sm transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-1 ${
+        className={`group relative w-full flex items-center justify-between gap-2 h-8 px-2.5 text-left rounded-control text-sm font-medium border shadow-sm backdrop-blur-sm transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-1 ${
           isOpen
             ? "border-border-active bg-surface-2/90 shadow ring-1 ring-primary/20"
             : "border-border/70 bg-surface-1/80 hover:border-border-hover hover:bg-surface-2/70 hover:shadow active:scale-[0.985]"
@@ -159,7 +168,7 @@ export default function LanguageSelector({
               left: `${dropdownPosition.left}px`,
               width: `${dropdownPosition.width}px`,
             }}
-            className="z-[9999] bg-surface-1 backdrop-blur-xl border border-border rounded shadow-xl overflow-hidden"
+            className="z-[9999] bg-surface-1 backdrop-blur-xl border border-border rounded-control shadow-xl overflow-hidden"
           >
             <div className="px-2 pt-2 pb-1.5 border-b border-border/50">
               <div className="relative">
@@ -171,13 +180,13 @@ export default function LanguageSelector({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={t("languageSelector.search")}
-                  className="w-full h-8 pl-7 pr-6 text-sm bg-surface-2 border-border rounded text-foreground focus:outline-none placeholder:text-muted-foreground"
+                  className="w-full h-8 pl-7 pr-6 text-sm bg-surface-2 border-border rounded-inner text-foreground focus:outline-none placeholder:text-muted-foreground"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors rounded p-0.5 hover:bg-muted/50"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors rounded-inner p-0.5 hover:bg-muted/50"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -198,7 +207,7 @@ export default function LanguageSelector({
                         key={language.value}
                         type="button"
                         onClick={() => handleSelect(language.value)}
-                        className={`group w-full flex items-center justify-between gap-2 h-8 px-2.5 text-left text-sm font-medium rounded transition-all duration-150 ease-out ${
+                        className={`group w-full flex items-center justify-between gap-2 h-8 px-2.5 text-left text-sm font-medium rounded-inner transition-all duration-150 ease-out ${
                           isSelected
                             ? "bg-primary/10 text-primary shadow-sm"
                             : isHighlighted

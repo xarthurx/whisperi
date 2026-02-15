@@ -80,6 +80,13 @@
   --color-border-subtle: hsl(222, 16%, 28%);       /* #3B4252 */
   --color-border-hover: hsl(220, 16%, 36%);        /* #4C566A */
   --color-border-active: hsl(193, 43%, 67%);       /* #88C0D0 */
+
+  /* Border radii — semantic tokens
+     rounded-control : buttons, inputs, dropdowns, toasts, containers
+     rounded-inner   : option rows, tab buttons, small nested elements
+     rounded-full    : toggles, dots, circular buttons (built-in, no token needed) */
+  --radius-control: 0.375rem;   /* 6px */
+  --radius-inner: 0.25rem;      /* 4px */
 }
 
 :root {

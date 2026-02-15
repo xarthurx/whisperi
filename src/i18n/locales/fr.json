@@ -13,8 +13,8 @@
 
   "general.uiLanguage.title": "Langue de l'interface",
   "general.uiLanguage.description": "Langue utilisée pour l'interface de l'application",
-  "general.language.title": "Langue",
-  "general.language.description": "Sélectionnez « Auto » pour la détection automatique multilingue. Choisissez une langue spécifique pour que la sortie soit toujours dans cette langue.",
+  "general.language.title": "Langue de sortie",
+  "general.language.description": "Sélectionnez « Auto » pour la détection automatique multilingue. Choisissez une langue spécifique pour que la sortie de transcription soit toujours dans cette langue.",
   "general.hotkey.title": "Raccourci clavier",
   "general.hotkey.description": "Raccourci clavier pour la dictée",
   "general.hotkey.activationMode": "Mode d'activation",

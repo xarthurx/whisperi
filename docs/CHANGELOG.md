@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.2] - 2026-02-15
+
+### Improvements
+- Unified all dropdown menus to custom styled components (replaced native OS `<select>` for mic device and model selectors)
+- Renamed "Language" to "Output Language" across all 9 locales for clarity
+- Fixed English missing from interface language selector (prefix matching for locale codes)
+- Introduced semantic border-radius tokens (`--radius-control`, `--radius-inner`) — all corner radii can now be tuned from two CSS variables in `index.css`
+- Unified rounded corners across all UI components (buttons, inputs, dropdowns, tabs, toasts, badges)
+
+### New Components
+- `StyledSelect` — generic styled dropdown matching LanguageSelector appearance, without search
+
 ## [0.5.1] - 2026-02-15
 
 ### Improvements

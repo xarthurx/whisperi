@@ -8,9 +8,10 @@ import {
 import { listAudioDevices, type AudioDevice } from "@/services/tauriApi";
 import { Toggle } from "@/components/ui/toggle";
 import LanguageSelector from "@/components/ui/LanguageSelector";
+import StyledSelect from "@/components/ui/StyledSelect";
 import { SettingsSection, SettingsRow } from "@/components/ui/SettingsSection";
 import { HotkeyInput } from "@/components/ui/HotkeyInput";
-import i18n, { SUPPORTED_LANGUAGES } from "@/i18n";
+import i18n, { LANGUAGE_CODES } from "@/i18n";
 import type { SectionProps } from "./types";
 
 export default function GeneralSection({ settings, update }: SectionProps) {
@@ -26,21 +27,15 @@ export default function GeneralSection({ settings, update }: SectionProps) {
   return (
     <>
       <SettingsSection title={t("general.uiLanguage.title")} description={t("general.uiLanguage.description")}>
-        <select
+        <LanguageSelector
           value={settings.uiLanguage || i18n.resolvedLanguage || "en"}
-          onChange={(e) => {
-            const lang = e.target.value;
+          onChange={(lang) => {
             update("uiLanguage", lang);
             i18n.changeLanguage(lang);
           }}
-          className="w-48 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
-        >
-          {SUPPORTED_LANGUAGES.map((lang) => (
-            <option key={lang.code} value={lang.code}>
-              {lang.name}
-            </option>
-          ))}
-        </select>
+          filterCodes={LANGUAGE_CODES as unknown as string[]}
+          className="w-48"
+        />
       </SettingsSection>
 
       <SettingsSection title={t("general.language.title")} description={t("general.language.description")}>
@@ -58,12 +53,12 @@ export default function GeneralSection({ settings, update }: SectionProps) {
             onChange={(hotkey) => update("dictationKey", hotkey)}
           />
           <SettingsRow label={t("general.hotkey.activationMode")}>
-            <div className="flex p-0.5 rounded-lg bg-surface-1">
+            <div className="flex p-0.5 rounded-control bg-surface-1">
               {(["tap", "push"] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => update("activationMode", mode)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-inner transition-all duration-150 ${
                     settings.activationMode === mode
                       ? "bg-primary/15 text-primary border border-primary/30"
                       : "text-muted-foreground hover:text-foreground border border-transparent"
@@ -78,18 +73,18 @@ export default function GeneralSection({ settings, update }: SectionProps) {
       </SettingsSection>
 
       <SettingsSection title={t("general.mic.title")} description={t("general.mic.description")}>
-        <select
+        <StyledSelect
           value={settings.selectedMicDeviceId}
-          onChange={(e) => update("selectedMicDeviceId", e.target.value)}
-          className="w-72 h-9 px-2 text-sm bg-surface-1 border border-border rounded-lg text-foreground"
-        >
-          <option value="">{t("general.mic.systemDefault")}</option>
-          {devices.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name} {d.is_default ? t("general.mic.default") : ""}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => update("selectedMicDeviceId", v)}
+          options={[
+            { value: "", label: t("general.mic.systemDefault") },
+            ...devices.map((d) => ({
+              value: d.id,
+              label: `${d.name}${d.is_default ? ` ${t("general.mic.default")}` : ""}`,
+            })),
+          ]}
+          className="w-72"
+        />
       </SettingsSection>
 
       <SettingsSection title={t("general.behavior.title")}>

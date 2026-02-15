@@ -13,8 +13,8 @@
 
   "general.uiLanguage.title": "Idioma de la interfaz",
   "general.uiLanguage.description": "Idioma utilizado para la interfaz de la aplicación",
-  "general.language.title": "Idioma",
-  "general.language.description": "Seleccione «Auto» para la detección automática multilingüe. Elija un idioma específico para que la salida sea siempre en ese idioma.",
+  "general.language.title": "Idioma de salida",
+  "general.language.description": "Seleccione «Auto» para la detección automática multilingüe. Elija un idioma específico para que la salida de transcripción sea siempre en ese idioma.",
   "general.hotkey.title": "Atajo de teclado",
   "general.hotkey.description": "Atajo de teclado para dictado",
   "general.hotkey.activationMode": "Modo de activación",

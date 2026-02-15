@@ -86,13 +86,13 @@ function SettingsPanelInner() {
         <div className="flex items-center gap-1">
           <button
             onClick={handleMinimize}
-            className="w-6 h-6 flex items-center justify-center rounded hover:bg-surface-raised transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded-inner hover:bg-surface-raised transition-colors"
           >
             <Minus className="w-3 h-3 text-muted-foreground" />
           </button>
           <button
             onClick={handleClose}
-            className="w-6 h-6 flex items-center justify-center rounded hover:bg-destructive/20 transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded-inner hover:bg-destructive/20 transition-colors"
           >
             <X className="w-3 h-3 text-muted-foreground" />
           </button>
@@ -106,7 +106,7 @@ function SettingsPanelInner() {
             <button
               key={id}
               onClick={() => setSection(id)}
-              className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-control text-sm font-medium transition-colors ${
                 section === id
                   ? "bg-primary/10 text-primary border-l-2 border-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-1"
