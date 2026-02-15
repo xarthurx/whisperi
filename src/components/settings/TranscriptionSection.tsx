@@ -1,11 +1,13 @@
+import { useTranslation } from "react-i18next";
 import { SettingsSection } from "@/components/ui/SettingsSection";
 import { getTranscriptionProviders } from "./providerHelpers";
 import ProviderModelSelector from "./ProviderModelSelector";
 import type { SectionProps } from "./types";
 
 export default function TranscriptionSection({ settings, update }: SectionProps) {
+  const { t } = useTranslation();
   return (
-    <SettingsSection title="Cloud Provider" description="Choose a cloud transcription service">
+    <SettingsSection title={t("transcription.title")} description={t("transcription.description")}>
       <ProviderModelSelector
         providers={getTranscriptionProviders(settings)}
         selectedProvider={settings.cloudTranscriptionProvider}
