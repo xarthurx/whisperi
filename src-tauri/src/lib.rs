@@ -121,10 +121,10 @@ pub fn run() {
             }
 
             // System tray
-            let show = CheckMenuItemBuilder::with_id("show", "Show Whisperi")
+            let show = CheckMenuItemBuilder::with_id("show", "Show")
                 .checked(true)
                 .build(app)?;
-            let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
+            let settings = MenuItemBuilder::with_id("settings", "Preferences").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
             let menu = MenuBuilder::new(app)

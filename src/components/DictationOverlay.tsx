@@ -143,6 +143,10 @@ function DictationOverlayInner() {
         0%, 100% { transform: scale(1); opacity: 1; }
         50% { transform: scale(1.15); opacity: 0.7; }
       }
+      @keyframes breathe {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
     `}</style>
     <div
       className="dictation-window flex flex-col items-center justify-center h-screen pointer-events-none"
@@ -153,8 +157,8 @@ function DictationOverlayInner() {
         <div
           className="absolute transition-transform duration-75"
           style={{
-            width: "4.5rem",
-            height: "4.5rem",
+            width: "3.5rem",
+            height: "3.5rem",
             borderRadius: "50%",
             transform: `scale(${isRecording ? levelScale : 1})`,
             background: isRecording
@@ -169,12 +173,13 @@ function DictationOverlayInner() {
           onPointerMove={handleButtonPointerMove}
           onPointerUp={handleButtonPointerUp}
           disabled={isProcessing}
-          className={`relative w-16 h-16 rounded-full border-2 transition-all duration-200 ${
+          style={!isRecording && !isProcessing ? { animation: "breathe 3s ease-in-out infinite" } : undefined}
+          className={`relative w-12 h-12 rounded-full border-2 transition-all duration-200 ${
             isProcessing
               ? "bg-surface-1 border-border-subtle cursor-wait shadow-md shadow-black/40"
               : isRecording
                 ? "bg-destructive border-destructive shadow-lg shadow-destructive/20"
-                : "bg-surface-1 border-border shadow-md shadow-black/40 hover:border-border-hover hover:bg-surface-2 hover:shadow-lg hover:shadow-primary/10 active:scale-95"
+                : "bg-surface-1 border-background shadow-md shadow-black/40 hover:border-border-subtle hover:bg-surface-2 hover:shadow-lg hover:shadow-primary/10 active:scale-95"
           }`}
           aria-label={
             isProcessing
@@ -189,7 +194,7 @@ function DictationOverlayInner() {
               <LoadingDots />
             ) : (
               <Mic
-                className={`w-7 h-7 ${isRecording ? "text-destructive-foreground" : "text-primary"}`}
+                className={`w-6 h-6 ${isRecording ? "text-destructive-foreground" : "text-primary/60"}`}
                 style={isRecording ? { animation: "pulse-mic 1.2s ease-in-out infinite" } : undefined}
               />
             )}

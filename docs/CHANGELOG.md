@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.1] - 2026-02-15
+
+### Improvements
+- Overlay button reduced from 64px to 48px for a more unobtrusive presence
+- Added subtle breathing animation (3s cycle) to idle overlay button
+- Mic icon scaled to 24px and softened to 60% opacity for a quieter idle state
+- Darker border on idle button creates a raised/convex appearance
+- System tray: renamed "Show Whisperi" to "Show", "Settings" to "Preferences"
+
 ## [0.5.0] - 2026-02-15
 
 ### Features
