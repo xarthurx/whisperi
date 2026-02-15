@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { appDataDir } from "@tauri-apps/api/path";
 import { Trash2 } from "lucide-react";
 import { clearTranscriptions } from "@/services/tauriApi";
@@ -8,6 +9,7 @@ import { SettingsSection, SettingsRow } from "@/components/ui/SettingsSection";
 import type { SectionProps } from "./types";
 
 export default function DeveloperSection({ settings, update, toast }: SectionProps & { toast: (props: { title?: string; description?: string; variant: "default" | "destructive" | "success" }) => void }) {
+  const { t } = useTranslation();
   const [dataPath, setDataPath] = useState("");
 
   useEffect(() => {
@@ -17,16 +19,16 @@ export default function DeveloperSection({ settings, update, toast }: SectionPro
   const handleClearHistory = async () => {
     try {
       await clearTranscriptions();
-      toast({ title: "History cleared", variant: "success" });
+      toast({ title: t("developer.data.historyCleared"), variant: "success" });
     } catch (e) {
-      toast({ title: "Failed to clear history", description: String(e), variant: "destructive" });
+      toast({ title: t("developer.data.clearFailed"), description: String(e), variant: "destructive" });
     }
   };
 
   return (
     <>
-      <SettingsSection title="Debug Mode" description="When enabled, the output includes labeled sections for both the raw transcription and the AI-enhanced result, so you can compare them side by side.">
-        <SettingsRow label="Enable debug output">
+      <SettingsSection title={t("developer.debug.title")} description={t("developer.debug.description")}>
+        <SettingsRow label={t("developer.debug.enable")}>
           <Toggle
             checked={settings.debugMode}
             onChange={(v) => update("debugMode", v)}
@@ -34,9 +36,9 @@ export default function DeveloperSection({ settings, update, toast }: SectionPro
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection title="Data" description={dataPath ? `Stored in ${dataPath}` : "Manage application data"}>
+      <SettingsSection title={t("developer.data.title")} description={dataPath ? t("developer.data.storedIn", { path: dataPath }) : t("developer.data.description")}>
         <Button variant="outline" size="sm" onClick={handleClearHistory} className="text-destructive hover:bg-destructive/10 hover:border-destructive/30">
-          <Trash2 className="w-3 h-3" /> Clear transcription history
+          <Trash2 className="w-3 h-3" /> {t("developer.data.clearHistory")}
         </Button>
       </SettingsSection>
     </>
