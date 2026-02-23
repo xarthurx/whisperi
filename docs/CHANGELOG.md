@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.4] - 2026-02-23
+
+### Fixes
+- Renamed "Settings" to "Preferences" in English overlay menu and window title to match tray menu label
+- Fixed UI language selector showing raw "en" instead of "English (US)" by adding prefix-match fallback for locale codes without region suffix
+
 ## [0.5.3] - 2026-02-15
 
 ### Fixes
