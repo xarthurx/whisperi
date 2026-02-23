@@ -145,12 +145,16 @@ export default function LanguageSelector({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className="truncate text-foreground">
-          <span className="mr-1.5">
-            {LANGUAGE_OPTIONS.find((l) => l.value === value)?.flag ?? "\uD83C\uDF10"}
-          </span>
-          {LANGUAGE_OPTIONS.find((l) => l.value === value)?.label ?? value}
-        </span>
+        {(() => {
+          const selected = LANGUAGE_OPTIONS.find((l) => l.value === value)
+            ?? LANGUAGE_OPTIONS.find((l) => l.value.startsWith(value + "-"));
+          return (
+            <span className="truncate text-foreground">
+              <span className="mr-1.5">{selected?.flag ?? "\uD83C\uDF10"}</span>
+              {selected?.label ?? value}
+            </span>
+          );
+        })()}
         <ChevronDown
           className={`w-3.5 h-3.5 shrink-0 text-muted-foreground transition-all duration-200 ${
             isOpen ? "rotate-180 text-primary" : "group-hover:text-foreground"

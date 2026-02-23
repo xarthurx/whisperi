@@ -1,5 +1,5 @@
 {
-  "settings.title": "Whisperi Settings",
+  "settings.title": "Whisperi Preferences",
   "settings.loading": "Loading settings...",
 
   "nav.general": "General",
@@ -90,7 +90,7 @@
   "overlay.stopRecording": "Stop recording",
   "overlay.startRecording": "Start recording",
   "overlay.updateAvailable": "Update available",
-  "overlay.menu.settings": "Settings",
+  "overlay.menu.settings": "Preferences",
   "overlay.menu.cancel": "Cancel Recording",
   "overlay.menu.quit": "Quit",
   "overlay.notification.title": "Whisperi",
