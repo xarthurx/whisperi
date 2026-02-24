@@ -109,6 +109,10 @@ Whisperi supports custom system prompts to control how the AI cleans up your tra
 
 To use a custom prompt, go to **Settings > Enhancement > System Prompt**, switch to the "Custom Prompt" tab, and paste your prompt text.
 
+## Known Issues
+
+- **Global hotkey may stop working after a remote desktop session** — If you use remote desktop software (RustDesk, Windows RDP, AnyDesk, etc.), the OS-level global hotkey registration can be disrupted when the remote session connects or disconnects. Whisperi will automatically re-register the hotkey when its overlay window regains focus, so **click the Whisperi overlay button once** to restore the shortcut. If the hotkey still doesn't work, open Preferences and re-set the hotkey.
+
 ## Other Platforms
 
 Whisperi currently targets **Windows only**, but it is built with [Tauri](https://tauri.app/), which supports macOS and Linux as well. If you'd like to see support for other platforms, please [open an issue](https://github.com/xarthurx/whisperi/issues).

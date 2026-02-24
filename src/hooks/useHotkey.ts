@@ -43,6 +43,29 @@ export function useHotkey({
     }
   }, []);
 
+  const setup = useCallback(async (key: string) => {
+    await cleanup();
+
+    try {
+      await register(key, (event) => {
+        if (activationModeRef.current === "tap") {
+          if (event.state === "Pressed") {
+            onToggleRef.current();
+          }
+        } else {
+          if (event.state === "Pressed") {
+            onPushStartRef.current?.();
+          } else if (event.state === "Released") {
+            onPushEndRef.current?.();
+          }
+        }
+      });
+      registeredRef.current = key;
+    } catch (e) {
+      console.warn("Failed to register hotkey:", key, e);
+    }
+  }, [cleanup]);
+
   useEffect(() => {
     if (!shortcut || !enabled) {
       cleanup();
@@ -51,36 +74,27 @@ export function useHotkey({
 
     let cancelled = false;
 
-    async function setup() {
-      await cleanup();
-      if (cancelled) return;
+    (async () => {
+      await setup(shortcut);
+      if (cancelled) registeredRef.current = null;
+    })();
 
-      try {
-        await register(shortcut, (event) => {
-          if (activationModeRef.current === "tap") {
-            if (event.state === "Pressed") {
-              onToggleRef.current();
-            }
-          } else {
-            if (event.state === "Pressed") {
-              onPushStartRef.current?.();
-            } else if (event.state === "Released") {
-              onPushEndRef.current?.();
-            }
-          }
-        });
-        if (!cancelled) {
-          registeredRef.current = shortcut;
-        }
-      } catch (e) {
-        console.warn("Failed to register hotkey:", shortcut, e);
-      }
-    }
-
-    setup();
     return () => {
       cancelled = true;
       cleanup();
     };
-  }, [shortcut, enabled, cleanup]);
+  }, [shortcut, enabled, cleanup, setup]);
+
+  // Re-register hotkey when the window regains focus (e.g. after a remote
+  // desktop session like RustDesk disrupts OS-level global hotkey hooks).
+  useEffect(() => {
+    if (!shortcut || !enabled) return;
+
+    const handleFocus = () => {
+      setup(shortcut);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [shortcut, enabled, setup]);
 }
