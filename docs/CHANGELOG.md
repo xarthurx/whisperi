@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.5] - 2026-02-24
+
+### Fixes
+- Fixed global hotkey breaking after remote desktop sessions (RustDesk, RDP, AnyDesk) — hotkey now re-registers automatically when the overlay window regains focus
+
 ## [0.5.4] - 2026-02-23
 
 ### Fixes
