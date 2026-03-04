@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.7] - 2026-03-04
+
+### Improvements
+- Restructured AI enhancement system prompt — 61% smaller, added few-shot input/output examples for better compliance from weaker models (LLaMA 4 Scout, etc.)
+- Added length ratio guard: falls back to raw transcription when model generates chatbot-style responses instead of cleaning up
+
+### Fixes
+- Fixed AI enhancement output containing preamble text (e.g., "Here is the cleaned-up text:") and alternative versions — added post-processing to strip preamble, alternative sections, and wrapping quotes
+
 ## [0.5.6] - 2026-03-04
 
 ### Fixes
