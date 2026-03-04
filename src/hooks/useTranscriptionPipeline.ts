@@ -137,7 +137,15 @@ export async function enhance(
   const rawAiResponse = await processReasoning(
     userPrompt, settings.reasoningModel, settings.reasoningProvider, systemPrompt, rApiKey,
   );
-  const finalText = stripAiPreamble(stripThinkTags(rawAiResponse));
+  let finalText = stripAiPreamble(stripThinkTags(rawAiResponse));
+
+  // Guard: if the model generated far more text than the input, it likely answered
+  // as a chatbot instead of cleaning up. Fall back to raw transcription.
+  if (!isChatMode && finalText.length > rawText.length * 3) {
+    console.warn("[Whisperi] Enhancement output is >3x input length — model likely answered instead of cleaning. Falling back to raw text.");
+    finalText = rawText;
+  }
+
   console.log("[Whisperi] Enhanced:", finalText);
   return { finalText, rawAiResponse };
 }
