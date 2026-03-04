@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.6] - 2026-03-04
+
+### Fixes
+- Fixed AI enhancement output containing preamble text (e.g., "Here is the cleaned-up text:") and alternative versions from models like LLaMA 4 Scout via Groq — added post-processing to strip preamble, alternative sections, and wrapping quotes
+- Reinforced system prompt with final reminder about output format for less instruction-following models
+
 ## [0.5.5] - 2026-02-24
 
 ### Fixes
