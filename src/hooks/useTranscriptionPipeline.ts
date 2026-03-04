@@ -137,7 +137,7 @@ export async function enhance(
   const rawAiResponse = await processReasoning(
     userPrompt, settings.reasoningModel, settings.reasoningProvider, systemPrompt, rApiKey,
   );
-  const finalText = stripThinkTags(rawAiResponse);
+  const finalText = stripAiPreamble(stripThinkTags(rawAiResponse));
   console.log("[Whisperi] Enhanced:", finalText);
   return { finalText, rawAiResponse };
 }
@@ -162,4 +162,34 @@ export function formatOutput(
 /** Strip <think>...</think> blocks from reasoning model output. */
 function stripThinkTags(text: string): string {
   return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+}
+
+/**
+ * Strip AI preamble, alternative sections, and wrapping quotes from model output.
+ * Some models (e.g., LLaMA via Groq) add "Here is the cleaned-up text:" preamble
+ * or offer alternative versions despite system prompt instructions not to.
+ */
+function stripAiPreamble(text: string): string {
+  let result = text;
+
+  // Strip "Here is/Here's the cleaned-up text:" style preamble
+  // (optionally preceded by "Sure," / "Certainly!" / etc.)
+  result = result.replace(
+    /^(?:(?:Sure|Certainly|Of course|Okay|OK)[,!.]?\s*)?(?:[Hh]ere(?:'s| is)|I'?ve)\s[^\n]*?(?:clean|polish|correct|revis|improv|refin|process|enhanc|tidi|final|version|transcri|output|result)\b[^\n]*?:\s*\n+/,
+    "",
+  );
+
+  // Strip "Or, in a more polished version:" and everything after it
+  result = result.replace(
+    /\n+\s*(?:Or|Alternatively)[,\s][^\n]*?(?:version|form|way|wording|text|polish|clean|formal|refin)\b[^\n]*?:\s*\n[\s\S]*$/i,
+    "",
+  );
+
+  // Strip wrapping double quotes if the entire output is quoted
+  result = result.trim();
+  if (result.startsWith('"') && result.endsWith('"') && result.length > 2) {
+    result = result.slice(1, -1).trim();
+  }
+
+  return result.trim();
 }
