@@ -29,6 +29,25 @@ fn override_min_window_size(window: &tauri::WebviewWindow, logical_w: i32, logic
     MIN_W.store(logical_w, Ordering::Relaxed);
     MIN_H.store(logical_h, Ordering::Relaxed);
 
+    /// Force DWM to recreate the transparent layered window surface.
+    /// A hide+show cycle is needed because SetWindowPos alone doesn't
+    /// make WebView2 repaint on a stale compositor surface.
+    unsafe fn refresh_transparent_overlay(hwnd: HWND) {
+        if !unsafe { IsWindowVisible(hwnd) }.as_bool() {
+            return;
+        }
+        unsafe {
+            let _ = ShowWindow(hwnd, SW_HIDE);
+            let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+            let _ = SetWindowPos(
+                hwnd,
+                HWND_TOPMOST,
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            );
+        }
+    }
+
     unsafe extern "system" fn wnd_proc(
         hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM,
     ) -> LRESULT {
@@ -40,21 +59,32 @@ fn override_min_window_size(window: &tauri::WebviewWindow, logical_w: i32, logic
             info.ptMinTrackSize.y = (MIN_H.load(Ordering::Relaxed) as f64 * scale) as i32;
             return LRESULT(0);
         }
+
         // After sleep/wake the compositor drops the transparent window surface.
-        // Re-assert the window state so DWM redraws it.
         const PBT_APMRESUMEAUTOMATIC: usize = 0x0012;
         if msg == WM_POWERBROADCAST && wparam.0 == PBT_APMRESUMEAUTOMATIC {
-            if unsafe { IsWindowVisible(hwnd) }.as_bool() {
-                let _ = unsafe {
-                    SetWindowPos(
-                        hwnd,
-                        HWND_TOPMOST,
-                        0, 0, 0, 0,
-                        SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_FRAMECHANGED,
-                    )
-                };
-            }
+            unsafe { refresh_transparent_overlay(hwnd) };
         }
+
+        // Monitor turned back on after power-saving blanked the display.
+        if msg == WM_SYSCOMMAND && (wparam.0 & 0xFFF0) == SC_MONITORPOWER as usize
+            && lparam.0 == -1
+        {
+            unsafe { refresh_transparent_overlay(hwnd) };
+        }
+
+        // Session unlock (Win+L → log back in) or remote reconnect.
+        const WM_WTSSESSION_CHANGE: u32 = 0x02B1;
+        const WTS_SESSION_UNLOCK: usize = 0x8;
+        if msg == WM_WTSSESSION_CHANGE && wparam.0 == WTS_SESSION_UNLOCK {
+            unsafe { refresh_transparent_overlay(hwnd) };
+        }
+
+        // Display settings changed (resolution, monitor connected/disconnected).
+        if msg == WM_DISPLAYCHANGE {
+            unsafe { refresh_transparent_overlay(hwnd) };
+        }
+
         let old: WNDPROC = unsafe { std::mem::transmute(OLD_WNDPROC.load(Ordering::Relaxed)) };
         unsafe { CallWindowProcW(old, hwnd, msg, wparam, lparam) }
     }
@@ -63,6 +93,12 @@ fn override_min_window_size(window: &tauri::WebviewWindow, logical_w: i32, logic
     unsafe {
         let old = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, wnd_proc as *const () as isize);
         OLD_WNDPROC.store(old, Ordering::Relaxed);
+    }
+
+    // Register for session change notifications (lock/unlock, remote connect).
+    {
+        use windows::Win32::System::RemoteDesktop::*;
+        let _ = unsafe { WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION) };
     }
 }
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.9] - 2026-03-05
+
+### Fixes
+- Fixed transparent overlay (mic button) disappearing after screen off, session lock, or display changes — added handlers for monitor power, session unlock, and display change events with a hide+show refresh cycle to force WebView2 surface recreation
+
 ## [0.5.8] - 2026-03-05
 
 ### Updates
