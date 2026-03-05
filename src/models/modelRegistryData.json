@@ -106,6 +106,11 @@
           "description": "Most accurate transcription"
         },
         {
+          "id": "gpt-4o-transcribe-diarize",
+          "name": "GPT-4o Transcribe + Diarize",
+          "description": "Transcription with speaker identification"
+        },
+        {
           "id": "whisper-1",
           "name": "Whisper",
           "params": "1.5B",
@@ -170,9 +175,14 @@
       "name": "OpenAI",
       "models": [
         {
+          "id": "gpt-5.3-chat-latest",
+          "name": "GPT-5.3",
+          "description": "Latest flagship, best conversational quality"
+        },
+        {
           "id": "gpt-5.2",
           "name": "GPT-5.2",
-          "description": "Latest flagship reasoning model"
+          "description": "Flagship reasoning model"
         },
         {
           "id": "gpt-5.2-pro",
@@ -188,21 +198,6 @@
           "id": "gpt-5-nano",
           "name": "GPT-5 Nano",
           "description": "Ultra-fast, lowest latency"
-        },
-        {
-          "id": "gpt-4.1",
-          "name": "GPT-4.1",
-          "description": "Strong baseline, 1M context"
-        },
-        {
-          "id": "gpt-4.1-mini",
-          "name": "GPT-4.1 Mini",
-          "description": "Smaller GPT-4.1 model"
-        },
-        {
-          "id": "gpt-4.1-nano",
-          "name": "GPT-4.1 Nano",
-          "description": "Lowest latency GPT-4.1"
         }
       ]
     },
@@ -216,8 +211,8 @@
           "description": "Most intelligent, coding and agents"
         },
         {
-          "id": "claude-sonnet-4-5",
-          "name": "Claude Sonnet 4.5",
+          "id": "claude-sonnet-4-6",
+          "name": "Claude Sonnet 4.6",
           "description": "Best speed-intelligence balance"
         },
         {
@@ -232,14 +227,19 @@
       "name": "Google Gemini",
       "models": [
         {
-          "id": "gemini-3-pro-preview",
-          "name": "Gemini 3 Pro",
+          "id": "gemini-3.1-pro-preview",
+          "name": "Gemini 3.1 Pro",
           "description": "Next-gen flagship for complex reasoning"
         },
         {
           "id": "gemini-3-flash-preview",
           "name": "Gemini 3 Flash",
           "description": "Ultra-fast next-gen model"
+        },
+        {
+          "id": "gemini-3.1-flash-lite-preview",
+          "name": "Gemini 3.1 Flash Lite",
+          "description": "Fastest and cheapest next-gen model"
         },
         {
           "id": "gemini-2.5-pro",
@@ -263,12 +263,6 @@
       "id": "groq",
       "name": "Groq",
       "models": [
-        {
-          "id": "meta-llama/llama-4-maverick-17b-128e-instruct",
-          "name": "LLaMA 4 Maverick",
-          "params": "400B MoE",
-          "description": "Latest Meta model, 17B active, 128 experts"
-        },
         {
           "id": "meta-llama/llama-4-scout-17b-16e-instruct",
           "name": "LLaMA 4 Scout",
@@ -312,6 +306,16 @@
       "id": "qwen",
       "name": "Qwen",
       "models": [
+        {
+          "id": "qwen3.5-plus",
+          "name": "Qwen3.5 Plus",
+          "description": "Latest flagship, 201 languages"
+        },
+        {
+          "id": "qwen3.5-flash",
+          "name": "Qwen3.5 Flash",
+          "description": "Fast Qwen3.5 model"
+        },
         {
           "id": "qwen3-235b-a22b",
           "name": "Qwen3 235B",
@@ -583,8 +587,8 @@
         "provider": "openrouter",
         "models": [
           {
-            "id": "anthropic/claude-sonnet-4",
-            "name": "Claude Sonnet 4",
+            "id": "anthropic/claude-sonnet-4.6",
+            "name": "Claude Sonnet 4.6",
             "description": "Balanced performance and quality",
             "recommended": true
           },
@@ -601,15 +605,15 @@
         "provider": "openrouter",
         "models": [
           {
-            "id": "anthropic/claude-opus-4",
-            "name": "Claude Opus 4",
+            "id": "anthropic/claude-opus-4.6",
+            "name": "Claude Opus 4.6",
             "description": "Most capable, highest quality",
             "recommended": true
           },
           {
-            "id": "openai/gpt-4.1",
-            "name": "GPT-4.1",
-            "description": "Strong general-purpose reasoning"
+            "id": "openai/gpt-5.2",
+            "name": "GPT-5.2",
+            "description": "Latest OpenAI flagship reasoning"
           }
         ]
       }

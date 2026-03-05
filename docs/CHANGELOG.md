@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.8] - 2026-03-05
+
+### Updates
+- Updated cloud model registry — removed deprecated models, added new ones
+- Removed: GPT-4.1 family (retiring), Gemini 3 Pro Preview (shutdown Mar 9), LLaMA 4 Maverick (deprecated on Groq)
+- Added: GPT-5.3, GPT-4o Transcribe Diarize, Gemini 3.1 Pro/Flash Lite, Qwen3.5 Plus/Flash
+- Updated: Claude Sonnet 4.5 → 4.6, Gemini 3 Pro → 3.1 Pro, OpenWhispri Cloud tier models to latest versions
+
 ## [0.5.7] - 2026-03-04
 
 ### Improvements
