@@ -126,6 +126,8 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus main window when a second instance is launched
             if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
                 let _ = window.set_focus();
             }
         }))
@@ -149,6 +151,7 @@ pub fn run() {
             #[cfg(windows)]
             if let Some(main_window) = app.get_webview_window("main") {
                 override_min_window_size(&main_window, 100, 100);
+                let _ = main_window.show();
             }
 
             // Settings window starts hidden — opened via tray

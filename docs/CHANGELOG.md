@@ -1,13 +1,17 @@
 # Changelog
 
-## [0.5.9] - 2026-03-05
+## [0.5.10] - 2026-03-06
 
 ### Fixes
+
 - Fixed transparent overlay (mic button) disappearing after screen off, session lock, or display changes — added handlers for monitor power, session unlock, and display change events with a hide+show refresh cycle to force WebView2 surface recreation
+- Fixed intermittent hidden overlay after launching while app was already running — single-instance activation now explicitly shows and unminimizes the main window before focusing it
+- Fixed enhancement occasionally returning shortened output with dictionary words appended — pass the same merged dictionary to enhancement and strip leaked dictionary blocks from model output post-processing
 
 ## [0.5.8] - 2026-03-05
 
 ### Updates
+
 - Updated cloud model registry — removed deprecated models, added new ones
 - Removed: GPT-4.1 family (retiring), Gemini 3 Pro Preview (shutdown Mar 9), LLaMA 4 Maverick (deprecated on Groq)
 - Added: GPT-5.3, GPT-4o Transcribe Diarize, Gemini 3.1 Pro/Flash Lite, Qwen3.5 Plus/Flash
@@ -16,51 +20,61 @@
 ## [0.5.7] - 2026-03-04
 
 ### Improvements
+
 - Restructured AI enhancement system prompt — 61% smaller, added few-shot input/output examples for better compliance from weaker models (LLaMA 4 Scout, etc.)
 - Added length ratio guard: falls back to raw transcription when model generates chatbot-style responses instead of cleaning up
 
 ### Fixes
+
 - Fixed AI enhancement output containing preamble text (e.g., "Here is the cleaned-up text:") and alternative versions — added post-processing to strip preamble, alternative sections, and wrapping quotes
 
 ## [0.5.6] - 2026-03-04
 
 ### Fixes
+
 - Fixed AI enhancement output containing preamble text (e.g., "Here is the cleaned-up text:") and alternative versions from models like LLaMA 4 Scout via Groq — added post-processing to strip preamble, alternative sections, and wrapping quotes
 - Reinforced system prompt with final reminder about output format for less instruction-following models
 
 ## [0.5.5] - 2026-02-24
 
 ### Fixes
+
 - Fixed global hotkey breaking after remote desktop sessions (RustDesk, RDP, AnyDesk) — hotkey now re-registers automatically when the overlay window regains focus
 
 ## [0.5.4] - 2026-02-23
 
 ### Fixes
+
 - Renamed "Settings" to "Preferences" in English overlay menu and window title to match tray menu label
 - Fixed UI language selector showing raw "en" instead of "English (US)" by adding prefix-match fallback for locale codes without region suffix
 
 ## [0.5.3] - 2026-02-15
 
 ### Fixes
+
 - Fixed English output language breaking transcription — locale codes like `en-US` are now normalized to ISO 639-1 (`en`) before reaching transcription APIs
 
 ## [0.5.2] - 2026-02-15
 
 ### Fixes
+
 - Fixed English missing from interface language selector (prefix matching for locale codes)
 
 ### Improvements
+
 - Unified all dropdown menus to custom styled components (replaced native OS `<select>` for mic device and model selectors)
 - Renamed "Language" to "Output Language" across all 9 locales for clarity
 - Introduced semantic border-radius tokens (`--radius-control`, `--radius-inner`) — all corner radii can now be tuned from two CSS variables in `index.css`
 - Unified rounded corners across all UI components (buttons, inputs, dropdowns, tabs, toasts, badges)
 
 ### New Components
+
 - `StyledSelect` — generic styled dropdown matching LanguageSelector appearance, without search
 
 ## [0.5.1] - 2026-02-15
 
 ### Improvements
+
 - Overlay button reduced from 64px to 48px for a more unobtrusive presence
 - Added subtle breathing animation (3s cycle) to idle overlay button
 - Mic icon scaled to 24px and softened to 60% opacity for a quieter idle state
@@ -70,12 +84,14 @@
 ## [0.5.0] - 2026-02-15
 
 ### Features
+
 - Added multi-language interface (i18n) with 9 supported languages: English, Simplified Chinese, Japanese, Korean, German, French, Spanish, Portuguese, Russian
 - Added Interface Language selector in Settings > General (first section)
 - Auto-detects language from OS locale on first launch, persists user choice
 - Cross-window language sync — changing language in settings instantly updates the overlay
 
 ### Technical
+
 - Added i18next, react-i18next, and i18next-browser-languagedetector
 - All UI strings extracted to translation JSON files (~90 translation keys)
 - New `uiLanguage` setting in tauri-plugin-store
@@ -83,6 +99,7 @@
 ## [0.4.4] - 2026-02-15
 
 ### Improvements
+
 - Fixed colored log output on Windows: force ANSI colors through piped stdout, set INFO level to green
 - Transcription logs now show the actual text (e.g., `"hello world" (11 chars)`) instead of just char count
 - Added dictionary echo detection: when silence causes Whisper to echo back dictionary words, logs now show WARN with "(dictionary echo, no voice detected)"
@@ -90,6 +107,7 @@
 ## [0.4.3] - 2026-02-14
 
 ### Refactoring
+
 - Extracted shared HTTP helper (`http.rs`) with `check_response()` to deduplicate error handling across 4 Rust modules
 - Deduplicated `ChatCompletionsResponse` types into shared struct in `http.rs`
 - Split `useAudioRecording` hook — extracted transcription pipeline logic into `useTranscriptionPipeline.ts`
@@ -101,6 +119,7 @@
 ## [0.4.2] - 2026-02-14
 
 ### Improvements
+
 - Added WARN-level "no voice detected" log message when transcription returns empty text (cloud, Qwen, OpenRouter, and local whisper paths)
 - Enabled colored console logging via `tauri-plugin-log` `colored` feature — log levels (ERROR, WARN, INFO) now render with ANSI colors in the terminal
 - Added consistent `log_transcription_result()` helper across all cloud transcription providers (was missing for Qwen)
@@ -108,20 +127,24 @@
 ## [0.4.1] - 2026-02-13
 
 ### Fixes
+
 - Fixed overlay window disappearing after sleep/wake: intercept `WM_POWERBROADCAST` to re-assert window state and force compositor redraw
 - Disabled default browser context menu in settings window
 
 ## [0.4.0] - 2026-02-12
 
 ### Fixes
+
 - Fixed settings not persisting immediately: added explicit `store.save()` after every `store.set()` call (was relying on auto-save timer, which could lose changes)
 
 ### Features
+
 - Settings window now reopens automatically after an in-app update (does not affect normal startup behavior)
 
 ## [0.3.10] - 2026-02-12
 
 ### Fixes
+
 - Strengthened Simplified Chinese (简体中文) enforcement across all prompt paths with concrete character examples (国/说/会/时/对 vs 國/說/會/時/對)
 - Added mandatory Simplified Chinese rule to `CHAT_SYSTEM_PROMPT` (was missing — caused Traditional Chinese output in chat mode)
 - Reinforced `AUTO_DETECT_INSTRUCTION` and `INTERNAL_SYSTEM_PROMPT` with stronger "MUST/NEVER" wording and explicit character pairs
@@ -129,16 +152,19 @@
 ## [0.3.9] - 2026-02-12
 
 ### Improvements
+
 - Added Whisper Large v3 (1.55B) to Groq transcription model dropdown
 - Updated recommended transcription model to Whisper Large v3 (highest accuracy) in README
 
 ## [0.3.8] - 2026-02-12
 
 ### Features
+
 - Added OpenRouter as a voice transcription provider via multimodal chat completions (requires audio-capable model)
 - Added Rust-side `log::info!`/`log::error!` logging for transcription and enhancement pipelines (visible in terminal with `bun run tauri dev`)
 
 ### Fixes
+
 - Fixed OpenRouter API authentication: add required `HTTP-Referer` and `X-Title` headers to prevent "Failed to authenticate with Clerk" errors
 - Fixed OpenRouter transcription: use multimodal chat completions with `modalities: ["text"]` instead of unsupported `/audio/transcriptions` endpoint
 - Set sensible default models when switching to OpenRouter (transcription: `openai/gpt-audio-mini`, enhancement: `openai/gpt-4o`)
@@ -147,24 +173,29 @@
 ## [0.3.7] - 2026-02-12
 
 ### Features
+
 - Added Qwen (Alibaba Cloud) as an AI enhancement provider (Qwen3 235B MoE, Qwen3 32B) — recommended for CJK languages
 - Added Qwen as a cloud transcription provider (Qwen3 ASR Flash) via multimodal chat completions API
 - Added OpenRouter as an AI enhancement provider with free-text model input (supports any model via `provider/model-name` format)
 - Show `[Enhancement Error]` in debug mode output when AI reasoning fails (was previously silent)
 
 ### Fixes
+
 - Fixed Qwen API endpoint: use international DashScope URL (`dashscope-intl`) instead of China-only endpoint
 
 ### Build
+
 - Upgraded Rust edition from 2021 to 2024
 - Added `base64` crate for Qwen ASR audio encoding
 
 ## [0.3.6] - 2026-02-12
 
 ### Improvements
+
 - Improved custom dictionary prompt: enhancement model now actively corrects phonetically similar mistranscriptions (e.g. "cloud" → "CLAUDE")
 
 ### UI
+
 - Added GitHub badges (CI, release, license, platform, Tauri) to README header
 - Added update-available yellow dot on overlay mic button
 - Increased text sizes in overlay-states SVG diagram
@@ -172,21 +203,25 @@
 ## [0.3.5] - 2026-02-12
 
 ### Fixes
+
 - Strip `<think>...</think>` tags from reasoning model output (DeepSeek, QwQ, etc.)
 - In debug mode, raw AI response with think tags shown under `[Raw AI Response]` label
 - Remove release body text from update notification (only show version number)
 - Persist overlay window position across restarts (no longer recenters on launch)
 
 ### Docs
+
 - Updated Other Platforms section: added local model note, fixed stale Whispering link (now Epicenter)
 
 ## [0.3.4] - 2026-02-12
 
 ### Features
+
 - Launch at startup toggle (General > Behavior) via `tauri-plugin-autostart`
 - Grouped startup, auto-paste, and sound toggles under unified "Behavior" section
 
 ### Code simplification
+
 - Rust: extracted `set_recording_error()` helper, replaced 5 duplicated lock-set patterns
 - Rust: iterator-based collect in database and settings, removed redundant clones
 - Rust: used `as_deref()` instead of `.clone()` in reasoning filter chains
@@ -196,19 +231,23 @@
 - Net reduction: −45 lines across 11 files
 
 ### Build
+
 - Restricted Vite dep scanner to `index.html` entry point (prevents EMFILE errors from Rust doc HTML)
 
 ## [0.3.3] - 2026-02-11
 
 ### First-launch experience
+
 - Auto-open settings window when no API keys are configured (first-time users)
 - Check for updates on app startup; show pulsing yellow badge on About tab when an update is available
 
 ### UI
+
 - Added app icon to settings window custom title bar
 - App icon added to README header
 
 ### README overhaul
+
 - Reordered sections: Why Cloud-First → Features → Language & Translation → Paste Anywhere
 - Moved Recommended Models into Supported Providers section with anchor link
 - Added animated overlay button states diagram (SVG with exact Lucide Mic paths and LoadingDots geometry)
@@ -219,6 +258,7 @@
 ## [0.3.2] - 2026-02-11
 
 ### Overlay button polish
+
 - Added subtle drop shadow to idle and processing state buttons for visual depth
 - Idle button gets a faint cyan glow on hover
 - Processing LoadingDots changed from near-invisible dark color to visible Snow Storm white
@@ -227,6 +267,7 @@
 ## [0.3.1] - 2026-02-11
 
 ### App icon redesign
+
 - Redesigned app icon with Nord color palette: Polar Night gradient background (#3B4252 → #2E3440), Snow Storm white microphone, Frost cyan sound wave arcs
 - Apple-style continuous-curvature squircle shape (superellipse) replacing rounded rectangle
 - Regenerated all icon sizes (32x32, 128x128, 256x256, 512x512, ICO, ICNS)
@@ -236,6 +277,7 @@
 ## [0.3.0] - 2026-02-11
 
 ### UI redesign
+
 - Adopted Nord color palette (Polar Night backgrounds, Snow Storm text, Frost cyan accent, Aurora semantics) with HSL tokens
 - Bundled Geist and Geist Mono fonts (woff2), replacing system Segoe UI
 - Unified button variants (ghost default, outline for actions, destructive ghost), pill-toggle pattern for activation mode and prompt tabs
@@ -244,15 +286,18 @@
 - Settings window resized to 760x800 (was 900x680), wider model dropdowns
 
 ### New settings
+
 - Sound effects toggle — disable start/stop recording sounds (General > Output)
 - Debug mode toggle — output labeled `[Transcription]` and `[Enhanced]` sections for comparison (Developer tab)
 
 ### Chat mode redesign
+
 - Pre-detect agent name in raw transcription before sending to AI reasoning
 - When agent name is detected, switch to a general-purpose assistant system prompt instead of the cleanup-focused prompt
 - AI now behaves naturally in chat mode (answers questions, follows instructions) instead of trying to clean up commands
 
 ### Bug fixes
+
 - Fixed language auto-detect: `getLanguageInstruction("auto")` now returns a proper auto-detect instruction instead of the broken "preferred language is set to auto" message
 - Agent name is now automatically included in transcription dictionary so STT correctly recognizes custom names
 - Improved updater error message for private repos / network failures
@@ -262,26 +307,31 @@
 ## [0.2.9] - 2026-02-11
 
 ### In-app auto-update
+
 - Added `tauri-plugin-updater` and `tauri-plugin-process` for in-app update checking, downloading, and installing
 - Configured updater endpoint pointing to GitHub Releases `latest.json`
 - Added signing key support to CI and release workflows (`TAURI_SIGNING_PRIVATE_KEY`)
 - Release workflow now produces signed NSIS installer + `latest.json` for updater
 
 ### Settings UI
+
 - Split "About" out of Developer tab into its own sidebar tab (with Info icon)
 - Developer tab now contains only "Data" section (more features planned)
 - New About tab shows app version and update UI with full state machine: idle, checking, up-to-date, available, downloading (progress bar), installing, error
 
 ### Custom app icon
+
 - New teal/emerald gradient icon with stylized microphone and sound wave arcs
 - Replaced all OpenWhispr icons in `src-tauri/icons/`
 - Added `scripts/generate-icons.mjs` for regenerating icons from SVG
 
 ### Overlay context menu
+
 - Right-click overlay shows native context menu (via Tauri Menu API) with Settings, Cancel Recording, and Quit
 - Added `quit_app` and `show_settings` Tauri commands
 
 ### CI/CD improvements
+
 - Merged CI `check` + `build` into single job to share Rust compilation cache
 - Added bun dependency caching (`actions/cache@v4` keyed on `bun.lock`)
 - Fixed updater signing key password — use GitHub secret instead of hardcoded empty string
@@ -289,6 +339,7 @@
 ## [0.2.8] - 2026-02-11
 
 ### CI/CD
+
 - Added `.github/workflows/release.yml` — automated GitHub Release workflow triggered on version tags (`v*`)
 - Uses `tauri-apps/tauri-action@v0` to build NSIS installer and publish it as a GitHub Release asset
 - Windows-only release (matches project's Windows-first platform target)
@@ -296,21 +347,25 @@
 ## [0.2.7] - 2026-02-11
 
 ### Dead code & dependency cleanup
+
 - Removed 11 unused shadcn/ui components (accordion, card, dialog, dropdown-menu, label, progress, select, skeleton, tabs, textarea, tooltip)
 - Removed 8 corresponding `@radix-ui/*` packages; kept react-slot and react-toggle
 - Removed unused exports from `prompts.ts` (`UNIFIED_SYSTEM_PROMPT`, `LEGACY_PROMPTS`, `buildPrompt()`, default export)
 - Removed unused `toast` export object from `Toast.tsx` and `SettingsGroup` component from `SettingsSection.tsx`
 
 ### Frontend quality
+
 - Removed 4 debug `console.log` calls from `useAudioRecording.ts` (kept `console.warn` for reasoning failure)
 - Replaced `(import.meta as any).env` with type-safe `import.meta.env` via standard `vite-env.d.ts`
 
 ### Rust consistency
+
 - Added `ResultExt::str_err()` trait in `commands/mod.rs`, replacing 23 repetitive `.map_err(|e| e.to_string())` calls
 - Normalized tray menu handler variable names (`w` to `window`) in `lib.rs`
 - Shared `reqwest::Client` via `LazyLock` static — replaces 5 per-request allocations with a pooled client with User-Agent header
 
 ### Project hygiene
+
 - Synced `package.json` version to 0.2.6 (was stuck at 0.2.3)
 - Added `.claude/`, `docs/plans/`, `src-tauri/gen/schemas/` to `.gitignore`; removed generated schemas from tracking
 - Updated `ARCHITECTURE.md`: added `commands/` module table, `main.rs` entry point, expanded file map
@@ -318,6 +373,7 @@
 ## [0.2.6] - 2026-02-11
 
 ### Overlay UX overhaul
+
 - Made surrounding overlay area fully transparent and click-through (`pointer-events-none`) — clicks pass to windows behind
 - Only the mic button is interactive (`pointer-events-auto`); drag to reposition, click to toggle recording
 - Removed background drag region — window repositioning is button-only
@@ -326,44 +382,53 @@
 - Removed status text below button, centered button vertically
 
 ### Hotkey capture guard
+
 - Global dictation hotkey is suspended while the HotkeyInput component in Settings is capturing a new shortcut
 - HotkeyInput emits `hotkey-capturing` event; overlay listens and disables hotkey accordingly
 
 ### System tray improvements
+
 - "Show Whisperi" is now a `CheckMenuItem` that toggles overlay visibility (checked = visible)
 
 ## [0.2.5] - 2026-02-11
 
 ### Dead code cleanup
+
 - Removed 7 unused Rust structs (`WhisperModelInfo`, `CloudModelInfo`, `CloudProvider`, `TranscriptionModel`, `TranscriptionProvider`, `ModelRegistry`, `WhisperModel`) and their unused `serde` imports
 - Zero compiler warnings
 
 ### Cross-window settings sync
+
 - Settings changed in the Settings window now immediately propagate to the Overlay window without requiring an app restart
 - Uses Tauri's cross-window event system (`emit`/`listen` on `settings-changed`) in `useSettings` hook
 - Fixes hotkey, activation mode, mic device, and all other settings requiring a restart to take effect
 
 ### UI improvements
+
 - Right-aligned model description text to appear under the model dropdown selector instead of left-aligned
 
 ## [0.2.4] - 2026-02-10
 
 ### Internal system prompt framework
+
 - Split `UNIFIED_SYSTEM_PROMPT` into `INTERNAL_SYSTEM_PROMPT` (hidden, always prepended) and `USER_VISIBLE_PROMPT` (shown in settings, replaceable by custom prompt)
 - Internal prompt covers: core identity, agent activation rules, imperative speech handling, output rules
 - User-visible prompt covers: cleanup rules, self-corrections, verbal punctuation, number/date formatting, smart formatting
 - Custom prompts now only replace the cleanup portion — core behavior rules always remain active
 
 ### Groq reasoning provider fix
+
 - Added `"groq"` arm in Rust reasoning dispatcher, routing to OpenAI-compatible chat completions with Groq base URL (`https://api.groq.com/openai/v1`)
 - Updated `openai::complete()` to accept optional `base_url` parameter; skips Responses API when using non-OpenAI base URLs
 
 ### UI improvements
+
 - Default Prompt tab now shows only the user-visible cleanup rules instead of the full system prompt
 - Custom prompt textarea grows with window height (`flex-1`, `min-h-[160px]`, `resize-y`) instead of fixed 8-row box
 - Updated placeholder text to clarify that core behavior rules are always applied automatically
 
 ### Project reorganization
+
 - Moved `ARCHITECTURE.md`, `CHANGELOG.md`, `CONTINUE.md` to `docs/`
 - Moved `README.md` to `.github/`
 - Updated `CLAUDE.md` with doc links and workflow rules (changelog updates before version bumps, context compression checkpoints)
@@ -372,20 +437,24 @@
 ## [0.2.3] - 2026-02-10
 
 ### Model registry updates
+
 - Added Claude Opus 4.6, GPT-5.2 Pro, Gemini 2.5 Pro/Flash, LLaMA 4 Maverick/Scout models
 - Removed discontinued Groq models (Mixtral 8x7B, Gemma 2 9B)
 - Added parameter counts to model dropdowns and description text below selection
 
 ### Multilingual punctuation
+
 - Added Chinese/Japanese/Korean punctuation rules to language instructions
 - Added multilingual punctuation override note to system prompt
 
 ### Documentation
+
 - Highlighted CLI paste capability (Claude Code, Codex) in README
 
 ## [0.2.2] - 2026-02-10
 
 ### UI polish
+
 - Modernized UI: larger fonts, softer radii (6-12px), better surface contrast
 - Added mic icon with pulse animation to overlay button
 - Added start/stop recording sound effects via Web Audio API
@@ -393,39 +462,47 @@
 - Enlarged overlay window, repositioned toast to bottom-center
 
 ### Enhancement pipeline
+
 - Renamed AI Models tab to Enhancement, added system prompt editor with default/custom tabs
 - Added `useCustomPrompt` toggle and `customSystemPrompt` wired through recording pipeline
 - Fixed empty `reasoningModel` default that prevented enhancement from running
 - Recommended Groq over OpenAI in provider tabs
 
 ### Hotkey improvements
+
 - Fixed hotkey registration: use refs for callbacks to prevent re-registration on re-render
 
 ### Settings refinements
+
 - Added language selector description for auto-detect vs specific language
 - Added duplicate word warning in dictionary section
 - Added agent name description explaining respond/chat mode
 - Removed local Whisper UI (cloud-first approach)
 
 ### Documentation
+
 - Created README with cloud-first philosophy and feature overview
 
 ## [0.2.1] - 2026-02-09
 
 ### Audio
+
 - Support all cpal audio sample formats (U8, I8, I32, U32, I64, U64, F64)
 
 ### Clipboard
+
 - Keep transcribed text on clipboard instead of restoring original content
 - Add auto-paste toggle in General settings
 
 ### UI
+
 - Add `hasKey` green dot indicator on provider tabs
 - Remove auto-switch logic — respect user's explicit tab selection
 - Enlarge overlay window, reposition toast to bottom-center
 - Add dev console logging for transcribed text
 
 ### Bugfixes
+
 - Persist setting defaults to store so recording pipeline stays in sync
 - Suppress `tao` event loop warnings via log level filter
 - Exclude overlay window from window-state plugin (fix size caching)
@@ -434,12 +511,14 @@
 ## [0.2.0] - 2026-02-09
 
 ### Bugfixes & polish (post-initial implementation)
+
 - Fixed Tauri 2.x shell plugin config: sidecar scope belongs in `capabilities/default.json`, not `plugins.shell` in tauri.conf.json
 - Fixed duplicate system tray icon: removed `trayIcon` from tauri.conf.json (programmatic tray in lib.rs is the sole source)
 - Fixed 3 Rust compiler warnings: removed unused re-exports in `audio/mod.rs`, suppressed test-only `is_recording` warning, removed dead `whisper_models_dir` function
 - Added model name dropdowns to SettingsPanel: cloud transcription and AI reasoning models populated from `modelRegistryData.json` with auto-select on provider switch
 
 ### Documentation
+
 - Added project architecture documentation (`ARCHITECTURE.md`)
 - Simplified `CLAUDE.md`, added `CHANGELOG.md`
 

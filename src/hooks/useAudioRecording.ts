@@ -25,7 +25,11 @@ function isEmptyTranscription(text: string, dictionary: string[]): boolean {
 
   // Normalize: lowercase, strip punctuation, split into words
   const normalize = (s: string) =>
-    s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").split(/\s+/).filter(Boolean);
+    s
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, "")
+      .split(/\s+/)
+      .filter(Boolean);
   const textWords = normalize(trimmed);
   if (textWords.length === 0) return true;
 
@@ -36,7 +40,11 @@ function isEmptyTranscription(text: string, dictionary: string[]): boolean {
 type RecordingPhase = "idle" | "recording" | "processing";
 
 interface UseAudioRecordingOptions {
-  onToast?: (props: { title: string; description: string; variant: "default" | "destructive" | "success" }) => void;
+  onToast?: (props: {
+    title: string;
+    description: string;
+    variant: "default" | "destructive" | "success";
+  }) => void;
 }
 
 export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
@@ -79,21 +87,24 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
     };
   }, [onToast]);
 
-  const start = useCallback(async (deviceId?: string) => {
-    if (phase !== "idle") return;
-    try {
-      await apiStartRecording(deviceId);
-      setPhase("recording");
-      const soundEnabled = await getSetting<boolean>("soundEnabled");
-      if (soundEnabled !== false) playStartSound();
-    } catch (e) {
-      onToast?.({
-        title: "Failed to start recording",
-        description: String(e),
-        variant: "destructive",
-      });
-    }
-  }, [phase, onToast]);
+  const start = useCallback(
+    async (deviceId?: string) => {
+      if (phase !== "idle") return;
+      try {
+        await apiStartRecording(deviceId);
+        setPhase("recording");
+        const soundEnabled = await getSetting<boolean>("soundEnabled");
+        if (soundEnabled !== false) playStartSound();
+      } catch (e) {
+        onToast?.({
+          title: "Failed to start recording",
+          description: String(e),
+          variant: "destructive",
+        });
+      }
+    },
+    [phase, onToast],
+  );
 
   const stop = useCallback(async () => {
     if (phase !== "recording") return;
@@ -107,14 +118,18 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
 
       const settings = await loadTranscriptionSettings();
       const transcriptionDict = buildTranscriptionDictionary(
-        settings.dictionary, settings.agentName, settings.agentAliases,
+        settings.dictionary,
+        settings.agentName,
+        settings.agentAliases,
       );
 
       const rawText = await transcribe(audioData, settings, transcriptionDict);
       console.log("[Whisperi] Transcription:", rawText);
 
       if (isEmptyTranscription(rawText, transcriptionDict)) {
-        console.log("[Whisperi] Empty transcription (silence or dictionary echo), skipping.");
+        console.log(
+          "[Whisperi] Empty transcription (silence or dictionary echo), skipping.",
+        );
         setPhase("idle");
         return;
       }
@@ -122,7 +137,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       let finalText = rawText;
       let rawAiResponse: string | null = null;
       try {
-        const result = await enhance(rawText, settings, settings.dictionary);
+        const result = await enhance(rawText, settings, transcriptionDict);
         finalText = result.finalText;
         rawAiResponse = result.rawAiResponse;
       } catch (e) {
@@ -132,7 +147,12 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         }
       }
 
-      const outputText = formatOutput(rawText, finalText, rawAiResponse, !!settings.debugMode);
+      const outputText = formatOutput(
+        rawText,
+        finalText,
+        rawAiResponse,
+        !!settings.debugMode,
+      );
       setTranscript(outputText);
 
       if (settings.autoPaste !== false) {
@@ -159,14 +179,17 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
     }
   }, [phase, onToast]);
 
-  const toggle = useCallback(async (deviceId?: string) => {
-    if (phase === "idle") {
-      await start(deviceId);
-    } else if (phase === "recording") {
-      await stop();
-    }
-    // If processing, ignore toggle
-  }, [phase, start, stop]);
+  const toggle = useCallback(
+    async (deviceId?: string) => {
+      if (phase === "idle") {
+        await start(deviceId);
+      } else if (phase === "recording") {
+        await stop();
+      }
+      // If processing, ignore toggle
+    },
+    [phase, start, stop],
+  );
 
   const cancel = useCallback(async () => {
     if (phase === "recording") {

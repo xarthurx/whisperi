@@ -36,9 +36,21 @@ export interface TranscriptionSettings {
 /** Load all settings needed for the transcription pipeline. */
 export async function loadTranscriptionSettings(): Promise<TranscriptionSettings> {
   const [
-    useLocal, whisperModel, cloudProvider, cloudModel, language, dictionary,
-    useReasoning, reasoningModel, reasoningProvider, autoPaste,
-    useCustomPrompt, customSystemPrompt, agentName, agentAliases, debugMode,
+    useLocal,
+    whisperModel,
+    cloudProvider,
+    cloudModel,
+    language,
+    dictionary,
+    useReasoning,
+    reasoningModel,
+    reasoningProvider,
+    autoPaste,
+    useCustomPrompt,
+    customSystemPrompt,
+    agentName,
+    agentAliases,
+    debugMode,
   ] = await Promise.all([
     getSetting<boolean>("useLocalWhisper"),
     getSetting<string>("whisperModel"),
@@ -58,9 +70,21 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
   ]);
 
   return {
-    useLocal, whisperModel, cloudProvider, cloudModel, language, dictionary,
-    useReasoning, reasoningModel, reasoningProvider, autoPaste,
-    useCustomPrompt, customSystemPrompt, agentName, agentAliases, debugMode,
+    useLocal,
+    whisperModel,
+    cloudProvider,
+    cloudModel,
+    language,
+    dictionary,
+    useReasoning,
+    reasoningModel,
+    reasoningProvider,
+    autoPaste,
+    useCustomPrompt,
+    customSystemPrompt,
+    agentName,
+    agentAliases,
+    debugMode,
   };
 }
 
@@ -94,13 +118,19 @@ export async function transcribe(
   const provider = settings.cloudProvider ?? "openai";
   const apiKey = await getApiKey(provider);
   if (!apiKey) {
-    throw new Error(`No API key configured for ${provider}. Set it in Settings.`);
+    throw new Error(
+      `No API key configured for ${provider}. Set it in Settings.`,
+    );
   }
   const model = settings.cloudModel ?? "gpt-4o-mini-transcribe";
   console.log(`[Whisperi] Transcribing with ${provider}/${model}...`);
   return transcribeCloud(
-    audioData, provider, apiKey, model,
-    settings.language ?? undefined, transcriptionDict,
+    audioData,
+    provider,
+    apiKey,
+    model,
+    settings.language ?? undefined,
+    transcriptionDict,
   );
 }
 
@@ -115,34 +145,60 @@ export async function enhance(
   settings: TranscriptionSettings,
   dictionary: string[],
 ): Promise<EnhancementResult> {
-  if (!settings.useReasoning || !settings.reasoningModel || !settings.reasoningProvider) {
+  if (
+    !settings.useReasoning ||
+    !settings.reasoningModel ||
+    !settings.reasoningProvider
+  ) {
     return { finalText: rawText, rawAiResponse: null };
   }
 
   const rApiKey = await getApiKey(settings.reasoningProvider);
   if (!rApiKey) {
-    console.warn(`[Whisperi] No API key for enhancement provider: ${settings.reasoningProvider}`);
+    console.warn(
+      `[Whisperi] No API key for enhancement provider: ${settings.reasoningProvider}`,
+    );
     return { finalText: rawText, rawAiResponse: null };
   }
 
-  console.log(`[Whisperi] Enhancing with ${settings.reasoningProvider}/${settings.reasoningModel}...`);
-  const isChatMode = detectChatMode(rawText, settings.agentName, settings.agentAliases);
+  console.log(
+    `[Whisperi] Enhancing with ${settings.reasoningProvider}/${settings.reasoningModel}...`,
+  );
+  const isChatMode = detectChatMode(
+    rawText,
+    settings.agentName,
+    settings.agentAliases,
+  );
   const systemPrompt = isChatMode
-    ? getChatSystemPrompt(settings.agentName, dictionary, settings.language ?? undefined)
+    ? getChatSystemPrompt(
+        settings.agentName,
+        dictionary,
+        settings.language ?? undefined,
+      )
     : getSystemPrompt(
-        settings.agentName, dictionary, settings.language ?? undefined,
-        settings.useCustomPrompt && settings.customSystemPrompt ? settings.customSystemPrompt : undefined,
+        settings.agentName,
+        dictionary,
+        settings.language ?? undefined,
+        settings.useCustomPrompt && settings.customSystemPrompt
+          ? settings.customSystemPrompt
+          : undefined,
       );
   const userPrompt = getUserPrompt(rawText);
   const rawAiResponse = await processReasoning(
-    userPrompt, settings.reasoningModel, settings.reasoningProvider, systemPrompt, rApiKey,
+    userPrompt,
+    settings.reasoningModel,
+    settings.reasoningProvider,
+    systemPrompt,
+    rApiKey,
   );
   let finalText = stripAiPreamble(stripThinkTags(rawAiResponse));
 
   // Guard: if the model generated far more text than the input, it likely answered
   // as a chatbot instead of cleaning up. Fall back to raw transcription.
   if (!isChatMode && finalText.length > rawText.length * 3) {
-    console.warn("[Whisperi] Enhancement output is >3x input length — model likely answered instead of cleaning. Falling back to raw text.");
+    console.warn(
+      "[Whisperi] Enhancement output is >3x input length — model likely answered instead of cleaning. Falling back to raw text.",
+    );
     finalText = rawText;
   }
 
@@ -190,6 +246,13 @@ function stripAiPreamble(text: string): string {
   // Strip "Or, in a more polished version:" and everything after it
   result = result.replace(
     /\n+\s*(?:Or|Alternatively)[,\s][^\n]*?(?:version|form|way|wording|text|polish|clean|formal|refin)\b[^\n]*?:\s*\n[\s\S]*$/i,
+    "",
+  );
+
+  // Strip leaked prompt dictionary blocks (some models echo system instructions)
+  result = result.replace(/\n+\s*Custom\s+Dictionary\s*[—:-][\s\S]*$/i, "");
+  result = result.replace(
+    /\n+\s*(?:Dictionary|Words?)\s*:\s*(?:[^\n]*,\s*){3,}[^\n]*$/i,
     "",
   );
 
