@@ -29,8 +29,13 @@ pub async fn transcribe_local(
 ) -> Result<String, String> {
     let file_name = format!("ggml-{}.bin", model);
     let language = normalize_language(language);
+    let prompt = if dictionary.is_empty() {
+        None
+    } else {
+        Some(dictionary.join(" "))
+    };
 
-    transcription::whisper::transcribe(
+    let text = transcription::whisper::transcribe(
         &app,
         &audio_data,
         &file_name,
@@ -38,7 +43,9 @@ pub async fn transcribe_local(
         &dictionary,
     )
     .await
-    .str_err()
+    .str_err()?;
+
+    Ok(transcription::cloud::strip_prompt_echo(&text, prompt.as_deref()))
 }
 
 #[tauri::command]
@@ -64,7 +71,7 @@ pub async fn transcribe_cloud(
         Some(dictionary.join(" "))
     };
 
-    match provider.as_str() {
+    let text = match provider.as_str() {
         "openai" => transcription::cloud::transcribe_openai(
             audio_data,
             &api_key,
@@ -74,7 +81,7 @@ pub async fn transcribe_cloud(
             None,
         )
         .await
-        .str_err(),
+        .str_err()?,
 
         "groq" => transcription::cloud::transcribe_groq(
             audio_data,
@@ -84,7 +91,7 @@ pub async fn transcribe_cloud(
             prompt.as_deref(),
         )
         .await
-        .str_err(),
+        .str_err()?,
 
         "qwen" => transcription::cloud::transcribe_qwen(
             audio_data,
@@ -92,7 +99,7 @@ pub async fn transcribe_cloud(
             &model,
         )
         .await
-        .str_err(),
+        .str_err()?,
 
         "mistral" => transcription::cloud::transcribe_mistral(
             audio_data,
@@ -102,7 +109,7 @@ pub async fn transcribe_cloud(
             prompt.as_deref(),
         )
         .await
-        .str_err(),
+        .str_err()?,
 
         "openrouter" => transcription::cloud::transcribe_openrouter(
             audio_data,
@@ -112,10 +119,12 @@ pub async fn transcribe_cloud(
             prompt.as_deref(),
         )
         .await
-        .str_err(),
+        .str_err()?,
 
-        other => Err(format!("Unknown transcription provider: {}", other)),
-    }
+        other => return Err(format!("Unknown transcription provider: {}", other)),
+    };
+
+    Ok(transcription::cloud::strip_prompt_echo(&text, prompt.as_deref()))
 }
 
 #[tauri::command]

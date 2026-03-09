@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.11] - 2026-03-09
+
+### Fixes
+
+- Fixed custom dictionary words appearing in transcription output — Whisper models (local and cloud) echo the prompt/dictionary at the start of transcriptions, especially during silence or short audio; added `strip_prompt_echo` to detect and strip full echoes (returning empty for silence) and prefix echoes (stripping dictionary words prepended to real speech)
+- Fixed AI enhancement leaking dictionary blocks at the start of output — extended `stripAiPreamble` to also strip "Custom Dictionary" and word-list patterns at the beginning, not just the end
+
 ## [0.5.10] - 2026-03-06
 
 ### Fixes

@@ -250,9 +250,19 @@ function stripAiPreamble(text: string): string {
   );
 
   // Strip leaked prompt dictionary blocks (some models echo system instructions)
+  // — at end of output
   result = result.replace(/\n+\s*Custom\s+Dictionary\s*[—:-][\s\S]*$/i, "");
   result = result.replace(
     /\n+\s*(?:Dictionary|Words?)\s*:\s*(?:[^\n]*,\s*){3,}[^\n]*$/i,
+    "",
+  );
+  // — at start of output
+  result = result.replace(
+    /^\s*Custom\s+Dictionary\s*[—:-][^\n]*\n+/i,
+    "",
+  );
+  result = result.replace(
+    /^\s*(?:Dictionary|Words?)\s*:\s*(?:[^\n]*,\s*){3,}[^\n]*\n+/i,
     "",
   );
 

@@ -27,6 +27,76 @@ fn is_dictionary_echo(text: &str, prompt: &str) -> bool {
     text_words.iter().all(|w| prompt_words.contains(w))
 }
 
+/// Strip echoed prompt/dictionary words from transcription output.
+///
+/// Whisper models (local and cloud) may echo the prompt at the beginning of their
+/// output, especially when audio starts with silence or is very short.
+///
+/// - Full echo (all words from prompt): return empty string (silence detected)
+/// - Prefix echo (text starts with prompt word sequence): strip the prefix
+pub fn strip_prompt_echo(text: &str, prompt: Option<&str>) -> String {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    let Some(p) = prompt.filter(|s| !s.is_empty()) else {
+        return trimmed.to_string();
+    };
+
+    // Full echo: every word in text comes from the prompt → silence
+    if is_dictionary_echo(trimmed, p) {
+        log::warn!(
+            "[Whisperi] Stripped dictionary echo (silence): \"{}\"",
+            trimmed
+        );
+        return String::new();
+    }
+
+    // Prefix echo: check if text starts with the prompt words in sequence.
+    // Only applies when prompt has 2+ words (single-word matches are too ambiguous).
+    let prompt_words: Vec<&str> = p.split_whitespace().collect();
+    if prompt_words.len() < 2 {
+        return trimmed.to_string();
+    }
+
+    let text_words: Vec<&str> = trimmed.split_whitespace().collect();
+    if text_words.len() <= prompt_words.len() {
+        // Not enough words for prefix echo + real speech
+        return trimmed.to_string();
+    }
+
+    // Count consecutive matching prompt words at the start of text
+    let mut match_count = 0;
+    for (tw, pw) in text_words.iter().zip(prompt_words.iter()) {
+        let tw_clean = tw.trim_matches(|c: char| !c.is_alphanumeric());
+        if tw_clean.eq_ignore_ascii_case(pw) {
+            match_count += 1;
+        } else {
+            break;
+        }
+    }
+
+    // Require ALL prompt words to match at the start (conservative to avoid
+    // stripping legitimate speech that happens to start with dictionary words)
+    if match_count == prompt_words.len() {
+        // Use pointer arithmetic on the slice to find the byte offset safely.
+        // text_words are &str slices into trimmed, so this is always valid UTF-8.
+        let last = text_words[match_count - 1];
+        let byte_offset = last.as_ptr() as usize - trimmed.as_ptr() as usize + last.len();
+        let stripped = trimmed[byte_offset..].trim();
+        if !stripped.is_empty() {
+            log::info!(
+                "[Whisperi] Stripped prompt echo prefix: \"{}\"",
+                trimmed[..byte_offset].trim()
+            );
+            return stripped.to_string();
+        }
+    }
+
+    trimmed.to_string()
+}
+
 /// Log transcription result, detecting silence (empty or dictionary echo).
 pub fn log_transcription_result(provider: &str, text: &str, prompt: Option<&str>) {
     let trimmed = text.trim();
