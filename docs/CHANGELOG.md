@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.12] - 2026-03-11
+
+### Fixes
+
+- Fixed autostart launching debug binary on boot — caused ERR_CONNECTION_REFUSED broken page and console window; autostart toggle is now hidden in dev mode to prevent registering the wrong binary
+
 ## [0.5.11] - 2026-03-09
 
 ### Fixes

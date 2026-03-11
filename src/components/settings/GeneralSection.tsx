@@ -18,10 +18,13 @@ export default function GeneralSection({ settings, update }: SectionProps) {
   const { t } = useTranslation();
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [launchAtStartup, setLaunchAtStartup] = useState(false);
+  const isDev = import.meta.env.DEV;
 
   useEffect(() => {
     listAudioDevices().then(setDevices).catch(() => {});
-    isAutostartEnabled().then(setLaunchAtStartup).catch(() => {});
+    if (!isDev) {
+      isAutostartEnabled().then(setLaunchAtStartup).catch(() => {});
+    }
   }, []);
 
   return (
@@ -88,18 +91,20 @@ export default function GeneralSection({ settings, update }: SectionProps) {
       </SettingsSection>
 
       <SettingsSection title={t("general.behavior.title")}>
-        <SettingsRow label={t("general.behavior.launchStartup")} description={t("general.behavior.launchStartupDesc")}>
-          <Toggle
-            checked={launchAtStartup}
-            onChange={async (v) => {
-              try {
-                if (v) await enableAutostart();
-                else await disableAutostart();
-                setLaunchAtStartup(v);
-              } catch { /* ignore */ }
-            }}
-          />
-        </SettingsRow>
+        {!isDev && (
+          <SettingsRow label={t("general.behavior.launchStartup")} description={t("general.behavior.launchStartupDesc")}>
+            <Toggle
+              checked={launchAtStartup}
+              onChange={async (v) => {
+                try {
+                  if (v) await enableAutostart();
+                  else await disableAutostart();
+                  setLaunchAtStartup(v);
+                } catch { /* ignore */ }
+              }}
+            />
+          </SettingsRow>
+        )}
         <SettingsRow label={t("general.behavior.autoPaste")} description={t("general.behavior.autoPasteDesc")}>
           <Toggle
             checked={settings.autoPaste}
