@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.13] - 2026-03-13
+
+### CI/CD
+
+- Added `.github/workflows/update-winget.yml` to submit a Winget manifest update for `xarthurx.Whisperi` whenever a GitHub release is published, and to support manual `workflow_dispatch` runs against an existing release tag for backfills/tests; requires a `WINGET_CREATE_GITHUB_TOKEN` classic PAT with `public_repo` scope
+
 ## [0.5.12] - 2026-03-11
 
 ### Fixes

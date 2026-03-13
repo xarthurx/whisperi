@@ -1,0 +1,82 @@
+name: Update Winget
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing GitHub release tag to submit to Winget (for example v0.5.12)
+        required: true
+        type: string
+  release:
+    types:
+      - published
+
+jobs:
+  submit-winget-update:
+    if: ${{ github.event_name == 'workflow_dispatch' || (!github.event.release.draft && !github.event.release.prerelease) }}
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    env:
+      PACKAGE_IDENTIFIER: xarthurx.Whisperi
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+      REPOSITORY: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Validate Winget token
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINGET_CREATE_GITHUB_TOKEN)) {
+            throw "Missing WINGET_CREATE_GITHUB_TOKEN secret. Create a GitHub classic PAT with public_repo scope for wingetcreate submissions."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:RELEASE_TAG)) {
+            throw "Missing release tag. Provide a release tag when running workflow_dispatch, or publish a GitHub release to trigger this workflow automatically."
+          }
+
+      - name: Install .NET 6
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Download wingetcreate
+        shell: pwsh
+        run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+      - name: Submit Winget manifest update
+        shell: pwsh
+        run: |
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+
+          $releaseApiUrl = if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            "https://api.github.com/repos/$env:REPOSITORY/releases/tags/$env:RELEASE_TAG"
+          } else {
+            "${{ github.event.release.url }}"
+          }
+
+          $release = Invoke-RestMethod -Headers $headers -Uri $releaseApiUrl
+
+          if ($release.draft -or $release.prerelease) {
+            throw "Winget submissions only support published non-prerelease GitHub releases."
+          }
+
+          $tag = $release.tag_name
+          $version = $tag -replace '^v', ''
+          $assets = @($release.assets)
+          $installerAssets = @($assets | Where-Object { $_.name -like '*_x64-setup.exe' })
+
+          if ($installerAssets.Count -ne 1) {
+            throw "Expected exactly one x64 setup asset on release $tag, found $($installerAssets.Count)."
+          }
+
+          .\wingetcreate.exe update `
+            $env:PACKAGE_IDENTIFIER `
+            -u $installerAssets[0].browser_download_url `
+            -v $version `
+            -t $env:WINGET_CREATE_GITHUB_TOKEN `
+            --submit
