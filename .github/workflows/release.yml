@@ -70,9 +70,14 @@ jobs:
             exit 0
           }
 
-      - name: Download wingetcreate (self-contained)
+      - name: Install .NET 6
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Download wingetcreate
         shell: pwsh
-        run: Invoke-WebRequest https://aka.ms/wingetcreate/latest/self-contained -OutFile wingetcreate.exe
+        run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
 
       - name: Submit Winget manifest update
         shell: pwsh
