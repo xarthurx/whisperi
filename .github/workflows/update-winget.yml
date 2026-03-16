@@ -1,19 +1,15 @@
-name: Update Winget
+name: Update Winget (manual)
 
 on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing GitHub release tag to submit to Winget (for example v0.5.12)
+        description: Existing GitHub release tag to submit to Winget (for example v0.6.0)
         required: true
         type: string
-  release:
-    types:
-      - published
 
 jobs:
   submit-winget-update:
-    if: ${{ github.event_name == 'workflow_dispatch' || (!github.event.release.draft && !github.event.release.prerelease) }}
     runs-on: windows-latest
     permissions:
       contents: read
@@ -21,8 +17,7 @@ jobs:
       PACKAGE_IDENTIFIER: xarthurx.Whisperi
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
-      REPOSITORY: ${{ github.repository }}
-      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
     steps:
       - name: Normalize and validate inputs
         shell: pwsh
@@ -31,11 +26,7 @@ jobs:
             throw "Missing WINGET_CREATE_GITHUB_TOKEN secret. Create a GitHub classic PAT with public_repo scope for wingetcreate submissions."
           }
 
-          if ([string]::IsNullOrWhiteSpace($env:RELEASE_TAG)) {
-            throw "Missing release tag. Provide a release tag when running workflow_dispatch, or publish a GitHub release to trigger this workflow automatically."
-          }
-
-          # Ensure tag has 'v' prefix (handles manual input like "0.5.13")
+          # Ensure tag has 'v' prefix (handles input like "0.6.0")
           $tag = $env:RELEASE_TAG
           if ($tag -notmatch '^v') { $tag = "v$tag" }
           echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
@@ -54,12 +45,7 @@ jobs:
             "X-GitHub-Api-Version" = "2022-11-28"
           }
 
-          $releaseApiUrl = if ("${{ github.event_name }}" -eq "workflow_dispatch") {
-            "https://api.github.com/repos/$env:REPOSITORY/releases/tags/$env:RELEASE_TAG"
-          } else {
-            "${{ github.event.release.url }}"
-          }
-
+          $releaseApiUrl = "https://api.github.com/repos/${{ github.repository }}/releases/tags/$env:RELEASE_TAG"
           Write-Output "Fetching release from: $releaseApiUrl"
           $release = Invoke-RestMethod -Headers $headers -Uri $releaseApiUrl
 
