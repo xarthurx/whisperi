@@ -51,6 +51,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": [
+      "../docs/CHANGELOG.md"
+    ],
     "windows": {
       "nsis": {
         "displayLanguageSelector": false

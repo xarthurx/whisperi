@@ -233,6 +233,7 @@ pub fn run() {
             commands::database::clear_transcriptions,
             commands::app::quit_app,
             commands::app::show_settings,
+            commands::changelog::read_changelog,
         ])
         .run(tauri::generate_context!())
         .expect("error while running whisperi");

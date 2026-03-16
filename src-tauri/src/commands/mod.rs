@@ -1,5 +1,6 @@
 pub mod app;
 pub mod audio;
+pub mod changelog;
 pub mod clipboard;
 pub mod database;
 pub mod models;
