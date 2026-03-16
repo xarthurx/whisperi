@@ -1,10 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { Toggle } from "@/components/ui/toggle";
 import { SettingsSection, SettingsRow } from "@/components/ui/SettingsSection";
-import { USER_VISIBLE_PROMPT } from "@/config/prompts";
+import { getVisiblePrompt, type EnhancementIntensity } from "@/config/prompts";
 import { getReasoningProviders } from "./providerHelpers";
 import ProviderModelSelector from "./ProviderModelSelector";
 import type { SectionProps } from "./types";
+
+const INTENSITIES: EnhancementIntensity[] = ["light", "standard", "full"];
 
 export default function AIModelsSection({ settings, update }: SectionProps) {
   const { t } = useTranslation();
@@ -32,6 +34,41 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
             settings={settings}
             update={update}
           />
+        </SettingsSection>
+      )}
+
+      {settings.useReasoningModel && (
+        <SettingsSection
+          title={t("enhancement.intensity.title")}
+          description={t("enhancement.intensity.description")}
+        >
+          <div className="flex flex-col gap-2">
+            <div className="relative flex p-0.5 rounded-control bg-surface-1">
+              {INTENSITIES.map((level) => {
+                const isActive = (settings.enhancementIntensity ?? "standard") === level;
+                const isDisabled = settings.useCustomPrompt;
+                return (
+                  <button
+                    key={level}
+                    onClick={() => !isDisabled && update("enhancementIntensity", level)}
+                    disabled={isDisabled}
+                    className={`relative z-10 flex-1 px-3 py-1.5 rounded-inner text-sm font-medium transition-all duration-150 ${
+                      isDisabled
+                        ? "text-muted-foreground/40 cursor-not-allowed border border-transparent"
+                        : isActive
+                          ? "bg-primary/15 text-primary border border-primary/30"
+                          : "text-muted-foreground hover:text-foreground border border-transparent"
+                    }`}
+                  >
+                    {t(`enhancement.intensity.${level}`)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground/70">
+              {t(`enhancement.intensity.${settings.enhancementIntensity ?? "standard"}Desc`)}
+            </p>
+          </div>
         </SettingsSection>
       )}
 
@@ -65,7 +102,7 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
             />
           ) : (
             <div className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border rounded-control text-muted-foreground/80 max-h-[50vh] overflow-y-auto whitespace-pre-wrap leading-relaxed">
-              {USER_VISIBLE_PROMPT}
+              {getVisiblePrompt((settings.enhancementIntensity ?? "standard") as EnhancementIntensity)}
             </div>
           )}
         </div>
