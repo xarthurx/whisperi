@@ -77,7 +77,7 @@ export default function WhatsNewModal({ version, changelog, onDismiss }: WhatsNe
           {sectionMarkdown ? (
             <ChangelogContent markdown={sectionMarkdown} />
           ) : (
-            <p className="text-sm text-muted-foreground">No changelog available for this version.</p>
+            <p className="text-sm text-muted-foreground">{t("whatsNew.noChangelog")}</p>
           )}
         </div>
 

@@ -47,18 +47,25 @@ function DictationOverlayInner() {
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check if the app version changed since last launch (covers both
-  // auto-updates and manual installs) → trigger What's New modal
+  // auto-updates and manual installs) → trigger What's New modal.
+  // Uses a short delay so the settings window's event listener is ready.
   useEffect(() => {
     if (!loaded) return;
-    getVersion().then((currentVersion) => {
-      getSetting<string>("lastSeenVersion").then((lastSeen) => {
+    (async () => {
+      try {
+        const [currentVersion, lastSeen] = await Promise.all([
+          getVersion(),
+          getSetting<string>("lastSeenVersion"),
+        ]);
         if (lastSeen !== currentVersion) {
-          setSetting("lastSeenVersion", currentVersion);
-          emit("show-whats-new", { version: currentVersion });
-          showSettings();
+          await setSetting("lastSeenVersion", currentVersion);
+          await showSettings();
+          setTimeout(() => emit("show-whats-new", { version: currentVersion }), 300);
         }
-      });
-    });
+      } catch {
+        // Silently ignore — version check is non-critical
+      }
+    })();
   }, [loaded]);
 
   // Check for updates on startup and notify settings window

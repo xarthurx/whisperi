@@ -56,6 +56,7 @@
 
   "whatsNew.title": "What's New in v{{version}}",
   "whatsNew.dismiss": "Got it",
+  "whatsNew.noChangelog": "No changelog available for this version.",
 
   "dictionary.title": "Custom Dictionary",
   "dictionary.description": "Words the transcription model should recognize (names, jargon, etc.)",

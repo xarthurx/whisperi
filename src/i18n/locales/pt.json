@@ -56,6 +56,7 @@
 
   "whatsNew.title": "Novidades na v{{version}}",
   "whatsNew.dismiss": "Entendi",
+  "whatsNew.noChangelog": "Nenhum registro de alterações disponível para esta versão.",
 
   "dictionary.title": "Dicionário personalizado",
   "dictionary.description": "Palavras que o modelo de transcrição deve reconhecer (nomes, jargões, etc.)",

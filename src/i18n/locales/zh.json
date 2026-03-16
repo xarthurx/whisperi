@@ -56,6 +56,7 @@
 
   "whatsNew.title": "v{{version}} 更新内容",
   "whatsNew.dismiss": "知道了",
+  "whatsNew.noChangelog": "此版本暂无更新日志。",
 
   "dictionary.title": "自定义词典",
   "dictionary.description": "转录模型应识别的词汇（姓名、术语等）",
