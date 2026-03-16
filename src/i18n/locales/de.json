@@ -54,6 +54,9 @@
   "enhancement.intensity.full": "Voll",
   "enhancement.intensity.fullDesc": "Intensive Überarbeitung — Sätze umstrukturieren und Formulierungen verbessern",
 
+  "whatsNew.title": "Neu in v{{version}}",
+  "whatsNew.dismiss": "Verstanden",
+
   "dictionary.title": "Benutzerwörterbuch",
   "dictionary.description": "Wörter, die das Transkriptionsmodell erkennen soll (Namen, Fachbegriffe usw.)",
   "dictionary.placeholder": "Wort hinzufügen...",

@@ -54,6 +54,9 @@
   "enhancement.intensity.full": "풀",
   "enhancement.intensity.fullDesc": "적극적 다듬기 — 문장 재구성 및 표현 개선",
 
+  "whatsNew.title": "v{{version}} 새로운 기능",
+  "whatsNew.dismiss": "확인",
+
   "dictionary.title": "사용자 사전",
   "dictionary.description": "음성 인식 모델이 인식해야 할 단어 (이름, 전문 용어 등)",
   "dictionary.placeholder": "단어 추가...",

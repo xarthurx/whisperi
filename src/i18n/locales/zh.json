@@ -54,6 +54,9 @@
   "enhancement.intensity.full": "完全",
   "enhancement.intensity.fullDesc": "深度润色 — 重构句式并优化措辞",
 
+  "whatsNew.title": "v{{version}} 更新内容",
+  "whatsNew.dismiss": "知道了",
+
   "dictionary.title": "自定义词典",
   "dictionary.description": "转录模型应识别的词汇（姓名、术语等）",
   "dictionary.placeholder": "添加词汇...",

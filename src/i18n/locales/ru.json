@@ -54,6 +54,9 @@
   "enhancement.intensity.full": "Полная",
   "enhancement.intensity.fullDesc": "Интенсивная правка — перестройка предложений и улучшение формулировок",
 
+  "whatsNew.title": "Что нового в v{{version}}",
+  "whatsNew.dismiss": "Понятно",
+
   "dictionary.title": "Пользовательский словарь",
   "dictionary.description": "Слова, которые модель транскрипции должна распознавать (имена, жаргон и т.д.)",
   "dictionary.placeholder": "Добавить слово...",

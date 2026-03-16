@@ -54,6 +54,9 @@
   "enhancement.intensity.full": "Full",
   "enhancement.intensity.fullDesc": "Aggressive polish — restructure and improve wording",
 
+  "whatsNew.title": "What's New in v{{version}}",
+  "whatsNew.dismiss": "Got it",
+
   "dictionary.title": "Custom Dictionary",
   "dictionary.description": "Words the transcription model should recognize (names, jargon, etc.)",
   "dictionary.placeholder": "Add a word...",

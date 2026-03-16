@@ -54,6 +54,9 @@
   "enhancement.intensity.full": "Completa",
   "enhancement.intensity.fullDesc": "Polimento intenso — reestruturar e melhorar a redação",
 
+  "whatsNew.title": "Novidades na v{{version}}",
+  "whatsNew.dismiss": "Entendi",
+
   "dictionary.title": "Dicionário personalizado",
   "dictionary.description": "Palavras que o modelo de transcrição deve reconhecer (nomes, jargões, etc.)",
   "dictionary.placeholder": "Adicionar uma palavra...",

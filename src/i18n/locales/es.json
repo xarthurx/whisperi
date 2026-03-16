@@ -54,6 +54,9 @@
   "enhancement.intensity.full": "Completa",
   "enhancement.intensity.fullDesc": "Pulido agresivo — reestructurar y mejorar la redacción",
 
+  "whatsNew.title": "Novedades en v{{version}}",
+  "whatsNew.dismiss": "Entendido",
+
   "dictionary.title": "Diccionario personalizado",
   "dictionary.description": "Palabras que el modelo de transcripción debe reconocer (nombres, jerga, etc.)",
   "dictionary.placeholder": "Agregar una palabra...",

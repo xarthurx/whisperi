@@ -54,6 +54,9 @@
   "enhancement.intensity.full": "Complet",
   "enhancement.intensity.fullDesc": "Polissage intensif — restructuration et amélioration de la formulation",
 
+  "whatsNew.title": "Nouveautés de la v{{version}}",
+  "whatsNew.dismiss": "Compris",
+
   "dictionary.title": "Dictionnaire personnalisé",
   "dictionary.description": "Mots que le modèle de transcription doit reconnaître (noms, jargon, etc.)",
   "dictionary.placeholder": "Ajouter un mot...",

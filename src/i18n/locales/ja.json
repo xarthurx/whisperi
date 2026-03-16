@@ -54,6 +54,9 @@
   "enhancement.intensity.full": "フル",
   "enhancement.intensity.fullDesc": "積極的な推敲 — 文章を再構成し表現を改善",
 
+  "whatsNew.title": "v{{version}} の新機能",
+  "whatsNew.dismiss": "了解",
+
   "dictionary.title": "カスタム辞書",
   "dictionary.description": "文字起こしモデルが認識すべき単語（名前、専門用語など）",
   "dictionary.placeholder": "単語を追加...",
