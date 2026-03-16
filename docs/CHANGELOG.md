@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.6.0] - 2026-03-16
+
+### Features
+
+- Added enhancement intensity levels (Light / Standard / Full) — controls how aggressively the AI modifies transcribed text; Light mode preserves original wording with minimal cleanup, Standard is the previous default, Full restructures and polishes prose
+- Added per-intensity temperature control — Light uses 0.3, Standard 0.5, Full 0.7 for more predictable output at lower intensity levels
+- Added "What's New" popup — shows changelog entries when the app updates to a new version or is freshly installed; compares stored `lastSeenVersion` against current app version on each launch
+
+### UI
+
+- Added 3-segment intensity toggle in Enhancement settings (disabled when custom prompt is active)
+- Default prompt view now reflects the selected intensity level's prompt text
+
+### Improvements
+
+- Bundled `CHANGELOG.md` as a Tauri resource for offline access by the What's New popup
+
 ## [0.5.13] - 2026-03-13
 
 ### CI/CD
