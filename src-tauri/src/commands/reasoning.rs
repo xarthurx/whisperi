@@ -8,6 +8,7 @@ pub async fn process_reasoning(
     system_prompt: String,
     api_key: String,
     max_tokens: Option<u32>,
+    temperature: Option<f64>,
 ) -> Result<String, String> {
     let key_preview = if api_key.len() > 8 {
         format!("{}...{}", &api_key[..4], &api_key[api_key.len()-4..])
@@ -23,6 +24,7 @@ pub async fn process_reasoning(
         system_prompt,
         api_key,
         max_tokens,
+        temperature,
     };
 
     match reasoning::process(&req).await {

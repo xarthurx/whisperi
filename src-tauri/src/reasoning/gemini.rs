@@ -29,6 +29,8 @@ struct Part {
 #[serde(rename_all = "camelCase")]
 struct GenerationConfig {
     max_output_tokens: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -47,6 +49,7 @@ pub async fn complete(
     system_prompt: &str,
     user_text: &str,
     max_tokens: Option<u32>,
+    temperature: Option<f64>,
 ) -> Result<String> {
     let url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
@@ -67,6 +70,7 @@ pub async fn complete(
         }],
         generation_config: GenerationConfig {
             max_output_tokens: max_tokens.unwrap_or(2048),
+            temperature,
         },
     };
 

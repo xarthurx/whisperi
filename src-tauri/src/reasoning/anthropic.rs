@@ -7,6 +7,8 @@ struct MessagesRequest {
     max_tokens: u32,
     system: String,
     messages: Vec<Message>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f64>,
 }
 
 #[derive(Serialize)]
@@ -33,6 +35,7 @@ pub async fn complete(
     system_prompt: &str,
     user_text: &str,
     max_tokens: Option<u32>,
+    temperature: Option<f64>,
 ) -> Result<String> {
     let request = MessagesRequest {
         model: model.to_string(),
@@ -42,6 +45,7 @@ pub async fn complete(
             role: "user".to_string(),
             content: user_text.to_string(),
         }],
+        temperature,
     };
 
     let response = crate::http::HTTP_CLIENT

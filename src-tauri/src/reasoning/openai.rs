@@ -9,6 +9,8 @@ struct ResponsesRequest {
     input: Vec<InputItem>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_output_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f64>,
 }
 
 #[derive(Serialize)]
@@ -44,6 +46,8 @@ struct ChatRequest {
     messages: Vec<ChatMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f64>,
 }
 
 #[derive(Serialize)]
@@ -58,6 +62,7 @@ pub async fn complete(
     system_prompt: &str,
     user_text: &str,
     max_tokens: Option<u32>,
+    temperature: Option<f64>,
     base_url: Option<&str>,
 ) -> Result<String> {
     let client = &*crate::http::HTTP_CLIENT;
@@ -65,7 +70,7 @@ pub async fn complete(
 
     // Try Responses API first (newer models) — only for OpenAI
     if base_url.is_none() {
-        match complete_responses(client, api_key, model, system_prompt, user_text, max_tokens, base).await {
+        match complete_responses(client, api_key, model, system_prompt, user_text, max_tokens, temperature, base).await {
             Ok(text) => return Ok(text),
             Err(e) => {
                 log::debug!("Responses API failed, falling back to Chat Completions: {}", e);
@@ -74,7 +79,7 @@ pub async fn complete(
     }
 
     // Fall back to Chat Completions API
-    complete_chat(client, api_key, model, system_prompt, user_text, max_tokens, base).await
+    complete_chat(client, api_key, model, system_prompt, user_text, max_tokens, temperature, base).await
 }
 
 async fn complete_responses(
@@ -84,6 +89,7 @@ async fn complete_responses(
     system_prompt: &str,
     user_text: &str,
     max_tokens: Option<u32>,
+    temperature: Option<f64>,
     base_url: &str,
 ) -> Result<String> {
     let request = ResponsesRequest {
@@ -99,6 +105,7 @@ async fn complete_responses(
             },
         ],
         max_output_tokens: max_tokens,
+        temperature,
     };
 
     let response = client
@@ -133,6 +140,7 @@ async fn complete_chat(
     system_prompt: &str,
     user_text: &str,
     max_tokens: Option<u32>,
+    temperature: Option<f64>,
     base_url: &str,
 ) -> Result<String> {
     let request = ChatRequest {
@@ -148,6 +156,7 @@ async fn complete_chat(
             },
         ],
         max_tokens,
+        temperature,
     };
 
     let url = format!("{}/chat/completions", base_url);
