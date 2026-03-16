@@ -8,6 +8,7 @@
     <a href="https://github.com/xarthurx/whisperi/blob/main/LICENSE"><img src="https://img.shields.io/github/license/xarthurx/whisperi?color=A3BE8C" alt="License"></a>
     <img src="https://img.shields.io/badge/platform-Windows-5E81AC" alt="Platform">
     <img src="https://img.shields.io/badge/built%20with-Tauri%202.x-EBCB8B" alt="Tauri">
+    <a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/x/xarthurx/Whisperi"><img src="https://img.shields.io/badge/winget-xarthurx.Whisperi-blue?logo=windows" alt="Winget"></a>
   </p>
 </div>
 
@@ -15,6 +16,14 @@
   <img src="assets/flow-diagram.svg" alt="Speech → Voice Transcription → Text Enhancement → Output" width="800"/>
   <p>A fast, modern desktop dictation app built with <strong>Tauri 2.x</strong>. Speak naturally and have your words transcribed, cleaned up, and pasted into any application — including CLI tools like <strong>Claude Code</strong> and <strong>Codex</strong>.</p>
 </p>
+
+## Installation
+
+```powershell
+winget install xarthurx.Whisperi
+```
+
+Or download the latest installer from the [Releases](https://github.com/xarthurx/whisperi/releases/latest) page.
 
 ## Why Cloud-First?
 

@@ -41,14 +41,9 @@ jobs:
           echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
           Write-Output "Normalized release tag: $tag"
 
-      - name: Install .NET 6
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '6.0.x'
-
-      - name: Download wingetcreate
+      - name: Download wingetcreate (self-contained)
         shell: pwsh
-        run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+        run: Invoke-WebRequest https://aka.ms/wingetcreate/latest/self-contained -OutFile wingetcreate.exe
 
       - name: Submit Winget manifest update
         shell: pwsh
