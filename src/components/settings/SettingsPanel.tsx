@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
+import { readChangelog } from "@/services/tauriApi";
+import WhatsNewModal from "@/components/ui/WhatsNewModal";
 import GeneralSection from "./GeneralSection";
 import TranscriptionSection from "./TranscriptionSection";
 import AIModelsSection from "./AIModelsSection";
@@ -45,6 +47,7 @@ const SECTION_DEFS = [
 function SettingsPanelInner() {
   const [section, setSection] = useState<Section>("general");
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [whatsNew, setWhatsNew] = useState<{ version: string; changelog: string } | null>(null);
   const { t } = useTranslation();
   const { settings, update, loaded } = useSettings();
   const { toast } = useToast();
@@ -52,6 +55,18 @@ function SettingsPanelInner() {
   useEffect(() => {
     const unlisten = listen<{ version: string }>("update-available", () => {
       setUpdateAvailable(true);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen<{ version: string }>("show-whats-new", async (event) => {
+      try {
+        const changelog = await readChangelog();
+        setWhatsNew({ version: event.payload.version, changelog });
+      } catch (e) {
+        console.warn("[Whisperi] Failed to read changelog:", e);
+      }
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
@@ -146,6 +161,14 @@ function SettingsPanelInner() {
           </div>
         </div>
       </div>
+
+      {whatsNew && (
+        <WhatsNewModal
+          version={whatsNew.version}
+          changelog={whatsNew.changelog}
+          onDismiss={() => setWhatsNew(null)}
+        />
+      )}
     </div>
   );
 }
