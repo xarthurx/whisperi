@@ -1,10 +1,23 @@
 import promptData from "./promptData.json";
 import { getLanguageInstruction } from "../utils/languageSupport";
 
-export const INTERNAL_SYSTEM_PROMPT = promptData.INTERNAL_SYSTEM_PROMPT;
-export const USER_VISIBLE_PROMPT = promptData.USER_VISIBLE_PROMPT;
+export type EnhancementIntensity = "light" | "standard" | "full";
+
+export const PROMPT_VARIANTS: Record<EnhancementIntensity, string> = {
+  light: promptData.USER_VISIBLE_PROMPT_LIGHT,
+  standard: promptData.USER_VISIBLE_PROMPT_STANDARD,
+  full: promptData.USER_VISIBLE_PROMPT_FULL,
+};
+
+const INTERNAL_SYSTEM_PROMPT = promptData.INTERNAL_SYSTEM_PROMPT;
 const CHAT_SYSTEM_PROMPT = promptData.CHAT_SYSTEM_PROMPT;
 const DICTIONARY_SUFFIX = promptData.DICTIONARY_SUFFIX;
+
+export const TEMPERATURE_MAP: Record<EnhancementIntensity, number> = {
+  light: 0.3,
+  standard: 0.5,
+  full: 0.7,
+};
 
 /**
  * Check if the transcribed text contains the agent name or any alias
@@ -50,12 +63,18 @@ export function getSystemPrompt(
   customDictionary?: string[],
   language?: string,
   customPrompt?: string,
+  intensity?: EnhancementIntensity,
 ): string {
   const name = agentName?.trim() || "Assistant";
-  const userPart = customPrompt || USER_VISIBLE_PROMPT;
+  const userPart = customPrompt || PROMPT_VARIANTS[intensity ?? "standard"];
   const prompt = INTERNAL_SYSTEM_PROMPT.replace(/\{\{agentName\}\}/g, name)
     + "\n\n" + userPart.replace(/\{\{agentName\}\}/g, name);
   return appendPromptExtras(prompt, customDictionary, language);
+}
+
+/** Get the visible prompt text for a given intensity level. */
+export function getVisiblePrompt(intensity: EnhancementIntensity): string {
+  return PROMPT_VARIANTS[intensity];
 }
 
 /**
