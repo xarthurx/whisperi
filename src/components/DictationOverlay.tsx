@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen, emit } from "@tauri-apps/api/event";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
+import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { Mic } from "lucide-react";
@@ -44,6 +45,21 @@ function DictationOverlayInner() {
       }
     });
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check if the app version changed since last launch (covers both
+  // auto-updates and manual installs) → trigger What's New modal
+  useEffect(() => {
+    if (!loaded) return;
+    getVersion().then((currentVersion) => {
+      getSetting<string>("lastSeenVersion").then((lastSeen) => {
+        if (lastSeen !== currentVersion) {
+          setSetting("lastSeenVersion", currentVersion);
+          emit("show-whats-new", { version: currentVersion });
+          showSettings();
+        }
+      });
+    });
+  }, [loaded]);
 
   // Check for updates on startup and notify settings window
   const [updateAvailable, setUpdateAvailable] = useState(false);
