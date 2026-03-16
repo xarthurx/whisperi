@@ -135,6 +135,11 @@ export async function processReasoning(
   });
 }
 
+// Changelog
+export async function readChangelog(): Promise<string> {
+  return invoke("read_changelog");
+}
+
 // Database
 export interface Transcription {
   id: number;
