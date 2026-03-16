@@ -27,7 +27,7 @@ export interface TranscriptionSettings {
   useReasoning: boolean | null;
   reasoningModel: string | null;
   reasoningProvider: string | null;
-  enhancementIntensity: string | null;
+  enhancementIntensity: EnhancementIntensity | null;
   autoPaste: boolean | null;
   useCustomPrompt: boolean | null;
   customSystemPrompt: string | null;
@@ -65,7 +65,7 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
     getSetting<boolean>("useReasoningModel"),
     getSetting<string>("reasoningModel"),
     getSetting<string>("reasoningProvider"),
-    getSetting<string>("enhancementIntensity"),
+    getSetting<EnhancementIntensity>("enhancementIntensity"),
     getSetting<boolean>("autoPaste"),
     getSetting<boolean>("useCustomPrompt"),
     getSetting<string>("customSystemPrompt"),
@@ -175,7 +175,7 @@ export async function enhance(
     settings.agentName,
     settings.agentAliases,
   );
-  const intensity = (settings.enhancementIntensity ?? "standard") as EnhancementIntensity;
+  const intensity = settings.enhancementIntensity ?? "standard";
   const systemPrompt = isChatMode
     ? getChatSystemPrompt(
         settings.agentName,

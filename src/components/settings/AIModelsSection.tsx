@@ -102,7 +102,7 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
             />
           ) : (
             <div className="w-full mt-3 px-3.5 py-3 text-sm bg-surface-1 border border-border rounded-control text-muted-foreground/80 max-h-[50vh] overflow-y-auto whitespace-pre-wrap leading-relaxed">
-              {getVisiblePrompt((settings.enhancementIntensity ?? "standard") as EnhancementIntensity)}
+              {getVisiblePrompt(settings.enhancementIntensity ?? "standard")}
             </div>
           )}
         </div>

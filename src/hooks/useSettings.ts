@@ -12,6 +12,7 @@ import {
   getAgentAliases,
   setAgentAliases as setAgentAliasesApi,
 } from "@/services/tauriApi";
+import type { EnhancementIntensity } from "@/config/prompts";
 
 export interface Settings {
   // Transcription
@@ -26,7 +27,7 @@ export interface Settings {
   useReasoningModel: boolean;
   reasoningModel: string;
   reasoningProvider: string;
-  enhancementIntensity: "light" | "standard" | "full";
+  enhancementIntensity: EnhancementIntensity;
   useCustomPrompt: boolean;
   customSystemPrompt: string;
 
