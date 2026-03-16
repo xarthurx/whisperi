@@ -13,6 +13,8 @@ import {
   getChatSystemPrompt,
   getUserPrompt,
   detectChatMode,
+  TEMPERATURE_MAP,
+  type EnhancementIntensity,
 } from "@/config/prompts";
 
 export interface TranscriptionSettings {
@@ -25,6 +27,7 @@ export interface TranscriptionSettings {
   useReasoning: boolean | null;
   reasoningModel: string | null;
   reasoningProvider: string | null;
+  enhancementIntensity: string | null;
   autoPaste: boolean | null;
   useCustomPrompt: boolean | null;
   customSystemPrompt: string | null;
@@ -45,6 +48,7 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
     useReasoning,
     reasoningModel,
     reasoningProvider,
+    enhancementIntensity,
     autoPaste,
     useCustomPrompt,
     customSystemPrompt,
@@ -61,6 +65,7 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
     getSetting<boolean>("useReasoningModel"),
     getSetting<string>("reasoningModel"),
     getSetting<string>("reasoningProvider"),
+    getSetting<string>("enhancementIntensity"),
     getSetting<boolean>("autoPaste"),
     getSetting<boolean>("useCustomPrompt"),
     getSetting<string>("customSystemPrompt"),
@@ -79,6 +84,7 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
     useReasoning,
     reasoningModel,
     reasoningProvider,
+    enhancementIntensity,
     autoPaste,
     useCustomPrompt,
     customSystemPrompt,
@@ -169,6 +175,7 @@ export async function enhance(
     settings.agentName,
     settings.agentAliases,
   );
+  const intensity = (settings.enhancementIntensity ?? "standard") as EnhancementIntensity;
   const systemPrompt = isChatMode
     ? getChatSystemPrompt(
         settings.agentName,
@@ -182,14 +189,18 @@ export async function enhance(
         settings.useCustomPrompt && settings.customSystemPrompt
           ? settings.customSystemPrompt
           : undefined,
+        intensity,
       );
   const userPrompt = getUserPrompt(rawText);
+  const temperature = isChatMode ? undefined : TEMPERATURE_MAP[intensity];
   const rawAiResponse = await processReasoning(
     userPrompt,
     settings.reasoningModel,
     settings.reasoningProvider,
     systemPrompt,
     rApiKey,
+    undefined,
+    temperature,
   );
   let finalText = stripAiPreamble(stripThinkTags(rawAiResponse));
 

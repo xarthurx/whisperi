@@ -122,6 +122,7 @@ export async function processReasoning(
   systemPrompt: string,
   apiKey: string,
   maxTokens?: number,
+  temperature?: number,
 ): Promise<string> {
   return invoke("process_reasoning", {
     text,
@@ -130,6 +131,7 @@ export async function processReasoning(
     systemPrompt,
     apiKey,
     maxTokens,
+    temperature,
   });
 }
 

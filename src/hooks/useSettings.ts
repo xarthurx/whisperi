@@ -26,6 +26,7 @@ export interface Settings {
   useReasoningModel: boolean;
   reasoningModel: string;
   reasoningProvider: string;
+  enhancementIntensity: "light" | "standard" | "full";
   useCustomPrompt: boolean;
   customSystemPrompt: string;
 
@@ -70,6 +71,7 @@ const DEFAULTS: Settings = {
   useReasoningModel: true,
   reasoningModel: "gpt-5-mini",
   reasoningProvider: "openai",
+  enhancementIntensity: "standard",
   useCustomPrompt: false,
   customSystemPrompt: "",
   autoPaste: true,
@@ -94,7 +96,7 @@ const DEFAULTS: Settings = {
 const STORE_KEYS = [
   "useLocalWhisper", "whisperModel", "preferredLanguage",
   "cloudTranscriptionProvider", "cloudTranscriptionModel",
-  "useReasoningModel", "reasoningModel", "reasoningProvider",
+  "useReasoningModel", "reasoningModel", "reasoningProvider", "enhancementIntensity",
   "useCustomPrompt", "customSystemPrompt",
   "autoPaste", "soundEnabled", "dictationKey", "activationMode",
   "selectedMicDeviceId", "debugMode", "uiLanguage",
