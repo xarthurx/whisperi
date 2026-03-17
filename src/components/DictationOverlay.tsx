@@ -47,8 +47,7 @@ function DictationOverlayInner() {
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check if the app version changed since last launch (covers both
-  // auto-updates and manual installs) → trigger What's New modal.
-  // Uses a short delay so the settings window's event listener is ready.
+  // auto-updates and manual installs) → store pending version for What's New modal
   useEffect(() => {
     if (!loaded) return;
     (async () => {
@@ -59,8 +58,8 @@ function DictationOverlayInner() {
         ]);
         if (lastSeen !== currentVersion) {
           await setSetting("lastSeenVersion", currentVersion);
-          await showSettings();
-          setTimeout(() => emit("show-whats-new", { version: currentVersion }), 300);
+          await setSetting("pendingWhatsNewVersion", currentVersion);
+          showSettings();
         }
       } catch {
         // Silently ignore — version check is non-critical

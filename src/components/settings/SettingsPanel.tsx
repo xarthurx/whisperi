@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
-import { readChangelog } from "@/services/tauriApi";
+import { readChangelog, getSetting, setSetting } from "@/services/tauriApi";
 import WhatsNewModal from "@/components/ui/WhatsNewModal";
 import GeneralSection from "./GeneralSection";
 import TranscriptionSection from "./TranscriptionSection";
@@ -59,17 +59,22 @@ function SettingsPanelInner() {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
+  // Check for pending What's New version (set by DictationOverlay on version change)
   useEffect(() => {
-    const unlisten = listen<{ version: string }>("show-whats-new", async (event) => {
+    if (!loaded) return;
+    (async () => {
       try {
-        const changelog = await readChangelog();
-        setWhatsNew({ version: event.payload.version, changelog });
+        const pending = await getSetting<string>("pendingWhatsNewVersion");
+        if (pending) {
+          await setSetting("pendingWhatsNewVersion", null);
+          const changelog = await readChangelog();
+          setWhatsNew({ version: pending, changelog });
+        }
       } catch (e) {
-        console.warn("[Whisperi] Failed to read changelog:", e);
+        console.warn("[Whisperi] Failed to load What's New:", e);
       }
-    });
-    return () => { unlisten.then((fn) => fn()); };
-  }, []);
+    })();
+  }, [loaded]);
 
   const handleClose = useCallback(async () => {
     await getCurrentWebviewWindow().hide();
