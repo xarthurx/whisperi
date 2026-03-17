@@ -25,8 +25,10 @@ function DictationOverlayInner() {
 
   const { settings, loaded } = useSettings();
 
-  // On first launch: open settings if no API keys are configured
-  // After in-app update: reopen settings so the user sees the About tab
+  // On first launch: open settings if no API keys are configured.
+  // After version change (in-app update or manual install): store pending
+  // What's New version and open settings so the modal can appear.
+  // After in-app update: reopen settings so the user sees the About tab.
   useEffect(() => {
     if (!loaded) return;
     const hasAnyKey =
@@ -37,35 +39,31 @@ function DictationOverlayInner() {
       showSettings();
       return;
     }
-    // Check if we just came back from an in-app update
-    getSetting<boolean>("openSettingsAfterUpdate").then((flag) => {
-      if (flag) {
-        setSetting("openSettingsAfterUpdate", false);
-        showSettings();
-      }
-    });
-  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Check if the app version changed since last launch (covers both
-  // auto-updates and manual installs) → store pending version for What's New modal
-  useEffect(() => {
-    if (!loaded) return;
     (async () => {
       try {
-        const [currentVersion, lastSeen] = await Promise.all([
+        const [currentVersion, lastSeen, openAfterUpdate] = await Promise.all([
           getVersion(),
           getSetting<string>("lastSeenVersion"),
+          getSetting<boolean>("openSettingsAfterUpdate"),
         ]);
+        let needsSettings = false;
         if (lastSeen !== currentVersion) {
-          await setSetting("lastSeenVersion", currentVersion);
-          await setSetting("pendingWhatsNewVersion", currentVersion);
-          showSettings();
+          await Promise.all([
+            setSetting("lastSeenVersion", currentVersion),
+            setSetting("pendingWhatsNewVersion", currentVersion),
+          ]);
+          needsSettings = true;
         }
+        if (openAfterUpdate) {
+          setSetting("openSettingsAfterUpdate", false);
+          needsSettings = true;
+        }
+        if (needsSettings) showSettings();
       } catch {
-        // Silently ignore — version check is non-critical
+        // Silently ignore — startup checks are non-critical
       }
     })();
-  }, [loaded]);
+  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for updates on startup and notify settings window
   const [updateAvailable, setUpdateAvailable] = useState(false);

@@ -66,7 +66,7 @@ function SettingsPanelInner() {
       try {
         const pending = await getSetting<string>("pendingWhatsNewVersion");
         if (pending) {
-          await setSetting("pendingWhatsNewVersion", null);
+          await setSetting("pendingWhatsNewVersion", false);
           const changelog = await readChangelog();
           setWhatsNew({ version: pending, changelog });
         }
