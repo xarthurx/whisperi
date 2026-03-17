@@ -110,7 +110,7 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 | **database** | `database/mod.rs`, `migrations.rs` | SQLite via rusqlite. Single `transcriptions` table. Auto-migrates on startup. `Mutex<Connection>` for thread safety |
 | **settings** | `commands/settings.rs` | Thin wrapper over `tauri-plugin-store` — get/set/get-all |
 | **models** | `models/mod.rs` | Streaming HTTP download with progress events, atomic file rename, `.part` temp files |
-| **commands** | `commands/audio.rs`, `app.rs`, `clipboard.rs`, `database.rs`, `models.rs`, `reasoning.rs`, `settings.rs`, `transcription.rs` | Tauri `#[command]` handlers — thin wrappers that delegate to domain modules |
+| **commands** | `commands/audio.rs`, `app.rs`, `changelog.rs`, `clipboard.rs`, `database.rs`, `models.rs`, `reasoning.rs`, `settings.rs`, `transcription.rs` | Tauri `#[command]` handlers — thin wrappers that delegate to domain modules |
 | **main.rs** | `main.rs` | Binary entry point, calls `whisperi_lib::run()` |
 | **lib.rs** | `lib.rs` | App entry point: plugin registration, state injection, tray menu, command handler registration |
 
@@ -119,17 +119,17 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 | Layer | File(s) | Responsibility |
 |-------|---------|----------------|
 | **Views** | `App.tsx` | Window-label router: overlay vs settings |
-| **Overlay** | `components/DictationOverlay.tsx` | Mic button, audio-level ring, status text, drag handle, hotkey response |
+| **Overlay** | `components/DictationOverlay.tsx` | Mic button, audio-level ring, status text, drag handle, hotkey response, startup checks (version change → What's New, first launch → open settings) |
 | **Settings** | `components/settings/*` | Tabbed settings shell (`SettingsPanel.tsx`) + 7 section components: general (UI language, output language, hotkey, mic, behavior), transcription, enhancement, dictionary, agent, developer, about. Shared `ProviderModelSelector` for provider/model dropdowns |
 | **Hooks** | `hooks/useAudioRecording.ts` | Full dictation pipeline state machine (idle → recording → processing → idle) |
 | | `hooks/useSettings.ts` | Load/save all settings from plugin-store with defaults |
 | | `hooks/useHotkey.ts` | Global shortcut registration, tap vs push-to-talk modes |
 | **Services** | `services/tauriApi.ts` | Typed `invoke()` wrappers for every Rust command, event listeners |
-| **Config** | `config/constants.ts`, `prompts.ts`, `promptData.json`, `languageRegistry.json` | Default values, prompt templates with agent-name and language interpolation, language-specific instructions |
+| **Config** | `config/constants.ts`, `prompts.ts`, `promptData.json`, `languageRegistry.json` | Default values, prompt templates with agent-name and language interpolation, language-specific instructions, enhancement intensity levels (Light/Standard/Full) with temperature mapping |
 | **Models** | `models/modelRegistryData.json` | Static registry of all supported transcription and reasoning models per provider |
 | **Utils** | `utils/sounds.ts`, `languageSupport.ts` | Web Audio API tone generation (no static assets); language support validation, auto-detect and per-language instruction assembly |
 | **i18n** | `i18n/index.ts`, `i18n/i18next.d.ts`, `i18n/locales/*.json` | i18next initialization, typed translation keys, 9 locale files (en, zh, ja, ko, de, fr, es, pt, ru) |
-| **UI Kit** | `components/ui/*` | shadcn/ui primitives + custom components: StyledSelect, LanguageSelector, ProviderTabs, HotkeyInput, ApiKeyInput, ProviderIcon, Toast, SettingsSection |
+| **UI Kit** | `components/ui/*` | shadcn/ui primitives + custom components: StyledSelect, LanguageSelector, ProviderTabs, HotkeyInput, ApiKeyInput, ProviderIcon, Toast, SettingsSection, WhatsNewModal |
 
 ---
 
@@ -272,11 +272,15 @@ Single `check-and-build` job: TypeScript check → Vite build → `cargo test` �
 
 ### Release Pipeline (`.github/workflows/release.yml`)
 
-Triggered on version tags (`v*`). Builds the NSIS installer via `tauri-apps/tauri-action@v0` and publishes it as a GitHub Release asset. Windows-only.
+Triggered on version tags (`v*`). Two jobs:
+1. **`release`** — Builds the NSIS installer via `tauri-apps/tauri-action@v0` and publishes it as a GitHub Release asset. Windows-only.
+2. **`update-winget`** — Runs after `release`. Downloads `wingetcreate`, resolves the released x64 NSIS installer asset, and submits a manifest update PR for `xarthurx.Whisperi` to `microsoft/winget-pkgs`. Requires a `WINGET_CREATE_GITHUB_TOKEN` classic PAT with `public_repo` scope (≤ 90-day lifetime).
 
-### Winget Update Pipeline (`.github/workflows/update-winget.yml`)
+The Winget step is in the same workflow (not a separate one) because `tauri-action` creates the release using `GITHUB_TOKEN`, and events from `GITHUB_TOKEN` do not trigger other workflows.
 
-Triggered automatically when a GitHub release is published, and can also be run manually with `workflow_dispatch` for an existing tag. Resolves the released x64 NSIS installer asset and runs `wingetcreate update` to submit a manifest update PR for `xarthurx.Whisperi`. Requires a `WINGET_CREATE_GITHUB_TOKEN` classic PAT with `public_repo` scope.
+### Winget Update (Manual) (`.github/workflows/update-winget.yml`)
+
+Manual-only (`workflow_dispatch`) backup for retries and backfills against an existing release tag.
 
 ### Key Dependencies
 
@@ -320,6 +324,7 @@ whisperi/
 │   │       ├── HotkeyInput.tsx         # Key binding capture
 │   │       ├── ProviderTabs.tsx        # Provider tab bar with sliding indicator
 │   │       ├── ProviderIcon.tsx        # Provider letter/icon badges
+│   │       ├── WhatsNewModal.tsx      # Version changelog popup
 │   │       └── ...                     # button, input, toggle, badge, toast
 │   ├── i18n/
 │   │   ├── index.ts                   # i18next init, SUPPORTED_LANGUAGES
@@ -362,6 +367,7 @@ whisperi/
 │   │   │   ├── mod.rs                 # Module exports
 │   │   │   ├── audio.rs              # Recording commands
 │   │   │   ├── app.rs                # App lifecycle (quit, show settings)
+│   │   │   ├── changelog.rs         # Read bundled CHANGELOG.md
 │   │   │   ├── clipboard.rs          # Paste/read clipboard
 │   │   │   ├── database.rs           # Transcription CRUD
 │   │   │   ├── models.rs             # Model registry
