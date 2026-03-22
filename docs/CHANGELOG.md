@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.1] - 2026-03-22
+
+### Features
+
+- Added punctuation conditioning prompt to transcription pipeline — Whisper models now receive punctuated text as the initial prompt, nudging them to produce properly punctuated and capitalized output
+- Added punctuation guidance to OpenRouter transcription instruction
+
+### Tests
+
+- Added 11 regression tests for `strip_prompt_echo` covering echo detection, false positive prevention, and conditioning echo scenarios
+
 ## [0.6.0] - 2026-03-16
 
 ### Features
