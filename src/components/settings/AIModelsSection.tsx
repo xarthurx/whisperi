@@ -6,7 +6,7 @@ import { getReasoningProviders } from "./providerHelpers";
 import ProviderModelSelector from "./ProviderModelSelector";
 import type { SectionProps } from "./types";
 
-const INTENSITIES: EnhancementIntensity[] = ["light", "standard", "full"];
+const INTENSITIES: EnhancementIntensity[] = ["standard", "full"];
 
 export default function AIModelsSection({ settings, update }: SectionProps) {
   const { t } = useTranslation();

@@ -1,10 +1,9 @@
 import promptData from "./promptData.json";
 import { getLanguageInstruction } from "../utils/languageSupport";
 
-export type EnhancementIntensity = "light" | "standard" | "full";
+export type EnhancementIntensity = "standard" | "full";
 
 export const PROMPT_VARIANTS: Record<EnhancementIntensity, string> = {
-  light: promptData.USER_VISIBLE_PROMPT_LIGHT,
   standard: promptData.USER_VISIBLE_PROMPT_STANDARD,
   full: promptData.USER_VISIBLE_PROMPT_FULL,
 };
@@ -14,7 +13,6 @@ const CHAT_SYSTEM_PROMPT = promptData.CHAT_SYSTEM_PROMPT;
 const DICTIONARY_SUFFIX = promptData.DICTIONARY_SUFFIX;
 
 export const TEMPERATURE_MAP: Record<EnhancementIntensity, number> = {
-  light: 0.3,
   standard: 0.5,
   full: 0.7,
 };

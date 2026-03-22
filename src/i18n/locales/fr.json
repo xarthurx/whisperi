@@ -47,8 +47,6 @@
   "enhancement.prompt.placeholder": "Entrez vos instructions de nettoyage personnalisées ici. Les règles de comportement de base (activation de l'agent, format de sortie) sont toujours appliquées automatiquement.",
   "enhancement.intensity.title": "Intensité de l'amélioration",
   "enhancement.intensity.description": "Contrôle le degré de modification du texte transcrit par l'IA",
-  "enhancement.intensity.light": "Léger",
-  "enhancement.intensity.lightDesc": "Nettoyage minimal — correction de la ponctuation et des mots de remplissage uniquement",
   "enhancement.intensity.standard": "Standard",
   "enhancement.intensity.standardDesc": "Nettoyage complet avec mise en forme et gestion des auto-corrections",
   "enhancement.intensity.full": "Complet",

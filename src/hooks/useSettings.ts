@@ -143,6 +143,11 @@ export function useSettings() {
         (resolved as unknown as Record<string, unknown>)[`${provider}ApiKey`] = apiKeys[i];
       });
 
+      // Migrate deprecated "light" intensity to "standard"
+      if ((resolved.enhancementIntensity as string) === "light") {
+        resolved.enhancementIntensity = "standard";
+      }
+
       // Persist defaults to store for keys that were missing, so the
       // recording pipeline (which reads from the store independently)
       // always sees the same values the UI shows.

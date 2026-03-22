@@ -47,8 +47,6 @@
   "enhancement.prompt.placeholder": "사용자 정의 정리 지침을 입력하세요. 핵심 동작 규칙(에이전트 활성화, 출력 형식)은 항상 자동으로 적용됩니다.",
   "enhancement.intensity.title": "향상 강도",
   "enhancement.intensity.description": "AI가 음성 인식 텍스트를 얼마나 수정할지 제어합니다",
-  "enhancement.intensity.light": "라이트",
-  "enhancement.intensity.lightDesc": "최소 수정 — 구두점과 군더더기 단어만 수정",
   "enhancement.intensity.standard": "표준",
   "enhancement.intensity.standardDesc": "서식 및 자기 수정 처리를 포함한 전체 정리",
   "enhancement.intensity.full": "풀",
