@@ -280,8 +280,10 @@ pub async fn transcribe_openrouter(
     );
     let b64 = BASE64.encode(&audio_data);
 
-    let mut instruction =
-        String::from("Transcribe this audio. Output only the transcribed text, nothing else.");
+    let mut instruction = String::from(
+        "Transcribe this audio with proper punctuation and capitalization. \
+         Output only the transcribed text, nothing else.",
+    );
     if let Some(lang) = language {
         if lang != "auto" {
             instruction.push_str(&format!(" Output language: {}.", lang));
