@@ -29,7 +29,7 @@ pub async fn transcribe_local(
 ) -> Result<String, String> {
     let file_name = format!("ggml-{}.bin", model);
     let language = normalize_language(language);
-    let full_prompt = crate::transcription::build_prompt(&dictionary);
+    let full_prompt = crate::transcription::build_prompt(&dictionary, language.as_deref());
 
     let text = transcription::whisper::transcribe(
         &app,
@@ -61,7 +61,7 @@ pub async fn transcribe_cloud(
     log::info!("[Whisperi] Transcribing: provider={}, model={}, key={}", provider, model, key_preview);
 
     let language = normalize_language(language);
-    let prompt = crate::transcription::build_prompt(&dictionary);
+    let prompt = crate::transcription::build_prompt(&dictionary, language.as_deref());
 
     let text = match provider.as_str() {
         "openai" => transcription::cloud::transcribe_openai(

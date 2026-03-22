@@ -58,7 +58,7 @@ pub async fn transcribe(
         }
     }
 
-    let full_prompt = super::build_prompt(dictionary);
+    let full_prompt = super::build_prompt(dictionary, language);
     args.push("--prompt".into());
     args.push(full_prompt.clone());
 
