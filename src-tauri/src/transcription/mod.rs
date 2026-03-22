@@ -2,7 +2,7 @@ pub mod cloud;
 pub mod whisper;
 
 /// Default (English) punctuation-conditioning initial prompt.
-pub const PUNCTUATION_PROMPT: &str =
+pub(crate) const PUNCTUATION_PROMPT: &str =
     "Hello, how are you today? I'm fine, thank you! Let's begin.";
 
 /// Return the punctuation-conditioning prompt for the given language.

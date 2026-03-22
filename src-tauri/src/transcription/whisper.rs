@@ -20,13 +20,14 @@ pub fn delete_model(file_name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Transcribe audio using whisper.cpp sidecar
+/// Transcribe audio using whisper.cpp sidecar.
+/// `prompt` is the full conditioning + dictionary prompt (built by `build_prompt`).
 pub async fn transcribe(
     app: &AppHandle,
     audio_data: &[u8],
     model_file: &str,
     language: Option<&str>,
-    dictionary: &[String],
+    prompt: &str,
 ) -> Result<String> {
     let models_path = models_dir()?;
     let model_path = models_path.join(model_file);
@@ -58,9 +59,8 @@ pub async fn transcribe(
         }
     }
 
-    let full_prompt = super::build_prompt(dictionary, language);
     args.push("--prompt".into());
-    args.push(full_prompt.clone());
+    args.push(prompt.to_string());
 
     // Execute whisper.cpp sidecar
     let output = app
@@ -81,7 +81,7 @@ pub async fn transcribe(
     }
 
     let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    super::cloud::log_transcription_result("Local", &text, Some(&full_prompt));
+    super::cloud::log_transcription_result("Local", &text, Some(prompt));
     Ok(text)
 }
 

@@ -146,6 +146,7 @@ export function useSettings() {
       // Migrate deprecated "light" intensity to "standard"
       if ((resolved.enhancementIntensity as string) === "light") {
         resolved.enhancementIntensity = "standard";
+        setSetting("enhancementIntensity", "standard");
       }
 
       // Persist defaults to store for keys that were missing, so the

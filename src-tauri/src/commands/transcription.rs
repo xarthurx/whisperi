@@ -36,7 +36,7 @@ pub async fn transcribe_local(
         &audio_data,
         &file_name,
         language.as_deref(),
-        &dictionary,
+        &full_prompt,
     )
     .await
     .str_err()?;
