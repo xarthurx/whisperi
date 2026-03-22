@@ -58,10 +58,9 @@ pub async fn transcribe(
         }
     }
 
-    if !dictionary.is_empty() {
-        args.push("--prompt".into());
-        args.push(dictionary.join(" "));
-    }
+    let full_prompt = super::build_prompt(dictionary);
+    args.push("--prompt".into());
+    args.push(full_prompt.clone());
 
     // Execute whisper.cpp sidecar
     let output = app
@@ -82,8 +81,7 @@ pub async fn transcribe(
     }
 
     let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let prompt = if dictionary.is_empty() { None } else { Some(dictionary.join(" ")) };
-    super::cloud::log_transcription_result("Local", &text, prompt.as_deref());
+    super::cloud::log_transcription_result("Local", &text, Some(&full_prompt));
     Ok(text)
 }
 
