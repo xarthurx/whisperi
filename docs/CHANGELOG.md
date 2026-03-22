@@ -1,15 +1,18 @@
 # Changelog
 
-## [0.6.1] - 2026-03-22
+## [0.6.2] - 2026-03-22
 
 ### Features
 
 - Added punctuation conditioning prompt to transcription pipeline — Whisper models now receive punctuated text as the initial prompt, nudging them to produce properly punctuated and capitalized output
+- Added language-specific conditioning prompts — Chinese and Japanese use full-width punctuation (，。？！), French uses spaced marks, etc.; falls back to English for unsupported languages
 - Added punctuation guidance to OpenRouter transcription instruction
+- Removed "Light" enhancement intensity — with punctuation now handled by the transcription model, only Standard and Full remain
 
 ### Tests
 
 - Added 11 regression tests for `strip_prompt_echo` covering echo detection, false positive prevention, and conditioning echo scenarios
+- Added language-specific `build_prompt` tests for Chinese, Japanese, unknown language fallback
 
 ## [0.6.0] - 2026-03-16
 
