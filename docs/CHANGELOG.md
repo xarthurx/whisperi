@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.4] - 2026-03-23
+
+### Fixes
+
+- Fixed Chinese transcription outputting half-width punctuation (`,` `.` `?`) instead of full-width (`，` `。` `？`) and sometimes missing sentence-ending punctuation — strengthened Chinese punctuation rules with NEVER/MUST emphasis, added Chinese few-shot examples to the language instruction, and reinforced punctuation requirements in auto-detect and multilingual prompt sections
+
 ## [0.6.3] - 2026-03-23
 
 ### Fixes
