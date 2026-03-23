@@ -76,6 +76,27 @@ function SettingsPanelInner() {
     })();
   }, [loaded]);
 
+  // Re-check on window focus (covers the race where the store flag was
+  // written after our initial loaded-check already ran).  The store write
+  // is awaited before showSettings() calls set_focus(), so the flag is
+  // guaranteed to be present by the time this fires.
+  useEffect(() => {
+    const unlisten = getCurrentWebviewWindow().onFocusChanged(async ({ payload: focused }) => {
+      if (!focused || whatsNew) return;
+      try {
+        const pending = await getSetting<string>("pendingWhatsNewVersion");
+        if (pending) {
+          await setSetting("pendingWhatsNewVersion", false);
+          const changelog = await readChangelog();
+          setWhatsNew({ version: pending, changelog });
+        }
+      } catch {
+        // ignore
+      }
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [whatsNew]);
+
   const handleClose = useCallback(async () => {
     await getCurrentWebviewWindow().hide();
   }, []);

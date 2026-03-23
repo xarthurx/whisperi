@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.3] - 2026-03-23
+
+### Fixes
+
+- Fixed "What's New" modal not appearing after in-app update — root cause was a race condition where `SettingsPanel` checked `pendingWhatsNewVersion` before `DictationOverlay` had written it; added `onFocusChanged` listener in `SettingsPanel` to re-check the store flag when the window gains focus
+- Fixed `readChangelog` command failing in dev mode — bundle resources are only present in production builds; added fallback to read `docs/CHANGELOG.md` from the source tree via `CARGO_MANIFEST_DIR`
+- "What's New" modal now always triggers in dev mode for testing (`import.meta.env.DEV` bypasses version comparison)
+
 ## [0.6.2] - 2026-03-22
 
 ### Features

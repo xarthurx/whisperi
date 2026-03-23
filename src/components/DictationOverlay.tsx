@@ -47,7 +47,8 @@ function DictationOverlayInner() {
           getSetting<boolean>("openSettingsAfterUpdate"),
         ]);
         let needsSettings = false;
-        if (lastSeen !== currentVersion) {
+        const isDev = import.meta.env.DEV;
+        if (isDev || lastSeen !== currentVersion) {
           await Promise.all([
             setSetting("lastSeenVersion", currentVersion),
             setSetting("pendingWhatsNewVersion", currentVersion),
