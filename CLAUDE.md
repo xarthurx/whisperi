@@ -46,7 +46,7 @@ Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, i18next 
 
 - **Version bump** — update `docs/CHANGELOG.md` first, then create a git tag (`vX.Y.Z`) after bumping
 - **Context compression** — re-read this file (`CLAUDE.md`) after compression to restore context
-- **End of conversation** — update relevant markdown files (`docs/CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/CONTINUE.md`) to reflect changes made
+- **End of conversation** — update relevant markdown files (`docs/CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/TODO.md`, `docs/PROGRESS.md`) to reflect changes made
 
 ### Superpowers Plugin Usage
 
