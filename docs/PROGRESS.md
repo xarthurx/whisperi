@@ -12,15 +12,11 @@
 - `update-winget.yml` is kept as a manual-only (`workflow_dispatch`) backup for retries/backfills.
 - The release is created by `tauri-action` using `GITHUB_TOKEN`, which does not trigger other workflows (GitHub security policy). That's why the Winget step is in the same workflow instead of a separate one.
 
-### wingetcreate YAML Formatting Issues
+### wingetcreate Notes
 
-`wingetcreate` (v1.12.8.0, framework-dependent, requires .NET 6) generates manifests with broken YAML indentation — sequence items under `Installers:` and `Documentations:` start at column 0 instead of being indented, and `ReleaseDate` is placed as a top-level key instead of inside the installer entry. Missing fields like `PublisherUrl`, `PackageUrl`, `ReleaseNotesUrl`, and `Documentations` are also common.
+`wingetcreate` (v1.12.8.0, framework-dependent, requires .NET 6) output is used as-is with `--submit`. Its `ReleaseDate` placement at the top level (outside `Installers`) looks wrong per the schema docs but is the convention winget-pkgs validation expects — do not move it inside the installer entry.
 
 **Do NOT use the self-contained wingetcreate** (`aka.ms/wingetcreate/latest/self-contained`) — it bundles v1.0.4.0, which generates schema 1.1.0 manifests instead of 1.10.0.
-
-The CI workflow now automatically fixes `wingetcreate` YAML formatting before submission (generates manifests with `-o`, patches them, then runs `wingetcreate submit`). The main fix is moving `ReleaseDate` from the top level into each `Installers` entry in `installer.yaml`.
-
-If `wingetcreate` introduces new formatting bugs, add fixes to the "Fix wingetcreate YAML formatting" step in both `release.yml` and `update-winget.yml`.
 
 ## NSIS Updater Behavior on Windows
 

@@ -79,7 +79,7 @@ jobs:
         shell: pwsh
         run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
 
-      - name: Generate Winget manifests
+      - name: Submit Winget manifest update
         shell: pwsh
         run: |
           $headers = @{
@@ -105,44 +105,5 @@ jobs:
             $env:PACKAGE_IDENTIFIER `
             -u $installerAssets[0].browser_download_url `
             -v $version `
-            -o ./manifests
-
-      - name: Fix wingetcreate YAML formatting
-        shell: pwsh
-        run: |
-          $manifestDir = Get-ChildItem -Path ./manifests -Directory -Recurse |
-            Where-Object { $_.GetFiles("*.installer.yaml").Count -gt 0 } |
-            Select-Object -First 1
-
-          if (-not $manifestDir) { throw "No installer manifest found in ./manifests" }
-
-          # Fix installer.yaml: move ReleaseDate inside each Installers entry
-          $installerFile = Join-Path $manifestDir.FullName "$env:PACKAGE_IDENTIFIER.installer.yaml"
-          if (Test-Path $installerFile) {
-            $lines = Get-Content $installerFile
-            $releaseDate = $lines | Where-Object { $_ -match '^ReleaseDate:\s' }
-            if ($releaseDate) {
-              $value = ($releaseDate -split ':\s*', 2)[1]
-              # Remove top-level ReleaseDate line
-              $lines = $lines | Where-Object { $_ -notmatch '^ReleaseDate:\s' }
-              # Insert indented ReleaseDate before ManifestType
-              $result = @()
-              foreach ($line in $lines) {
-                if ($line -match '^ManifestType:') {
-                  $result += "  ReleaseDate: $value"
-                }
-                $result += $line
-              }
-              $result | Set-Content $installerFile -Encoding UTF8
-              Write-Output "Fixed: moved ReleaseDate inside installer entry"
-            }
-          }
-
-      - name: Submit Winget manifest
-        shell: pwsh
-        run: |
-          .\wingetcreate.exe submit `
-            --token $env:WINGET_CREATE_GITHUB_TOKEN `
-            (Get-ChildItem -Path ./manifests -Directory -Recurse |
-              Where-Object { $_.GetFiles("*.installer.yaml").Count -gt 0 } |
-              Select-Object -First 1).FullName
+            -t $env:WINGET_CREATE_GITHUB_TOKEN `
+            --submit
