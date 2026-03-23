@@ -25,3 +25,14 @@
 2. **`locale.en-US.yaml`** — indent `- DocumentLabel:` (and `DocumentUrl`) by 2 spaces under `Documentations:`. Verify `PublisherUrl`, `PublisherSupportUrl`, `PackageUrl`, `ReleaseNotesUrl`, and `Documentations` are present. Fix grammar in `ShortDescription` ("services" not "service", "APIs" not "API").
 
 These fixes can be pushed directly to the PR branch via GitHub API or by cloning the fork (`xarthurx/winget-pkgs`).
+
+## NSIS Updater Behavior on Windows
+
+On Windows, the Tauri NSIS updater with `installMode: "passive"` calls `std::process::exit(0)` during `downloadAndInstall()`. Any JavaScript code after the `await` (e.g., `setSetting(...)`, `relaunch()`) is dead code — it never executes. The NSIS installer handles the relaunch.
+
+The "What's New" modal relies on two independent mechanisms to trigger after an update:
+
+1. **Primary (version comparison):** `DictationOverlay` compares `lastSeenVersion` (from `tauri-plugin-store` in `%APPDATA%`) against `getVersion()` on every launch. If they differ, it sets `pendingWhatsNewVersion` and opens the settings window.
+2. **Secondary (explicit flag):** `AboutSection` sets `openSettingsAfterUpdate = true` in the store **before** calling `downloadAndInstall()`, so the flag is persisted to disk before the process is killed.
+
+Both mechanisms independently trigger the settings window. `SettingsPanel` detects `pendingWhatsNewVersion` via two layers: an initial `loaded` check and an `onFocusChanged` listener (to cover the race where the store flag is written after the initial check).

@@ -53,6 +53,9 @@ export default function AboutSection() {
         setStatus({ phase: "up-to-date" });
         return;
       }
+      // Set flag BEFORE downloadAndInstall — on Windows NSIS the installer
+      // calls std::process::exit(0), so anything after the await is dead code.
+      await setSetting("openSettingsAfterUpdate", true);
       await update.downloadAndInstall((event) => {
         if (event.event === "Started" && event.data.contentLength) {
           setStatus((prev) =>
@@ -70,9 +73,13 @@ export default function AboutSection() {
           setStatus({ phase: "installing" });
         }
       });
-      await setSetting("openSettingsAfterUpdate", true);
+      // These may not execute on Windows (NSIS kills the process), but
+      // are kept as a fallback for other platforms.
       await relaunch();
     } catch (e) {
+      // Clear the flag so the settings window doesn't open on next launch
+      // after a failed update attempt.
+      setSetting("openSettingsAfterUpdate", false);
       setStatus({ phase: "error", message: String(e) });
     }
   };

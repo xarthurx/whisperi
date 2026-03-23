@@ -30,6 +30,7 @@ cd src-tauri && cargo clippy # lint
 - **System tray** — built programmatically in `lib.rs` (no `trayIcon` in tauri.conf.json)
 - **i18n** — all UI strings in `src/i18n/locales/*.json`, typed via `i18next.d.ts`; add new keys to `en.json` first, then all 8 other locales; cross-window sync via `settings-changed` event
 - **Package manager** — bun (not npm/yarn)
+- **NSIS updater on Windows** — `downloadAndInstall()` calls `std::process::exit(0)` internally; any JS code after the await is dead code. Set flags/state BEFORE calling it
 
 ## Tech Stack
 

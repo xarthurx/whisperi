@@ -5,6 +5,7 @@
 ### Fixes
 
 - Fixed "What's New" modal not appearing after in-app update — root cause was a race condition where `SettingsPanel` checked `pendingWhatsNewVersion` before `DictationOverlay` had written it; added `onFocusChanged` listener in `SettingsPanel` to re-check the store flag when the window gains focus
+- Fixed `openSettingsAfterUpdate` flag never being set on Windows — the NSIS installer calls `std::process::exit(0)` during `downloadAndInstall()`, so code after the await was dead; moved `setSetting("openSettingsAfterUpdate", true)` to before the `downloadAndInstall()` call
 - Fixed `readChangelog` command failing in dev mode — bundle resources are only present in production builds; added fallback to read `docs/CHANGELOG.md` from the source tree via `CARGO_MANIFEST_DIR`
 - "What's New" modal now always triggers in dev mode for testing (`import.meta.env.DEV` bypasses version comparison)
 
