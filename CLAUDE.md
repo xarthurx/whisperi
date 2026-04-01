@@ -42,6 +42,14 @@ Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, i18next 
 - Settings: tauri-plugin-store (`settings.json`)
 - Database: SQLite at `{app_data}/whisperi.db`
 
+## Winget Manifests
+
+- `wingetcreate update --submit` in CI handles manifest generation; metadata is inherited from previous version
+- **License**: SPDX identifier `MIT` (not `MIT License`), include `LicenseUrl`
+- **ShortDescription**: single concise phrase only; longer text goes in `Description`
+- **`ReleaseDate`** in installer manifest is valid (schema 1.2.0+) — don't move it
+- See [docs/PROGRESS.md](docs/PROGRESS.md) for full winget notes
+
 ## Workflow Rules
 
 - **Version bump** — update `docs/CHANGELOG.md` first, then create a git tag (`vX.Y.Z`) after bumping
