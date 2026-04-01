@@ -59,43 +59,44 @@ function SettingsPanelInner() {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
+  // Helper: consume pendingWhatsNewVersion flag and show modal.
+  // Clears the flag only AFTER changelog is read successfully so a
+  // failed attempt can be retried on next focus / event.
+  const consumeWhatsNew = useCallback(async () => {
+    const pending = await getSetting<string>("pendingWhatsNewVersion");
+    if (!pending) return;
+    const changelog = await readChangelog();
+    await setSetting("pendingWhatsNewVersion", false);
+    setWhatsNew({ version: pending, changelog });
+  }, []);
+
   // Check for pending What's New version (set by DictationOverlay on version change)
   useEffect(() => {
     if (!loaded) return;
-    (async () => {
-      try {
-        const pending = await getSetting<string>("pendingWhatsNewVersion");
-        if (pending) {
-          await setSetting("pendingWhatsNewVersion", false);
-          const changelog = await readChangelog();
-          setWhatsNew({ version: pending, changelog });
-        }
-      } catch (e) {
-        console.warn("[Whisperi] Failed to load What's New:", e);
-      }
-    })();
-  }, [loaded]);
+    consumeWhatsNew().catch((e) =>
+      console.warn("[Whisperi] Failed to load What's New:", e),
+    );
+  }, [loaded, consumeWhatsNew]);
 
-  // Re-check on window focus (covers the race where the store flag was
-  // written after our initial loaded-check already ran).  The store write
-  // is awaited before showSettings() calls set_focus(), so the flag is
-  // guaranteed to be present by the time this fires.
+  // Primary cross-window trigger: DictationOverlay emits "show-whats-new"
+  // after writing the flag, so we don't depend on focus heuristics.
+  useEffect(() => {
+    const unlisten = listen("show-whats-new", () => {
+      if (whatsNew) return;
+      consumeWhatsNew().catch(() => {});
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [whatsNew, consumeWhatsNew]);
+
+  // Fallback: re-check on window focus (covers manual tray open, or
+  // platforms where the event above is missed).
   useEffect(() => {
     const unlisten = getCurrentWebviewWindow().onFocusChanged(async ({ payload: focused }) => {
       if (!focused || whatsNew) return;
-      try {
-        const pending = await getSetting<string>("pendingWhatsNewVersion");
-        if (pending) {
-          await setSetting("pendingWhatsNewVersion", false);
-          const changelog = await readChangelog();
-          setWhatsNew({ version: pending, changelog });
-        }
-      } catch {
-        // ignore
-      }
+      consumeWhatsNew().catch(() => {});
     });
     return () => { unlisten.then((fn) => fn()); };
-  }, [whatsNew]);
+  }, [whatsNew, consumeWhatsNew]);
 
   const handleClose = useCallback(async () => {
     await getCurrentWebviewWindow().hide();

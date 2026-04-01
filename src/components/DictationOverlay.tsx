@@ -54,6 +54,9 @@ function DictationOverlayInner() {
             setSetting("pendingWhatsNewVersion", currentVersion),
           ]);
           needsSettings = true;
+          // Notify settings panel directly — covers the race where
+          // the panel's initial loaded-check already ran before this write.
+          emit("show-whats-new", { version: currentVersion });
         }
         if (openAfterUpdate) {
           setSetting("openSettingsAfterUpdate", false);

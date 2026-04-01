@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.5] - 2026-04-01
+
+### Fixes
+
+- Fixed "What's New" modal not appearing after update — replaced unreliable focus-based detection with a cross-window `show-whats-new` event from the overlay to the settings panel; also fixed flag being cleared before changelog read (a failed read would permanently lose the modal)
+
 ## [0.6.4] - 2026-03-23
 
 ### Fixes
