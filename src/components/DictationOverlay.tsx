@@ -26,8 +26,8 @@ function DictationOverlayInner() {
   const { settings, loaded } = useSettings();
 
   // On first launch: open settings if no API keys are configured.
-  // After version change (in-app update or manual install): store pending
-  // What's New version and open settings so the modal can appear.
+  // After version change: open settings (the panel self-detects
+  // version changes and shows What's New independently).
   // After in-app update: reopen settings so the user sees the About tab.
   useEffect(() => {
     if (!loaded) return;
@@ -49,14 +49,8 @@ function DictationOverlayInner() {
         let needsSettings = false;
         const isDev = import.meta.env.DEV;
         if (isDev || lastSeen !== currentVersion) {
-          await Promise.all([
-            setSetting("lastSeenVersion", currentVersion),
-            setSetting("pendingWhatsNewVersion", currentVersion),
-          ]);
+          await setSetting("lastSeenVersion", currentVersion);
           needsSettings = true;
-          // Notify settings panel directly — covers the race where
-          // the panel's initial loaded-check already ran before this write.
-          emit("show-whats-new", { version: currentVersion });
         }
         if (openAfterUpdate) {
           setSetting("openSettingsAfterUpdate", false);

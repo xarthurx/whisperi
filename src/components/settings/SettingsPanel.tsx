@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen } from "@tauri-apps/api/event";
+import { getVersion } from "@tauri-apps/api/app";
 import {
   Settings,
   Mic,
@@ -59,44 +60,34 @@ function SettingsPanelInner() {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
-  // Helper: consume pendingWhatsNewVersion flag and show modal.
-  // Clears the flag only AFTER changelog is read successfully so a
-  // failed attempt can be retried on next focus / event.
-  const consumeWhatsNew = useCallback(async () => {
-    const pending = await getSetting<string>("pendingWhatsNewVersion");
-    if (!pending) return;
-    const changelog = await readChangelog();
-    await setSetting("pendingWhatsNewVersion", false);
-    setWhatsNew({ version: pending, changelog });
-  }, []);
-
-  // Check for pending What's New version (set by DictationOverlay on version change)
+  // What's New: self-contained version check — no cross-window IPC needed.
+  // The settings panel independently detects version changes by comparing
+  // getVersion() against its own lastWhatsNewVersion store key.
+  // When lastWhatsNewVersion is null (first install or upgrading from an
+  // older build), null !== currentVersion is true, so the modal shows.
   useEffect(() => {
     if (!loaded) return;
-    consumeWhatsNew().catch((e) =>
-      console.warn("[Whisperi] Failed to load What's New:", e),
-    );
-  }, [loaded, consumeWhatsNew]);
-
-  // Primary cross-window trigger: DictationOverlay emits "show-whats-new"
-  // after writing the flag, so we don't depend on focus heuristics.
-  useEffect(() => {
-    const unlisten = listen("show-whats-new", () => {
-      if (whatsNew) return;
-      consumeWhatsNew().catch(() => {});
-    });
-    return () => { unlisten.then((fn) => fn()); };
-  }, [whatsNew, consumeWhatsNew]);
-
-  // Fallback: re-check on window focus (covers manual tray open, or
-  // platforms where the event above is missed).
-  useEffect(() => {
-    const unlisten = getCurrentWebviewWindow().onFocusChanged(async ({ payload: focused }) => {
-      if (!focused || whatsNew) return;
-      consumeWhatsNew().catch(() => {});
-    });
-    return () => { unlisten.then((fn) => fn()); };
-  }, [whatsNew, consumeWhatsNew]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [currentVersion, lastWhatsNew] = await Promise.all([
+          getVersion(),
+          getSetting<string>("lastWhatsNewVersion"),
+        ]);
+        if (cancelled) return;
+        const isDev = import.meta.env.DEV;
+        if (isDev || lastWhatsNew !== currentVersion) {
+          const changelog = await readChangelog();
+          if (cancelled) return;
+          await setSetting("lastWhatsNewVersion", currentVersion);
+          setWhatsNew({ version: currentVersion, changelog });
+        }
+      } catch (e) {
+        console.warn("[Whisperi] Failed to load What's New:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [loaded]);
 
   const handleClose = useCallback(async () => {
     await getCurrentWebviewWindow().hide();

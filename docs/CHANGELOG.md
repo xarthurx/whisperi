@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.6] - 2026-04-08
+
+### Fixes
+
+- Fixed "What's New" modal not appearing after update — eliminated cross-window IPC entirely; the settings panel now independently detects version changes via its own `lastWhatsNewVersion` store key instead of depending on flags/events from the overlay (which failed due to race conditions between the two webviews)
+
 ## [0.6.5] - 2026-04-01
 
 ### Fixes
