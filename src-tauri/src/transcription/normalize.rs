@@ -1,8 +1,12 @@
-/// Check if a character is in the CJK Unified Ideographs range used by modern Chinese.
-/// Covers U+4E00–U+9FFF (main block) and U+3400–U+4DBF (Extension A).
+/// Check if a character is in the CJK Unified Ideographs ranges used by modern Chinese.
+/// Covers U+4E00–U+9FFF (main block), U+3400–U+4DBF (Extension A),
+/// and U+F900–U+FAFF (Compatibility Ideographs, e.g. 﨑).
+/// Extension B+ (U+20000+) is omitted — those characters are extremely rare in STT output.
 fn is_han(c: char) -> bool {
     let cp = c as u32;
-    (0x4E00..=0x9FFF).contains(&cp) || (0x3400..=0x4DBF).contains(&cp)
+    (0x4E00..=0x9FFF).contains(&cp)
+        || (0x3400..=0x4DBF).contains(&cp)
+        || (0xF900..=0xFAFF).contains(&cp)
 }
 
 fn is_half_width_punct(c: char) -> bool {
@@ -44,6 +48,10 @@ fn should_convert(left: Option<char>, right: Option<char>) -> bool {
 
 /// Walk outward from `from` in `direction` (-1 or +1) and return the first
 /// character that is neither whitespace nor a half-width punctuation char.
+/// Note: full-width punctuation (，。？etc.) is NOT skipped — it counts as a
+/// significant character. This is fine because `to_full_width` returns None for
+/// them, so they pass through unchanged, and `should_convert` treats them as
+/// non-alphanumeric non-Han (which permits conversion when the other side is Han).
 fn nearest_significant(chars: &[char], from: usize, direction: isize) -> Option<char> {
     let mut idx = from as isize + direction;
     while idx >= 0 && (idx as usize) < chars.len() {
