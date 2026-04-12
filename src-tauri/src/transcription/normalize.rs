@@ -114,7 +114,13 @@ pub fn normalize_cjk_punctuation(text: &str) -> String {
     }
 
     // First pass: collapse runs of 3+ dots to Chinese ellipsis when Han-adjacent.
-    let chars = collapse_ellipses(&text.chars().collect::<Vec<_>>());
+    // Skip allocation when no dots are present (the common case).
+    let raw_chars: Vec<char> = text.chars().collect();
+    let chars = if raw_chars.contains(&'.') {
+        collapse_ellipses(&raw_chars)
+    } else {
+        raw_chars
+    };
 
     // Second pass: per-character punctuation conversion.
     let mut out = String::with_capacity(text.len());
@@ -138,9 +144,7 @@ pub fn normalize_cjk_punctuation(text: &str) -> String {
 mod tests {
     use super::*;
 
-    // --- is_han tests ---
-
-    #[test]
+#[test]
     fn is_han_recognizes_common_chars() {
         assert!(is_han('天'));
         assert!(is_han('好'));
@@ -161,9 +165,7 @@ mod tests {
         assert!(!is_han('ア'));
     }
 
-    // --- is_half_width_punct tests ---
-
-    #[test]
+#[test]
     fn is_half_width_punct_recognizes_target_chars() {
         for c in [',', '.', '?', '!', ':', ';'] {
             assert!(is_half_width_punct(c), "should recognize {:?}", c);
@@ -177,9 +179,7 @@ mod tests {
         }
     }
 
-    // --- to_full_width tests ---
-
-    #[test]
+#[test]
     fn to_full_width_maps_all_six() {
         assert_eq!(to_full_width(','), Some('，'));
         assert_eq!(to_full_width('.'), Some('。'));
@@ -196,9 +196,7 @@ mod tests {
         assert_eq!(to_full_width('，'), None);
     }
 
-    // --- should_convert tests ---
-
-    #[test]
+#[test]
     fn should_convert_both_han() {
         assert!(should_convert(Some('天'), Some('讨')));
     }
@@ -236,9 +234,7 @@ mod tests {
         assert!(should_convert(Some('天'), None));
     }
 
-    // --- normalize_cjk_punctuation tests ---
-
-    #[test]
+#[test]
     fn normalize_empty_string() {
         assert_eq!(normalize_cjk_punctuation(""), "");
     }
@@ -306,9 +302,7 @@ mod tests {
         assert_eq!(normalize_cjk_punctuation(input), input);
     }
 
-    // --- ellipsis tests (Task 5) ---
-
-    #[test]
+#[test]
     fn ellipsis_three_dots_chinese() {
         assert_eq!(normalize_cjk_punctuation("我想想..."), "我想想……");
     }
@@ -350,9 +344,7 @@ mod tests {
         );
     }
 
-    // --- edge case tests (Task 6) ---
-
-    #[test]
+#[test]
     fn edge_decimal_number_unchanged() {
         assert_eq!(normalize_cjk_punctuation("3.14"), "3.14");
     }

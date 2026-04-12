@@ -19,6 +19,14 @@ export const TEMPERATURE_MAP: Record<EnhancementIntensity, number> = {
   full: 0.7,
 };
 
+/** Max output/input length ratio before falling back to raw text.
+ *  Light uses a tight guard (only filler removal + punct); standard/full allow more rewriting. */
+export const LENGTH_GUARD_MAP: Record<EnhancementIntensity, number> = {
+  light: 1.5,
+  standard: 3,
+  full: 3,
+};
+
 /**
  * Check if the transcribed text contains the agent name or any alias
  * (case-insensitive), indicating the user is addressing the agent directly.

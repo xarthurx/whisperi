@@ -14,6 +14,7 @@ import {
   getUserPrompt,
   detectChatMode,
   TEMPERATURE_MAP,
+  LENGTH_GUARD_MAP,
   type EnhancementIntensity,
 } from "@/config/prompts";
 
@@ -206,9 +207,7 @@ export async function enhance(
 
   // Guard: if the model generated far more text than the input, it likely answered
   // as a chatbot instead of cleaning up. Fall back to raw transcription.
-  // Light mode uses a tighter guard (1.5x) since it only removes fillers / fixes punct.
-  const LENGTH_GUARD: Record<EnhancementIntensity, number> = { light: 1.5, standard: 3, full: 3 };
-  const maxRatio = LENGTH_GUARD[intensity];
+  const maxRatio = LENGTH_GUARD_MAP[intensity];
   if (!isChatMode && finalText.length > rawText.length * maxRatio) {
     console.warn(
       `[Whisperi] Enhancement output is >${maxRatio}x input length — model likely answered instead of cleaning. Falling back to raw text.`,
