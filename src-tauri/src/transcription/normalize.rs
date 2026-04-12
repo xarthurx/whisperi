@@ -1,14 +1,17 @@
 /// Check if a character is in the CJK Unified Ideographs range used by modern Chinese.
 /// Covers U+4E00–U+9FFF (main block) and U+3400–U+4DBF (Extension A).
+#[allow(dead_code)]
 fn is_han(c: char) -> bool {
     let cp = c as u32;
     (0x4E00..=0x9FFF).contains(&cp) || (0x3400..=0x4DBF).contains(&cp)
 }
 
+#[allow(dead_code)]
 fn is_half_width_punct(c: char) -> bool {
     matches!(c, ',' | '.' | '?' | '!' | ':' | ';')
 }
 
+#[allow(dead_code)]
 fn to_full_width(c: char) -> Option<char> {
     match c {
         ',' => Some('，'),
@@ -26,6 +29,7 @@ fn to_full_width(c: char) -> Option<char> {
 /// 1. At least one neighbor must be a Han character.
 /// 2. The other neighbor must NOT be a Latin letter or ASCII digit.
 /// 3. None (start/end of text) counts as "not alphanumeric" → permits conversion.
+#[allow(dead_code)]
 fn should_convert(left: Option<char>, right: Option<char>) -> bool {
     let left_han = left.is_some_and(is_han);
     let right_han = right.is_some_and(is_han);
@@ -44,6 +48,7 @@ fn should_convert(left: Option<char>, right: Option<char>) -> bool {
 
 /// Walk outward from `from` in `direction` (-1 or +1) and return the first
 /// character that is neither whitespace nor a half-width punctuation char.
+#[allow(dead_code)]
 fn nearest_significant(chars: &[char], from: usize, direction: isize) -> Option<char> {
     let mut idx = from as isize + direction;
     while idx >= 0 && (idx as usize) < chars.len() {
@@ -54,6 +59,45 @@ fn nearest_significant(chars: &[char], from: usize, direction: isize) -> Option<
         idx += direction;
     }
     None
+}
+
+/// Pre-pass: replace runs of 3+ consecutive `.` with `……` (two U+2026 chars)
+/// when the run is Han-adjacent. Otherwise leave the dots alone.
+#[allow(dead_code)]
+fn collapse_ellipses(chars: &[char]) -> Vec<char> {
+    let mut out: Vec<char> = Vec::with_capacity(chars.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '.' {
+            let start = i;
+            while i < chars.len() && chars[i] == '.' {
+                i += 1;
+            }
+            let dot_count = i - start;
+            if dot_count >= 3 {
+                let left = if start > 0 {
+                    nearest_significant(chars, start, -1)
+                } else {
+                    None
+                };
+                let right = if i < chars.len() {
+                    nearest_significant(chars, i - 1, 1)
+                } else {
+                    None
+                };
+                if left.is_some_and(is_han) || right.is_some_and(is_han) {
+                    out.push('\u{2026}');
+                    out.push('\u{2026}');
+                    continue;
+                }
+            }
+            out.extend(std::iter::repeat_n('.', dot_count));
+        } else {
+            out.push(chars[i]);
+            i += 1;
+        }
+    }
+    out
 }
 
 /// Convert half-width ASCII punctuation to Chinese full-width punctuation when
@@ -68,9 +112,11 @@ pub fn normalize_cjk_punctuation(text: &str) -> String {
         return text.to_string();
     }
 
-    let chars: Vec<char> = text.chars().collect();
-    let mut out = String::with_capacity(text.len());
+    // First pass: collapse runs of 3+ dots to Chinese ellipsis when Han-adjacent.
+    let chars = collapse_ellipses(&text.chars().collect::<Vec<_>>());
 
+    // Second pass: per-character punctuation conversion.
+    let mut out = String::with_capacity(text.len());
     for i in 0..chars.len() {
         let c = chars[i];
         if let Some(full) = to_full_width(c) {
@@ -256,6 +302,155 @@ mod tests {
     #[test]
     fn normalize_quick_bail_no_han() {
         let input = "This is a test, only English. No CJK here!";
+        assert_eq!(normalize_cjk_punctuation(input), input);
+    }
+
+    // --- ellipsis tests (Task 5) ---
+
+    #[test]
+    fn ellipsis_three_dots_chinese() {
+        assert_eq!(normalize_cjk_punctuation("我想想..."), "我想想……");
+    }
+
+    #[test]
+    fn ellipsis_four_dots_chinese() {
+        assert_eq!(normalize_cjk_punctuation("我想想...."), "我想想……");
+    }
+
+    #[test]
+    fn ellipsis_five_dots_chinese() {
+        assert_eq!(normalize_cjk_punctuation("我想想....."), "我想想……");
+    }
+
+    #[test]
+    fn ellipsis_three_dots_english_unchanged() {
+        assert_eq!(
+            normalize_cjk_punctuation("Let me think..."),
+            "Let me think..."
+        );
+    }
+
+    #[test]
+    fn ellipsis_between_han() {
+        assert_eq!(normalize_cjk_punctuation("今天...明天"), "今天……明天");
+    }
+
+    #[test]
+    fn ellipsis_three_dots_no_han_unchanged() {
+        assert_eq!(normalize_cjk_punctuation("..."), "...");
+        assert_eq!(normalize_cjk_punctuation("....."), ".....");
+    }
+
+    #[test]
+    fn ellipsis_does_not_break_period_normalization() {
+        assert_eq!(
+            normalize_cjk_punctuation("今天.....完."),
+            "今天……完。"
+        );
+    }
+
+    // --- edge case tests (Task 6) ---
+
+    #[test]
+    fn edge_decimal_number_unchanged() {
+        assert_eq!(normalize_cjk_punctuation("3.14"), "3.14");
+    }
+
+    #[test]
+    fn edge_decimal_in_chinese_context_unchanged() {
+        assert_eq!(
+            normalize_cjk_punctuation("今天3.14米长"),
+            "今天3.14米长"
+        );
+    }
+
+    #[test]
+    fn edge_version_number_unchanged() {
+        assert_eq!(normalize_cjk_punctuation("v1.2.3"), "v1.2.3");
+        assert_eq!(
+            normalize_cjk_punctuation("使用v1.2.3版本"),
+            "使用v1.2.3版本"
+        );
+    }
+
+    #[test]
+    fn edge_ip_address_unchanged() {
+        assert_eq!(
+            normalize_cjk_punctuation("服务器192.168.1.1可访问"),
+            "服务器192.168.1.1可访问"
+        );
+    }
+
+    #[test]
+    fn edge_url_unchanged() {
+        assert_eq!(
+            normalize_cjk_punctuation("https://example.com/path"),
+            "https://example.com/path"
+        );
+    }
+
+    #[test]
+    fn edge_url_in_chinese_text_unchanged() {
+        assert_eq!(
+            normalize_cjk_punctuation("访问https://example.com看看"),
+            "访问https://example.com看看"
+        );
+    }
+
+    #[test]
+    fn edge_filename_extension_unchanged() {
+        assert_eq!(
+            normalize_cjk_punctuation("打开config.json看看"),
+            "打开config.json看看"
+        );
+        assert_eq!(
+            normalize_cjk_punctuation("视频.mp4很大"),
+            "视频.mp4很大"
+        );
+    }
+
+    #[test]
+    fn edge_english_abbreviation_unchanged() {
+        assert_eq!(normalize_cjk_punctuation("e.g."), "e.g.");
+        assert_eq!(
+            normalize_cjk_punctuation("Mr.王在办公室"),
+            "Mr.王在办公室"
+        );
+    }
+
+    #[test]
+    fn edge_mixed_chinese_left_neighbor() {
+        assert_eq!(
+            normalize_cjk_punctuation("今天, hello world"),
+            "今天, hello world"
+        );
+    }
+
+    #[test]
+    fn edge_mixed_english_then_chinese_unchanged() {
+        assert_eq!(
+            normalize_cjk_punctuation("hello, 你好"),
+            "hello, 你好"
+        );
+    }
+
+    #[test]
+    fn edge_chinese_clause_then_english_clause_then_chinese() {
+        assert_eq!(
+            normalize_cjk_punctuation("今天hello world.明天."),
+            "今天hello world.明天。"
+        );
+    }
+
+    #[test]
+    fn edge_existing_full_width_unchanged() {
+        let input = "今天下午三点开会，讨论新产品的设计。";
+        assert_eq!(normalize_cjk_punctuation(input), input);
+    }
+
+    #[test]
+    fn edge_no_alteration_for_cjk_punct() {
+        let input = "今天，hello, world。";
         assert_eq!(normalize_cjk_punctuation(input), input);
     }
 }
