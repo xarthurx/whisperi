@@ -41,7 +41,8 @@ pub async fn transcribe_local(
     .await
     .str_err()?;
 
-    Ok(transcription::cloud::strip_prompt_echo(&text, Some(&full_prompt)))
+    let stripped = transcription::cloud::strip_prompt_echo(&text, Some(&full_prompt));
+    Ok(transcription::normalize_cjk_punctuation(&stripped))
 }
 
 #[tauri::command]
@@ -116,7 +117,8 @@ pub async fn transcribe_cloud(
         other => return Err(format!("Unknown transcription provider: {}", other)),
     };
 
-    Ok(transcription::cloud::strip_prompt_echo(&text, Some(prompt.as_str())))
+    let stripped = transcription::cloud::strip_prompt_echo(&text, Some(prompt.as_str()));
+    Ok(transcription::normalize_cjk_punctuation(&stripped))
 }
 
 #[tauri::command]
