@@ -30,7 +30,7 @@ pub async fn process_reasoning(
     match reasoning::process(&req).await {
         Ok(response) => {
             log::info!("[Whisperi] Enhancement complete ({} chars)", response.text.len());
-            Ok(response.text)
+            Ok(crate::transcription::normalize_cjk_punctuation(&response.text))
         }
         Err(e) => {
             log::error!("[Whisperi] Enhancement failed: {}", e);

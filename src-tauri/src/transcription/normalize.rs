@@ -1,17 +1,14 @@
 /// Check if a character is in the CJK Unified Ideographs range used by modern Chinese.
 /// Covers U+4E00–U+9FFF (main block) and U+3400–U+4DBF (Extension A).
-#[allow(dead_code)]
 fn is_han(c: char) -> bool {
     let cp = c as u32;
     (0x4E00..=0x9FFF).contains(&cp) || (0x3400..=0x4DBF).contains(&cp)
 }
 
-#[allow(dead_code)]
 fn is_half_width_punct(c: char) -> bool {
     matches!(c, ',' | '.' | '?' | '!' | ':' | ';')
 }
 
-#[allow(dead_code)]
 fn to_full_width(c: char) -> Option<char> {
     match c {
         ',' => Some('，'),
@@ -29,7 +26,6 @@ fn to_full_width(c: char) -> Option<char> {
 /// 1. At least one neighbor must be a Han character.
 /// 2. The other neighbor must NOT be a Latin letter or ASCII digit.
 /// 3. None (start/end of text) counts as "not alphanumeric" → permits conversion.
-#[allow(dead_code)]
 fn should_convert(left: Option<char>, right: Option<char>) -> bool {
     let left_han = left.is_some_and(is_han);
     let right_han = right.is_some_and(is_han);
@@ -48,7 +44,6 @@ fn should_convert(left: Option<char>, right: Option<char>) -> bool {
 
 /// Walk outward from `from` in `direction` (-1 or +1) and return the first
 /// character that is neither whitespace nor a half-width punctuation char.
-#[allow(dead_code)]
 fn nearest_significant(chars: &[char], from: usize, direction: isize) -> Option<char> {
     let mut idx = from as isize + direction;
     while idx >= 0 && (idx as usize) < chars.len() {
@@ -63,7 +58,6 @@ fn nearest_significant(chars: &[char], from: usize, direction: isize) -> Option<
 
 /// Pre-pass: replace runs of 3+ consecutive `.` with `……` (two U+2026 chars)
 /// when the run is Han-adjacent. Otherwise leave the dots alone.
-#[allow(dead_code)]
 fn collapse_ellipses(chars: &[char]) -> Vec<char> {
     let mut out: Vec<char> = Vec::with_capacity(chars.len());
     let mut i = 0;
@@ -102,7 +96,6 @@ fn collapse_ellipses(chars: &[char]) -> Vec<char> {
 
 /// Convert half-width ASCII punctuation to Chinese full-width punctuation when
 /// adjacent to Han characters. Idempotent, safe on all input.
-#[allow(dead_code)]
 pub fn normalize_cjk_punctuation(text: &str) -> String {
     if text.is_empty() {
         return String::new();
