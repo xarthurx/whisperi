@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.7] - 2026-04-12
+
+### Fixes
+
+- Fixed Chinese transcription producing half-width punctuation (`,` `.` `?` `!` `:` `;`) instead of full-width (`，` `。` `？` `！` `：` `；`) when AI enhancement is disabled — added a deterministic Rust post-processor (`normalize_cjk_punctuation`) that runs on every transcription and AI-enhanced output, converting half-width punct to full-width when adjacent to Han characters; carefully avoids touching decimals (`3.14`), version strings (`v1.2.3`), URLs, file extensions (`config.json`, `视频.mp4`), IP addresses, and English abbreviations (`Mr.王`, `e.g.`)
+- Runs of 3+ consecutive dots adjacent to Han characters now collapse to the Chinese ellipsis (`……`)
+
 ## [0.6.6] - 2026-04-08
 
 ### Fixes
