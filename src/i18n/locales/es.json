@@ -47,6 +47,8 @@
   "enhancement.prompt.placeholder": "Introduzca sus instrucciones de limpieza personalizadas aquí. Las reglas de comportamiento básicas (activación del agente, formato de salida) siempre se aplican automáticamente.",
   "enhancement.intensity.title": "Intensidad de mejora",
   "enhancement.intensity.description": "Controla cuánto modifica la IA el texto transcrito",
+  "enhancement.intensity.light": "Ligero",
+  "enhancement.intensity.lightDesc": "Limpieza mínima — solo eliminar muletillas y corregir puntuación",
   "enhancement.intensity.standard": "Estándar",
   "enhancement.intensity.standardDesc": "Limpieza completa con formato y manejo de autocorrecciones",
   "enhancement.intensity.full": "Completa",

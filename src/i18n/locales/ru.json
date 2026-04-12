@@ -47,6 +47,8 @@
   "enhancement.prompt.placeholder": "Введите свои инструкции по очистке. Основные правила поведения (активация агента, формат вывода) всегда применяются автоматически.",
   "enhancement.intensity.title": "Интенсивность улучшения",
   "enhancement.intensity.description": "Контролирует, насколько сильно ИИ изменяет транскрибированный текст",
+  "enhancement.intensity.light": "Лёгкий",
+  "enhancement.intensity.lightDesc": "Минимальная очистка — только удаление слов-паразитов и исправление пунктуации",
   "enhancement.intensity.standard": "Стандартная",
   "enhancement.intensity.standardDesc": "Полная очистка с форматированием и обработкой самоисправлений",
   "enhancement.intensity.full": "Полная",

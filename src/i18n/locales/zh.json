@@ -47,6 +47,8 @@
   "enhancement.prompt.placeholder": "在此输入您的自定义整理指令。核心行为规则（助手激活、输出格式）始终会自动应用。",
   "enhancement.intensity.title": "增强强度",
   "enhancement.intensity.description": "控制 AI 对转录文本的修改程度",
+  "enhancement.intensity.light": "轻量",
+  "enhancement.intensity.lightDesc": "最小修改 — 仅去除口头禅、修正标点",
   "enhancement.intensity.standard": "标准",
   "enhancement.intensity.standardDesc": "完整修改，包括格式化和自我纠正处理",
   "enhancement.intensity.full": "完全",

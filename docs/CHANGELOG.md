@@ -2,6 +2,11 @@
 
 ## [0.6.7] - 2026-04-12
 
+### Features
+
+- Added "Light" enhancement intensity — minimal AI cleanup that only removes filler words (um, uh, 嗯, 啊, 那个), fixes punctuation, applies dictionary corrections, and ensures Simplified Chinese; does not restructure sentences, convert numbers, or add formatting; uses temperature 0.1 for maximum determinism
+- Enhancement intensity toggle now shows 3 levels: Light / Standard / Full
+
 ### Fixes
 
 - Fixed Chinese transcription producing half-width punctuation (`,` `.` `?` `!` `:` `;`) instead of full-width (`，` `。` `？` `！` `：` `；`) when AI enhancement is disabled — added a deterministic Rust post-processor (`normalize_cjk_punctuation`) that runs on every transcription and AI-enhanced output, converting half-width punct to full-width when adjacent to Han characters; carefully avoids touching decimals (`3.14`), version strings (`v1.2.3`), URLs, file extensions (`config.json`, `视频.mp4`), IP addresses, and English abbreviations (`Mr.王`, `e.g.`)

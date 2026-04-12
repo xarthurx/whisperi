@@ -47,6 +47,8 @@
   "enhancement.prompt.placeholder": "カスタムクリーンアップ指示をここに入力してください。コア動作ルール（エージェント起動、出力形式）は常に自動適用されます。",
   "enhancement.intensity.title": "拡張強度",
   "enhancement.intensity.description": "AIが文字起こしテキストをどの程度修正するかを制御します",
+  "enhancement.intensity.light": "ライト",
+  "enhancement.intensity.lightDesc": "最小限のクリーンアップ — フィラー除去と句読点修正のみ",
   "enhancement.intensity.standard": "スタンダード",
   "enhancement.intensity.standardDesc": "書式設定と自己修正処理を含む完全なクリーンアップ",
   "enhancement.intensity.full": "フル",

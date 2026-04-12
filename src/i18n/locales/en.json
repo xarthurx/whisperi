@@ -47,6 +47,8 @@
   "enhancement.prompt.placeholder": "Enter your custom cleanup instructions here. Core behavior rules (agent activation, output format) are always applied automatically.",
   "enhancement.intensity.title": "Enhancement Intensity",
   "enhancement.intensity.description": "Controls how much the AI modifies your transcribed text",
+  "enhancement.intensity.light": "Light",
+  "enhancement.intensity.lightDesc": "Minimal cleanup — remove fillers and fix punctuation only",
   "enhancement.intensity.standard": "Standard",
   "enhancement.intensity.standardDesc": "Full cleanup with formatting and self-correction handling",
   "enhancement.intensity.full": "Full",
