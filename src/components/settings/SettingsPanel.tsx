@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen } from "@tauri-apps/api/event";
@@ -60,33 +60,41 @@ function SettingsPanelInner() {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
-  // What's New: self-contained version check — no cross-window IPC needed.
-  // The settings panel independently detects version changes by comparing
-  // getVersion() against its own lastWhatsNewVersion store key.
-  // When lastWhatsNewVersion is null (first install or upgrading from an
-  // older build), null !== currentVersion is true, so the modal shows.
+  // What's New: check on mount and retry on window focus.
+  // lastWhatsNewVersion is set only when the user dismisses the modal,
+  // so if the modal fails to display (e.g. hidden WebView2 window during
+  // post-update startup), the next focus will retry.
+  const whatsNewChecked = useRef(false);
   useEffect(() => {
     if (!loaded) return;
-    let cancelled = false;
-    (async () => {
+
+    async function checkWhatsNew() {
       try {
         const [currentVersion, lastWhatsNew] = await Promise.all([
           getVersion(),
           getSetting<string>("lastWhatsNewVersion"),
         ]);
-        if (cancelled) return;
         const isDev = import.meta.env.DEV;
         if (isDev || lastWhatsNew !== currentVersion) {
           const changelog = await readChangelog();
-          if (cancelled) return;
-          await setSetting("lastWhatsNewVersion", currentVersion);
+          whatsNewChecked.current = true;
           setWhatsNew({ version: currentVersion, changelog });
+        } else {
+          whatsNewChecked.current = true;
         }
       } catch (e) {
         console.warn("[Whisperi] Failed to load What's New:", e);
       }
-    })();
-    return () => { cancelled = true; };
+    }
+
+    checkWhatsNew();
+
+    // Retry on window focus — handles the case where the initial check
+    // ran while the WebView2 window was still hidden (post-update).
+    const unlisten = getCurrentWebviewWindow().onFocusChanged(({ payload: focused }) => {
+      if (focused && !whatsNewChecked.current) checkWhatsNew();
+    });
+    return () => { unlisten.then((fn) => fn()); };
   }, [loaded]);
 
   const handleClose = useCallback(async () => {
@@ -184,7 +192,10 @@ function SettingsPanelInner() {
         <WhatsNewModal
           version={whatsNew.version}
           changelog={whatsNew.changelog}
-          onDismiss={() => setWhatsNew(null)}
+          onDismiss={() => {
+            setSetting("lastWhatsNewVersion", whatsNew.version);
+            setWhatsNew(null);
+          }}
         />
       )}
     </div>
