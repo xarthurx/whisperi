@@ -1,5 +1,8 @@
 pub mod cloud;
+pub mod normalize;
 pub mod whisper;
+#[allow(unused_imports)]
+pub use normalize::normalize_cjk_punctuation;
 
 /// Default (English) punctuation-conditioning initial prompt.
 pub(crate) const PUNCTUATION_PROMPT: &str =
