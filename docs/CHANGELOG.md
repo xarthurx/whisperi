@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.8] - 2026-04-24
+
+### Fixes
+
+- Fixed "What's New" modal never appearing after production installs/updates (real root cause, sixth attempt) — `read_changelog` was reading from `{install_dir}/CHANGELOG.md`, but Tauri's NSIS bundler places resources specified with a `..` path (like `../docs/CHANGELOG.md`) under `_up_/docs/CHANGELOG.md`. The file was bundled, just at a different path than the command expected, so every call returned an error that was silently swallowed by a `console.warn`. Switched to `app.path().resolve("../docs/CHANGELOG.md", BaseDirectory::Resource)`, which reverses the `_up_` transformation transparently on all platforms
+- Replaced the silent `console.warn` on What's New load failures with a destructive toast so future resource-path regressions surface immediately instead of hiding across multiple release cycles
+
 ## [0.6.7] - 2026-04-12
 
 ### Features

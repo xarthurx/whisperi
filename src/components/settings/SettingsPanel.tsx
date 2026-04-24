@@ -75,15 +75,19 @@ function SettingsPanelInner() {
           getSetting<string>("lastWhatsNewVersion"),
         ]);
         const isDev = import.meta.env.DEV;
-        if (isDev || lastWhatsNew !== currentVersion) {
-          const changelog = await readChangelog();
+        if (!isDev && lastWhatsNew === currentVersion) {
           whatsNewChecked.current = true;
-          setWhatsNew({ version: currentVersion, changelog });
-        } else {
-          whatsNewChecked.current = true;
+          return;
         }
+        const changelog = await readChangelog();
+        whatsNewChecked.current = true;
+        setWhatsNew({ version: currentVersion, changelog });
       } catch (e) {
-        console.warn("[Whisperi] Failed to load What's New:", e);
+        // Surface via a toast rather than console — the settings window is
+        // often hidden at check time, so dev-tools logs are invisible to users
+        // and (as v0.6.1–0.6.7 showed) can mask real failures for many releases.
+        const msg = e instanceof Error ? e.message : String(e);
+        toast({ description: `What's New: ${msg}`, variant: "destructive", duration: 8000 });
       }
     }
 
