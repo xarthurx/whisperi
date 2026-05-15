@@ -1,7 +1,8 @@
 pub mod cloud;
 pub mod normalize;
+mod t2s_table;
 pub mod whisper;
-pub use normalize::normalize_cjk_punctuation;
+pub use normalize::finalize_chinese_text;
 
 /// Default (English) punctuation-conditioning initial prompt.
 pub(crate) const PUNCTUATION_PROMPT: &str =

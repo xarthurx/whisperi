@@ -51,12 +51,25 @@ export interface WhisperModelStatus {
   recommended: boolean;
 }
 
+/**
+ * Result of a transcription call. `text` is the cleaned-up output.
+ * `detected_language` is what the model reported during language ID
+ * (present only when the user requested auto-detect AND the provider
+ * supports detection — local whisper.cpp and OpenAI/Groq's verbose_json).
+ * Forward it into `processReasoning` so AI enhancement runs with the
+ * resolved language instead of "auto".
+ */
+export interface TranscriptionResult {
+  text: string;
+  detected_language: string | null;
+}
+
 export async function transcribeLocal(
   audioData: number[],
   model: string,
   language?: string,
   dictionary?: string[],
-): Promise<string> {
+): Promise<TranscriptionResult> {
   return invoke("transcribe_local", {
     audioData,
     model,
@@ -72,7 +85,7 @@ export async function transcribeCloud(
   model: string,
   language?: string,
   dictionary?: string[],
-): Promise<string> {
+): Promise<TranscriptionResult> {
   return invoke("transcribe_cloud", {
     audioData,
     provider,
@@ -123,6 +136,7 @@ export async function processReasoning(
   apiKey: string,
   maxTokens?: number,
   temperature?: number,
+  language?: string,
 ): Promise<string> {
   return invoke("process_reasoning", {
     text,
@@ -132,6 +146,7 @@ export async function processReasoning(
     apiKey,
     maxTokens,
     temperature,
+    language,
   });
 }
 

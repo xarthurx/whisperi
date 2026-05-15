@@ -8,6 +8,31 @@ fn normalize_language(lang: Option<String>) -> Option<String> {
     lang.map(|l| l.split('-').next().unwrap_or(&l).to_string())
 }
 
+/// Result of a transcription Tauri command. `text` is the post-processed
+/// (Simplified Chinese, full-width punctuation) output. `detected_language` is
+/// what whisper/cloud reported during language ID — present only when the user
+/// requested auto-detect AND the provider supports it. The frontend forwards
+/// this into the subsequent reasoning call so AI enhancement runs with the
+/// resolved language instead of "auto".
+#[derive(Debug, Serialize)]
+pub struct TranscriptionResult {
+    pub text: String,
+    pub detected_language: Option<String>,
+}
+
+/// Pick the language to use for the post-processing (T→S) decision. If the
+/// user requested auto-detect, prefer what the model reported; otherwise use
+/// what the user explicitly chose.
+fn effective_language(
+    requested: Option<&str>,
+    detected: Option<&str>,
+) -> Option<String> {
+    match requested {
+        None | Some("auto") => detected.map(str::to_string),
+        Some(other) => Some(other.to_string()),
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct WhisperModelStatus {
     pub id: String,
@@ -26,12 +51,12 @@ pub async fn transcribe_local(
     model: String,
     language: Option<String>,
     dictionary: Vec<String>,
-) -> Result<String, String> {
+) -> Result<TranscriptionResult, String> {
     let file_name = format!("ggml-{}.bin", model);
     let language = normalize_language(language);
     let full_prompt = crate::transcription::build_prompt(&dictionary, language.as_deref());
 
-    let text = transcription::whisper::transcribe(
+    let output = transcription::whisper::transcribe(
         &app,
         &audio_data,
         &file_name,
@@ -41,8 +66,13 @@ pub async fn transcribe_local(
     .await
     .str_err()?;
 
-    let stripped = transcription::cloud::strip_prompt_echo(&text, Some(&full_prompt));
-    Ok(transcription::normalize_cjk_punctuation(&stripped))
+    let stripped = transcription::cloud::strip_prompt_echo(&output.text, Some(&full_prompt));
+    let effective = effective_language(language.as_deref(), output.detected_language.as_deref());
+    let text = transcription::finalize_chinese_text(&stripped, effective.as_deref());
+    Ok(TranscriptionResult {
+        text,
+        detected_language: output.detected_language,
+    })
 }
 
 #[tauri::command]
@@ -53,7 +83,7 @@ pub async fn transcribe_cloud(
     model: String,
     language: Option<String>,
     dictionary: Vec<String>,
-) -> Result<String, String> {
+) -> Result<TranscriptionResult, String> {
     let key_preview = if api_key.len() > 8 {
         format!("{}...{}", &api_key[..4], &api_key[api_key.len()-4..])
     } else {
@@ -64,7 +94,7 @@ pub async fn transcribe_cloud(
     let language = normalize_language(language);
     let prompt = crate::transcription::build_prompt(&dictionary, language.as_deref());
 
-    let text = match provider.as_str() {
+    let output = match provider.as_str() {
         "openai" => transcription::cloud::transcribe_openai(
             audio_data,
             &api_key,
@@ -117,8 +147,13 @@ pub async fn transcribe_cloud(
         other => return Err(format!("Unknown transcription provider: {}", other)),
     };
 
-    let stripped = transcription::cloud::strip_prompt_echo(&text, Some(prompt.as_str()));
-    Ok(transcription::normalize_cjk_punctuation(&stripped))
+    let stripped = transcription::cloud::strip_prompt_echo(&output.text, Some(prompt.as_str()));
+    let effective = effective_language(language.as_deref(), output.detected_language.as_deref());
+    let text = transcription::finalize_chinese_text(&stripped, effective.as_deref());
+    Ok(TranscriptionResult {
+        text,
+        detected_language: output.detected_language,
+    })
 }
 
 #[tauri::command]
@@ -274,4 +309,38 @@ pub fn get_whisper_status(app: AppHandle) -> Result<bool, String> {
     }
 
     Ok(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn effective_language_prefers_user_choice() {
+        // User explicitly chose Japanese — detection result is ignored.
+        assert_eq!(
+            effective_language(Some("ja"), Some("zh")),
+            Some("ja".to_string())
+        );
+    }
+
+    #[test]
+    fn effective_language_uses_detection_in_auto_mode() {
+        assert_eq!(
+            effective_language(Some("auto"), Some("zh")),
+            Some("zh".to_string())
+        );
+        assert_eq!(
+            effective_language(None, Some("ja")),
+            Some("ja".to_string())
+        );
+    }
+
+    #[test]
+    fn effective_language_falls_back_to_none_when_no_detection() {
+        // Auto mode + no detection → None. finalize_chinese_text will then
+        // use its own kana heuristic.
+        assert_eq!(effective_language(Some("auto"), None), None);
+        assert_eq!(effective_language(None, None), None);
+    }
 }

@@ -123,8 +123,15 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         settings.agentAliases,
       );
 
-      const rawText = await transcribe(audioData, settings, transcriptionDict);
+      const { text: rawText, detectedLanguage } = await transcribe(
+        audioData,
+        settings,
+        transcriptionDict,
+      );
       console.log("[Whisperi] Transcription:", rawText);
+      if (detectedLanguage) {
+        console.log("[Whisperi] Detected language:", detectedLanguage);
+      }
 
       if (isEmptyTranscription(rawText, transcriptionDict)) {
         console.log(
@@ -137,7 +144,12 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       let finalText = rawText;
       let rawAiResponse: string | null = null;
       try {
-        const result = await enhance(rawText, settings, transcriptionDict);
+        const result = await enhance(
+          rawText,
+          settings,
+          transcriptionDict,
+          detectedLanguage,
+        );
         finalText = result.finalText;
         rawAiResponse = result.rawAiResponse;
       } catch (e) {

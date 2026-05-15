@@ -1,6 +1,7 @@
 use crate::reasoning::{self, ReasoningRequest};
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn process_reasoning(
     text: String,
     model: String,
@@ -9,6 +10,7 @@ pub async fn process_reasoning(
     api_key: String,
     max_tokens: Option<u32>,
     temperature: Option<f64>,
+    language: Option<String>,
 ) -> Result<String, String> {
     let key_preview = if api_key.len() > 8 {
         format!("{}...{}", &api_key[..4], &api_key[api_key.len()-4..])
@@ -30,7 +32,14 @@ pub async fn process_reasoning(
     match reasoning::process(&req).await {
         Ok(response) => {
             log::info!("[Whisperi] Enhancement complete ({} chars)", response.text.len());
-            Ok(crate::transcription::normalize_cjk_punctuation(&response.text))
+            // Run the full Chinese post-processing pipeline (punctuation + T→S
+            // when the configured language is Chinese). Acts as a deterministic
+            // safety net for models that occasionally slip into Traditional
+            // characters or half-width punctuation despite prompt instructions.
+            Ok(crate::transcription::finalize_chinese_text(
+                &response.text,
+                language.as_deref(),
+            ))
         }
         Err(e) => {
             log::error!("[Whisperi] Enhancement failed: {}", e);

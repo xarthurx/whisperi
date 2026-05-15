@@ -107,19 +107,29 @@ export function buildTranscriptionDictionary(
   return extraWords.length > 0 ? [...dictionary, ...extraWords] : dictionary;
 }
 
-/** Run transcription (local or cloud). Returns raw text. Throws on missing API key. */
+export interface TranscribeResult {
+  /** Cleaned-up transcription text (Simplified Chinese + full-width punctuation when applicable). */
+  text: string;
+  /** Language code the backend reported during auto-detect. `null` when the user
+   *  forced a language or the provider doesn't expose detection. */
+  detectedLanguage: string | null;
+}
+
+/** Run transcription (local or cloud). Returns text plus the language the backend
+ *  detected (when in auto mode). Throws on missing API key. */
 export async function transcribe(
   audioData: number[],
   settings: TranscriptionSettings,
   transcriptionDict: string[],
-): Promise<string> {
+): Promise<TranscribeResult> {
   if (settings.useLocal) {
-    return transcribeLocal(
+    const result = await transcribeLocal(
       audioData,
       settings.whisperModel ?? "base",
       settings.language ?? undefined,
       transcriptionDict,
     );
+    return { text: result.text, detectedLanguage: result.detected_language };
   }
 
   const provider = settings.cloudProvider ?? "openai";
@@ -131,7 +141,7 @@ export async function transcribe(
   }
   const model = settings.cloudModel ?? "gpt-4o-mini-transcribe";
   console.log(`[Whisperi] Transcribing with ${provider}/${model}...`);
-  return transcribeCloud(
+  const result = await transcribeCloud(
     audioData,
     provider,
     apiKey,
@@ -139,6 +149,7 @@ export async function transcribe(
     settings.language ?? undefined,
     transcriptionDict,
   );
+  return { text: result.text, detectedLanguage: result.detected_language };
 }
 
 export interface EnhancementResult {
@@ -146,11 +157,26 @@ export interface EnhancementResult {
   rawAiResponse: string | null;
 }
 
-/** Enhance raw transcription with AI reasoning. Returns original text if enhancement is disabled or fails. */
+/** Pick the language for the enhancement step: prefer the backend-detected
+ *  language when the user is in auto mode, otherwise honour the explicit choice. */
+function effectiveLanguage(
+  requested: string | null | undefined,
+  detected: string | null | undefined,
+): string | undefined {
+  if (!requested || requested === "auto") {
+    return detected ?? undefined;
+  }
+  return requested;
+}
+
+/** Enhance raw transcription with AI reasoning. Returns original text if enhancement is disabled or fails.
+ *  Pass `detectedLanguage` from the transcription step so auto-mode users still get
+ *  language-specific behavior (Simplified Chinese enforcement, language-aware prompts). */
 export async function enhance(
   rawText: string,
   settings: TranscriptionSettings,
   dictionary: string[],
+  detectedLanguage: string | null = null,
 ): Promise<EnhancementResult> {
   if (
     !settings.useReasoning ||
@@ -177,16 +203,16 @@ export async function enhance(
     settings.agentAliases,
   );
   const intensity = settings.enhancementIntensity ?? "standard";
+  // In auto mode, use the language the transcription step actually detected.
+  // This makes downstream T→S enforcement deterministic instead of relying on
+  // the kana heuristic inside `finalize_chinese_text`.
+  const resolvedLanguage = effectiveLanguage(settings.language, detectedLanguage);
   const systemPrompt = isChatMode
-    ? getChatSystemPrompt(
-        settings.agentName,
-        dictionary,
-        settings.language ?? undefined,
-      )
+    ? getChatSystemPrompt(settings.agentName, dictionary, resolvedLanguage)
     : getSystemPrompt(
         settings.agentName,
         dictionary,
-        settings.language ?? undefined,
+        resolvedLanguage,
         settings.useCustomPrompt && settings.customSystemPrompt
           ? settings.customSystemPrompt
           : undefined,
@@ -202,6 +228,7 @@ export async function enhance(
     rApiKey,
     undefined,
     temperature,
+    resolvedLanguage,
   );
   let finalText = stripAiPreamble(stripThinkTags(rawAiResponse));
 

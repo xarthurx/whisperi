@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.9] - 2026-05-15
+
+### Fixes
+
+- Fixed Chinese output occasionally containing Traditional characters (繁體) instead of Simplified (简体), even when the Chinese language is selected and the prompts explicitly require Simplified — added a deterministic Traditional→Simplified post-processor backed by OpenCC's character mapping (4,105 entries, Apache-2.0), so the output is guaranteed regardless of what the Whisper or reasoning model emits. Runs whenever the user selects any Chinese variant (`zh`, `zh-CN`, `zh-TW`, `zh-HK`, …) and, in auto-detect mode, only when Han characters are present AND no kana (so Japanese kanji like 馬 stay as 馬, not 马)
+- New entry point `transcription::finalize_chinese_text(text, language)` consolidates the two passes — punctuation normalization (existing) + Traditional→Simplified (new) — and replaces the previous direct calls to `normalize_cjk_punctuation` from `transcribe_local`, `transcribe_cloud`, and `process_reasoning`. The reasoning command now accepts a `language` parameter forwarded from `useTranscriptionPipeline` so the deterministic safety net runs on the enhancement output too, not just the raw transcription
+- Fixed auto-detect mode relying on a kana heuristic to decide whether output is Chinese vs. Japanese — now reads the actual detected language from the transcription model. Whisper.cpp's stderr is parsed for `auto-detected language: <code>`, and OpenAI/Groq are switched to `response_format=verbose_json` so their response includes a `language` field. The detected code is returned to the frontend in a new `TranscriptionResult { text, detected_language }` shape and forwarded into the subsequent AI enhancement call so language-aware prompts and T→S enforcement run with the resolved language instead of "auto". User-explicit language choices still win — detection only fills in when the user picked auto
+
+### Internal
+
+- Added `src-tauri/src/transcription/t2s_table.rs` — auto-generated, sorted slice of `(char, char)` pairs used by `to_simplified_char` via binary search (~12 comparisons per lookup, ~33 KB binary size)
+- Added `scripts/gen_t2s_table.py` to regenerate the table from OpenCC's `TSCharacters.txt`; never hand-edit the table
+- 31 new Rust unit tests in `normalize.rs` covering: T→S character mapping (common chars, already-Simplified no-op, ASCII/kana pass-through), `convert_to_simplified` idempotency and mixed-input handling, `is_chinese_language` variant acceptance (`zh`, `zh-CN`, `zh_TW`, `ZH`), auto-detect gating (kana detection blocks T→S conversion), full pipeline `finalize_chinese_text` for zh/ja/en/auto
+- Added `WhisperOutput { text, detected_language }` and `CloudTranscription { text, detected_language }` Rust structs replacing bare `String` returns from the transcription layer. `normalize_provider_language` converts OpenAI's full-name responses ("english", "chinese") back to ISO codes
+- 10 additional Rust unit tests: `parse_detected_language` (Chinese/English/subtag/missing/repeated), `normalize_provider_language` (ISO pass-through, full-name → code, unknown fall-through, empty/whitespace), `effective_language` (explicit choice wins, auto uses detection, no-detection → None). 81 transcription-module tests pass total; clippy clean
+
 ## [0.6.8] - 2026-04-24
 
 ### Fixes

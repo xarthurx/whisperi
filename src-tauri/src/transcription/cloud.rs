@@ -6,6 +6,19 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize)]
 struct TranscriptionResponse {
     text: String,
+    /// Detected language code, returned by OpenAI/Groq when
+    /// `response_format=verbose_json` is requested. Absent for chat-completion
+    /// transcription paths (Qwen, OpenRouter).
+    #[serde(default)]
+    language: Option<String>,
+}
+
+/// Result of a cloud transcription: the text plus, when the provider supports
+/// detection (e.g. OpenAI/Groq with verbose_json), the language code.
+#[derive(Debug, Clone)]
+pub struct CloudTranscription {
+    pub text: String,
+    pub detected_language: Option<String>,
 }
 
 /// Split text into lowercase word tokens (letters + numbers only).
@@ -117,6 +130,11 @@ pub fn log_transcription_result(provider: &str, text: &str, prompt: Option<&str>
 }
 
 /// Transcribe audio via OpenAI Whisper API
+///
+/// Uses `response_format=verbose_json` so the response includes the
+/// detected language. The `gpt-4o-*-transcribe` models reject verbose_json
+/// (they only support `json` or `text`), so we drop the parameter for them
+/// and accept that detection is unavailable on that path.
 pub async fn transcribe_openai(
     audio_data: Vec<u8>,
     api_key: &str,
@@ -124,7 +142,7 @@ pub async fn transcribe_openai(
     language: Option<&str>,
     prompt: Option<&str>,
     base_url: Option<&str>,
-) -> Result<String> {
+) -> Result<CloudTranscription> {
     let url = format!(
         "{}/audio/transcriptions",
         base_url.unwrap_or("https://api.openai.com/v1")
@@ -137,6 +155,14 @@ pub async fn transcribe_openai(
     let mut form = multipart::Form::new()
         .text("model", model.to_string())
         .part("file", file_part);
+
+    // verbose_json gives us `language` (and `duration`/`segments` which we
+    // ignore). Only `whisper-1` and Groq's whisper variants support it; the
+    // newer GPT-4o transcription models do not.
+    let supports_verbose = !model.starts_with("gpt-4o");
+    if supports_verbose {
+        form = form.text("response_format", "verbose_json".to_string());
+    }
 
     if let Some(lang) = language {
         if lang != "auto" {
@@ -162,7 +188,51 @@ pub async fn transcribe_openai(
 
     let result: TranscriptionResponse = response.json().await?;
     log_transcription_result("Cloud", &result.text, prompt);
-    Ok(result.text)
+    if let Some(ref code) = result.language {
+        log::info!("[Whisperi] Cloud detected language: {}", code);
+    }
+    Ok(CloudTranscription {
+        text: result.text,
+        detected_language: normalize_provider_language(result.language.as_deref()),
+    })
+}
+
+/// OpenAI's verbose_json returns full English names ("english", "chinese") for
+/// some models and ISO 639-1 codes for others. Normalize to ISO codes since
+/// that's what the rest of the pipeline expects.
+fn normalize_provider_language(lang: Option<&str>) -> Option<String> {
+    let raw = lang?.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    // If it already looks like a 2-3 letter code, keep it.
+    if raw.len() <= 3 && raw.chars().all(|c| c.is_ascii_alphabetic()) {
+        return Some(raw.to_lowercase());
+    }
+    // Common full-name → code mappings produced by OpenAI's verbose_json.
+    let code = match raw.to_lowercase().as_str() {
+        "chinese" | "mandarin" => "zh",
+        "english" => "en",
+        "japanese" => "ja",
+        "korean" => "ko",
+        "french" => "fr",
+        "german" => "de",
+        "spanish" => "es",
+        "portuguese" => "pt",
+        "russian" => "ru",
+        "italian" => "it",
+        "dutch" => "nl",
+        "polish" => "pl",
+        "turkish" => "tr",
+        "arabic" => "ar",
+        "hindi" => "hi",
+        "vietnamese" => "vi",
+        "thai" => "th",
+        "indonesian" => "id",
+        "ukrainian" => "uk",
+        _ => return Some(raw.to_lowercase()),
+    };
+    Some(code.to_string())
 }
 
 /// Transcribe audio via Groq Whisper API
@@ -172,7 +242,7 @@ pub async fn transcribe_groq(
     model: &str,
     language: Option<&str>,
     prompt: Option<&str>,
-) -> Result<String> {
+) -> Result<CloudTranscription> {
     transcribe_openai(
         audio_data,
         api_key,
@@ -216,7 +286,7 @@ pub async fn transcribe_qwen(
     audio_data: Vec<u8>,
     api_key: &str,
     model: &str,
-) -> Result<String> {
+) -> Result<CloudTranscription> {
     let b64 = BASE64.encode(&audio_data);
     let data_url = format!("data:audio/wav;base64,{}", b64);
 
@@ -246,7 +316,10 @@ pub async fn transcribe_qwen(
     let text = result.text();
 
     log_transcription_result("Qwen", &text, None);
-    Ok(text)
+    Ok(CloudTranscription {
+        text,
+        detected_language: None,
+    })
 }
 
 // --- OpenRouter multimodal types (chat completions with audio) ---
@@ -271,7 +344,7 @@ pub async fn transcribe_openrouter(
     model: &str,
     language: Option<&str>,
     prompt: Option<&str>,
-) -> Result<String> {
+) -> Result<CloudTranscription> {
     log::info!(
         "[Whisperi] OpenRouter transcription: model={}, audio={} bytes ({:.1} KB base64)",
         model,
@@ -328,7 +401,10 @@ pub async fn transcribe_openrouter(
     let text = result.text();
 
     log_transcription_result("OpenRouter", &text, prompt);
-    Ok(text)
+    Ok(CloudTranscription {
+        text,
+        detected_language: None,
+    })
 }
 
 /// Transcribe audio via Mistral Voxtral API
@@ -338,7 +414,7 @@ pub async fn transcribe_mistral(
     model: &str,
     language: Option<&str>,
     prompt: Option<&str>,
-) -> Result<String> {
+) -> Result<CloudTranscription> {
     transcribe_openai(
         audio_data,
         api_key,
@@ -353,6 +429,39 @@ pub async fn transcribe_mistral(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn normalize_provider_language_iso_codes_pass_through() {
+        assert_eq!(normalize_provider_language(Some("zh")), Some("zh".into()));
+        assert_eq!(normalize_provider_language(Some("EN")), Some("en".into()));
+        assert_eq!(normalize_provider_language(Some("ja")), Some("ja".into()));
+    }
+
+    #[test]
+    fn normalize_provider_language_full_names_to_codes() {
+        assert_eq!(normalize_provider_language(Some("chinese")), Some("zh".into()));
+        assert_eq!(normalize_provider_language(Some("Chinese")), Some("zh".into()));
+        assert_eq!(normalize_provider_language(Some("English")), Some("en".into()));
+        assert_eq!(normalize_provider_language(Some("Japanese")), Some("ja".into()));
+        assert_eq!(normalize_provider_language(Some("mandarin")), Some("zh".into()));
+    }
+
+    #[test]
+    fn normalize_provider_language_unknown_full_name_falls_through() {
+        // Unknown full name → lowercased verbatim (caller's heuristic still works
+        // for the Chinese case since downstream gating doesn't recognise it).
+        assert_eq!(
+            normalize_provider_language(Some("Klingon")),
+            Some("klingon".into())
+        );
+    }
+
+    #[test]
+    fn normalize_provider_language_none_and_empty() {
+        assert_eq!(normalize_provider_language(None), None);
+        assert_eq!(normalize_provider_language(Some("")), None);
+        assert_eq!(normalize_provider_language(Some("   ")), None);
+    }
 
     #[test]
     fn strip_prompt_echo_no_prompt() {
