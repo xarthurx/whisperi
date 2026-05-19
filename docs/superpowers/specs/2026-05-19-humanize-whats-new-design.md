@@ -49,12 +49,12 @@ Title (`"What's New in v{version}"`), dismiss button (`"Got it"`), opening trigg
 
 ### Backfill scope
 
-Add Highlights to the last five versions: 0.6.4, 0.6.5, 0.6.6, 0.6.7, 0.6.8. Older versions stay as-is (fallback rendering). Going forward, every new release adds its own Highlights as part of the version-bump workflow.
+Add Highlights to the last six versions: 0.6.4, 0.6.5, 0.6.6, 0.6.7, 0.6.8, and the in-flight 0.6.9 entry (already on `main` but not yet tagged). Older versions stay as-is (fallback rendering). Going forward, every new release adds its own Highlights as part of the version-bump workflow.
 
 ### Files touched
 
 - [src/components/ui/WhatsNewModal.tsx](../../../src/components/ui/WhatsNewModal.tsx) — extend `extractVersionChangelog` (or add a helper) to detect a `### Highlights` subsection; branch `ChangelogContent` to render flat bullets when Highlights is present, fall back to current rendering otherwise.
-- [docs/CHANGELOG.md](../../CHANGELOG.md) — add `### Highlights` stanza to 0.6.4 through 0.6.8.
+- [docs/CHANGELOG.md](../../CHANGELOG.md) — add `### Highlights` stanza to 0.6.4 through 0.6.9.
 - [docs/PROGRESS.md](../../PROGRESS.md) — add a one-liner: "Each new version must include a `### Highlights` stanza with 1–4 user-facing bullets at the top of its CHANGELOG entry."
 - [CLAUDE.md](../../../CLAUDE.md) — add the same Highlights rule under "Workflow Rules" so future sessions enforce it on version bumps.
 
