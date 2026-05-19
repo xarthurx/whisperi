@@ -86,6 +86,7 @@ function ChangelogContent({ markdown }: { markdown: string }) {
 export default function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalProps) {
   const { t } = useTranslation();
   const sectionMarkdown = extractVersionChangelog(changelog, version);
+  const highlights = extractHighlights(sectionMarkdown);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -97,7 +98,15 @@ export default function WhatsNewModal({ version, changelog, onDismiss }: WhatsNe
         </div>
 
         <div className="px-5 py-4 overflow-y-auto flex-1">
-          {sectionMarkdown ? (
+          {highlights ? (
+            <ul className="space-y-1.5">
+              {highlights.map((bullet, i) => (
+                <li key={i} className="text-sm text-foreground/80 ml-4 list-disc">
+                  {bullet}
+                </li>
+              ))}
+            </ul>
+          ) : sectionMarkdown ? (
             <ChangelogContent markdown={sectionMarkdown} />
           ) : (
             <p className="text-sm text-muted-foreground">{t("whatsNew.noChangelog")}</p>
