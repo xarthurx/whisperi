@@ -231,6 +231,7 @@ pub fn run() {
             commands::database::get_transcriptions,
             commands::database::delete_transcription,
             commands::database::clear_transcriptions,
+            commands::database::get_stats,
             commands::app::quit_app,
             commands::app::show_settings,
             commands::changelog::read_changelog,

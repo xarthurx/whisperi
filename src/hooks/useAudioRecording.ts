@@ -52,6 +52,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   const [audioLevel, setAudioLevel] = useState(0);
   const [transcript, setTranscript] = useState("");
   const unlistenRef = useRef<(() => void)[]>([]);
+  const recordingStartRef = useRef<number | null>(null);
 
   // Subscribe to audio-level and recording-error events
   useEffect(() => {
@@ -90,12 +91,18 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   const start = useCallback(
     async (deviceId?: string) => {
       if (phase !== "idle") return;
+      // Capture before the await so the duration reflects "user pressed
+      // hotkey" rather than "Rust finished initializing cpal". The ~50–100ms
+      // device-startup overhead is acceptable per the spec; cleared on failure
+      // so a failed start doesn't poison the next recording.
+      recordingStartRef.current = performance.now();
       try {
         await apiStartRecording(deviceId);
         setPhase("recording");
         const soundEnabled = await getSetting<boolean>("soundEnabled");
         if (soundEnabled !== false) playStartSound();
       } catch (e) {
+        recordingStartRef.current = null;
         onToast?.({
           title: "Failed to start recording",
           description: String(e),
@@ -109,6 +116,13 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   const stop = useCallback(async () => {
     if (phase !== "recording") return;
     setPhase("processing");
+    // Capture duration as soon as we know the user released the hotkey,
+    // before any awaits that would inflate the recorded length.
+    const durationMs =
+      recordingStartRef.current !== null
+        ? Math.round(performance.now() - recordingStartRef.current)
+        : null;
+    recordingStartRef.current = null;
     const soundEnabled = await getSetting<boolean>("soundEnabled");
     if (soundEnabled !== false) playStopSound();
 
@@ -177,6 +191,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         settings.useReasoning ? "ai" : "none",
         settings.agentName,
         null,
+        durationMs,
       );
 
       setPhase("idle");
@@ -210,6 +225,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       } catch {
         // ignore
       }
+      recordingStartRef.current = null;
       setAudioLevel(0);
       setPhase("idle");
     }

@@ -6,7 +6,7 @@ use super::t2s_table;
 /// Covers U+4E00–U+9FFF (main block), U+3400–U+4DBF (Extension A),
 /// and U+F900–U+FAFF (Compatibility Ideographs, e.g. 﨑).
 /// Extension B+ (U+20000+) is omitted — those characters are extremely rare in STT output.
-fn is_han(c: char) -> bool {
+pub(crate) fn is_han(c: char) -> bool {
     let cp = c as u32;
     (0x4E00..=0x9FFF).contains(&cp)
         || (0x3400..=0x4DBF).contains(&cp)

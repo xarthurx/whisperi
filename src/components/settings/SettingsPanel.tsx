@@ -10,6 +10,7 @@ import {
   BookOpen,
   Bot,
   Wrench,
+  BarChart3,
   Info,
   Minus,
   X,
@@ -24,6 +25,7 @@ import AIModelsSection from "./AIModelsSection";
 import DictionarySection from "./DictionarySection";
 import AgentSection from "./AgentSection";
 import DeveloperSection from "./DeveloperSection";
+import StatisticsSection from "./StatisticsSection";
 import AboutSection from "./AboutSection";
 
 type Section =
@@ -33,6 +35,7 @@ type Section =
   | "dictionary"
   | "agent"
   | "developer"
+  | "statistics"
   | "about";
 
 const SECTION_DEFS = [
@@ -42,6 +45,7 @@ const SECTION_DEFS = [
   { id: "dictionary" as Section, labelKey: "nav.dictionary" as const, icon: BookOpen },
   { id: "agent" as Section, labelKey: "nav.agent" as const, icon: Bot },
   { id: "developer" as Section, labelKey: "nav.developer" as const, icon: Wrench },
+  { id: "statistics" as Section, labelKey: "nav.statistics" as const, icon: BarChart3 },
   { id: "about" as Section, labelKey: "nav.about" as const, icon: Info },
 ];
 
@@ -187,6 +191,7 @@ function SettingsPanelInner() {
             {section === "developer" && (
               <DeveloperSection settings={settings} update={update} toast={toast} />
             )}
+            {section === "statistics" && <StatisticsSection />}
             {section === "about" && <AboutSection />}
           </div>
         </div>
