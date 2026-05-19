@@ -20,18 +20,46 @@ pub fn run(conn: &Connection) -> Result<()> {
     )?;
 
     // v2: add duration_ms + word_count for the Statistics tab.
+    //
+    // The guard checks both `user_version` AND the actual column presence.
+    // The column check is belt-and-braces for downgrade/restore/dev scenarios
+    // where the columns may already exist while user_version says otherwise —
+    // a bare `ALTER TABLE ADD COLUMN` would then fail with "duplicate column
+    // name" and prevent the app from starting.
     let version: i64 =
         conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if version < 2 {
-        // ALTER TABLE ADD COLUMN must run as separate statements because SQLite
-        // doesn't allow multiple ADDs in one ALTER. Both default to NULL, which
-        // is what stats queries filter on to exclude pre-feature rows.
-        conn.execute("ALTER TABLE transcriptions ADD COLUMN duration_ms INTEGER", [])?;
-        conn.execute("ALTER TABLE transcriptions ADD COLUMN word_count INTEGER", [])?;
+        if !column_exists(conn, "transcriptions", "duration_ms")? {
+            conn.execute(
+                "ALTER TABLE transcriptions ADD COLUMN duration_ms INTEGER",
+                [],
+            )?;
+        }
+        if !column_exists(conn, "transcriptions", "word_count")? {
+            conn.execute(
+                "ALTER TABLE transcriptions ADD COLUMN word_count INTEGER",
+                [],
+            )?;
+        }
         conn.execute_batch("PRAGMA user_version = 2;")?;
     }
 
     Ok(())
+}
+
+fn column_exists(conn: &Connection, table: &str, col: &str) -> Result<bool> {
+    // `PRAGMA table_info(...)` returns rows of (cid, name, type, notnull, dflt, pk).
+    // Table name is a Rust string literal (no user input), so format! is safe.
+    let sql = format!("PRAGMA table_info({table})");
+    let mut stmt = conn.prepare(&sql)?;
+    let mut rows = stmt.query([])?;
+    while let Some(row) = rows.next()? {
+        let name: String = row.get(1)?;
+        if name == col {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 #[cfg(test)]
@@ -95,5 +123,29 @@ mod tests {
         run(&conn).unwrap();
         // Second call would fail with "duplicate column name" if v2 weren't guarded.
         run(&conn).unwrap();
+    }
+
+    #[test]
+    fn v2_skips_existing_columns_when_user_version_is_stale() {
+        // Simulate a downgrade/dev DB: v1 schema + columns already present,
+        // but user_version still 0. Without the per-column guard this would
+        // fail with "duplicate column name".
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE transcriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                original_text TEXT NOT NULL,
+                duration_ms INTEGER,
+                word_count INTEGER
+            );",
+        )
+        .unwrap();
+        // user_version is still 0 here.
+        run(&conn).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(v, 2);
     }
 }

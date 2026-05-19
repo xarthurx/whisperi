@@ -146,12 +146,20 @@ impl Database {
     }
 
     pub fn get_stats(&self, period: StatsPeriod) -> Result<StatsPayload> {
-        // All queries:
-        //   - filter `duration_ms IS NOT NULL` so pre-feature rows (NULL after
-        //     the v2 migration on an existing DB) are excluded from both totals.
-        //   - use SQLite's 'localtime' modifier on `timestamp` so "today" and
-        //     "last 7 days" reflect the user's local timezone, not UTC.
-        // Each is one indexed scan + SUM; cheap.
+        // All queries filter `duration_ms IS NOT NULL` so pre-feature rows
+        // (NULL after the v2 migration on an existing DB) are excluded from
+        // both totals.
+        //
+        // For Today/Week we compute the cutoff in UTC up front rather than
+        // wrapping the `timestamp` column in `datetime(..., 'localtime')`.
+        // Stored timestamps come from `CURRENT_TIMESTAMP` (always UTC), so
+        // comparing them against a precomputed UTC cutoff keeps the predicate
+        // sargable — a future index on `timestamp` would actually be usable.
+        //
+        // Today cutoff = local midnight, expressed in UTC. The chained
+        // modifiers do: UTC now → local → start of local day → back to UTC.
+        // Week cutoff = "now − 7 days"; timezone math is irrelevant for a
+        // pure 7×24h window, so the simpler UTC form is equivalent.
         let (sum_ms, sum_words, total_recordings): (i64, i64, i64) = {
             let conn = self.conn.lock().unwrap();
             match period {
@@ -161,7 +169,7 @@ impl Database {
                             COUNT(*)
                      FROM transcriptions
                      WHERE duration_ms IS NOT NULL
-                       AND datetime(timestamp, 'localtime') >= date('now', 'localtime')",
+                       AND timestamp >= datetime('now', 'localtime', 'start of day', 'utc')",
                     [],
                     |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
                 )?,
@@ -171,7 +179,7 @@ impl Database {
                             COUNT(*)
                      FROM transcriptions
                      WHERE duration_ms IS NOT NULL
-                       AND datetime(timestamp, 'localtime') >= datetime('now', 'localtime', '-7 days')",
+                       AND timestamp >= datetime('now', '-7 days')",
                     [],
                     |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
                 )?,
@@ -187,16 +195,17 @@ impl Database {
             }
         };
 
+        // Total uses integer seconds (matches what the UI renders).
+        // Average is computed from sum_ms directly so we don't lose sub-second
+        // precision: two 1.9 s recordings should average to ~1.9 s, not 1.5 s.
         let total_seconds = sum_ms / 1000;
-        let avg_seconds = if total_recordings > 0 {
-            (total_seconds as f64) / (total_recordings as f64)
+        let (avg_seconds, avg_words) = if total_recordings > 0 {
+            (
+                (sum_ms as f64) / 1000.0 / (total_recordings as f64),
+                (sum_words as f64) / (total_recordings as f64),
+            )
         } else {
-            0.0
-        };
-        let avg_words = if total_recordings > 0 {
-            (sum_words as f64) / (total_recordings as f64)
-        } else {
-            0.0
+            (0.0, 0.0)
         };
 
         Ok(StatsPayload {

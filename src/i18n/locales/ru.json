@@ -22,6 +22,8 @@
   "stats.allTime": "За всё время",
   "stats.recordings": "Записей: {{count}}",
   "stats.recordings_one": "Запись: {{count}}",
+  "stats.recordings_few": "Записи: {{count}}",
+  "stats.recordings_many": "Записей: {{count}}",
   "stats.average": "В среднем на запись: {{duration}} · слов: {{words}}",
   "stats.empty": "Записей пока нет — начните диктовать, чтобы увидеть статистику здесь.",
 

@@ -91,13 +91,18 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   const start = useCallback(
     async (deviceId?: string) => {
       if (phase !== "idle") return;
+      // Capture before the await so the duration reflects "user pressed
+      // hotkey" rather than "Rust finished initializing cpal". The ~50–100ms
+      // device-startup overhead is acceptable per the spec; cleared on failure
+      // so a failed start doesn't poison the next recording.
+      recordingStartRef.current = performance.now();
       try {
         await apiStartRecording(deviceId);
-        recordingStartRef.current = performance.now();
         setPhase("recording");
         const soundEnabled = await getSetting<boolean>("soundEnabled");
         if (soundEnabled !== false) playStartSound();
       } catch (e) {
+        recordingStartRef.current = null;
         onToast?.({
           title: "Failed to start recording",
           description: String(e),
