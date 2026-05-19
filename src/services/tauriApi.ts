@@ -173,6 +173,7 @@ export async function saveTranscription(
   processingMethod: string,
   agentName: string | null,
   error: string | null,
+  durationMs: number | null,
 ): Promise<number> {
   return invoke("save_transcription", {
     originalText,
@@ -180,7 +181,23 @@ export async function saveTranscription(
     processingMethod,
     agentName,
     error,
+    durationMs,
   });
+}
+
+// Stats
+export type StatsPeriod = "today" | "week" | "all";
+
+export interface StatsPayload {
+  total_seconds: number;
+  total_words: number;
+  total_recordings: number;
+  avg_seconds: number;
+  avg_words: number;
+}
+
+export async function getStats(period: StatsPeriod): Promise<StatsPayload> {
+  return invoke("get_stats", { period });
 }
 
 export async function getTranscriptions(

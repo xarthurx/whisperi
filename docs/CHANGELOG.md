@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased]
+
+### Highlights
+
+- New "Statistics" tab in Preferences shows how much you've dictated — total audio time, total words, plus today / this week / all-time breakdown
+- Word counts work for Chinese, Japanese, and Korean (each Han character counts as one), not just space-separated English
+
+### Features
+
+- Added a "Statistics" preferences tab between Developer and About (icon: `BarChart3`). Shows two big totals (total audio time, total words), a today/this-week/all-time breakdown with recording counts, and average duration + words per recording. Empty state when there are no recordings yet
+- New Tauri command `get_stats(period)` accepting `"today" | "week" | "all"`, backed by indexed `SUM` queries that use SQLite `'localtime'` so day/week boundaries respect the user's timezone
+- `useAudioRecording` now timestamps recording start with `performance.now()` and persists the duration in ms with each transcription
+
+### Internal
+
+- Database migration v2: adds `duration_ms` and `word_count` columns to `transcriptions`, guarded by `PRAGMA user_version` so it's idempotent. Pre-feature rows have NULL in both columns and are excluded from stats queries (matches the "start fresh on upgrade" non-goal in the spec)
+- New `src-tauri/src/database/word_count.rs` — CJK-aware token-and-character counter (each Han character contributes 1; non-Han alphanumeric tokens contribute 1; punctuation contributes 0). 10 unit tests cover ASCII, pure Han, mixed tokens, punctuation-only, empty input
+- `is_han` in `transcription/normalize.rs` promoted from `fn` to `pub(crate) fn` so the word counter reuses one definition of the CJK range check instead of duplicating it
+- `save_transcription` (both library function and Tauri command) gained a `duration_ms: Option<i64>` parameter; word count is computed at save time from the user-visible text (processed if present, otherwise original)
+- 6 new Rust tests covering: migration v2 column add + idempotency, save persists duration/word_count, get_stats All/Today/Week filtering, empty-DB averages
+- 9 locale files updated with `nav.statistics`, `stats.title/description/totalAudio/totalWords/breakdown/today/thisWeek/allTime/recordings/recordings_one/average/empty`
+
 ## [0.6.10] - 2026-05-19
 
 ### Highlights

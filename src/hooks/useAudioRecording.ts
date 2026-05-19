@@ -52,6 +52,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   const [audioLevel, setAudioLevel] = useState(0);
   const [transcript, setTranscript] = useState("");
   const unlistenRef = useRef<(() => void)[]>([]);
+  const recordingStartRef = useRef<number | null>(null);
 
   // Subscribe to audio-level and recording-error events
   useEffect(() => {
@@ -92,6 +93,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       if (phase !== "idle") return;
       try {
         await apiStartRecording(deviceId);
+        recordingStartRef.current = performance.now();
         setPhase("recording");
         const soundEnabled = await getSetting<boolean>("soundEnabled");
         if (soundEnabled !== false) playStartSound();
@@ -109,6 +111,13 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   const stop = useCallback(async () => {
     if (phase !== "recording") return;
     setPhase("processing");
+    // Capture duration as soon as we know the user released the hotkey,
+    // before any awaits that would inflate the recorded length.
+    const durationMs =
+      recordingStartRef.current !== null
+        ? Math.round(performance.now() - recordingStartRef.current)
+        : null;
+    recordingStartRef.current = null;
     const soundEnabled = await getSetting<boolean>("soundEnabled");
     if (soundEnabled !== false) playStopSound();
 
@@ -177,6 +186,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         settings.useReasoning ? "ai" : "none",
         settings.agentName,
         null,
+        durationMs,
       );
 
       setPhase("idle");
@@ -210,6 +220,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       } catch {
         // ignore
       }
+      recordingStartRef.current = null;
       setAudioLevel(0);
       setPhase("idle");
     }
