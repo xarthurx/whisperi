@@ -2,6 +2,11 @@
 
 ## [0.6.9] - 2026-05-15
 
+### Highlights
+
+- Chinese transcription now consistently outputs Simplified characters, even when the model briefly emits Traditional ones
+- Auto language detection now uses what the transcription model actually heard, instead of guessing from the text
+
 ### Fixes
 
 - Fixed Chinese output occasionally containing Traditional characters (繁體) instead of Simplified (简体), even when the Chinese language is selected and the prompts explicitly require Simplified — added a deterministic Traditional→Simplified post-processor backed by OpenCC's character mapping (4,105 entries, Apache-2.0), so the output is guaranteed regardless of what the Whisper or reasoning model emits. Runs whenever the user selects any Chinese variant (`zh`, `zh-CN`, `zh-TW`, `zh-HK`, …) and, in auto-detect mode, only when Han characters are present AND no kana (so Japanese kanji like 馬 stay as 馬, not 马)
@@ -18,12 +23,21 @@
 
 ## [0.6.8] - 2026-04-24
 
+### Highlights
+
+- The "What's New" popup now reliably appears after every update
+
 ### Fixes
 
 - Fixed "What's New" modal never appearing after production installs/updates (real root cause, sixth attempt) — `read_changelog` was reading from `{install_dir}/CHANGELOG.md`, but Tauri's NSIS bundler places resources specified with a `..` path (like `../docs/CHANGELOG.md`) under `_up_/docs/CHANGELOG.md`. The file was bundled, just at a different path than the command expected, so every call returned an error that was silently swallowed by a `console.warn`. Switched to `app.path().resolve("../docs/CHANGELOG.md", BaseDirectory::Resource)`, which reverses the `_up_` transformation transparently on all platforms
 - Replaced the silent `console.warn` on What's New load failures with a destructive toast so future resource-path regressions surface immediately instead of hiding across multiple release cycles
 
 ## [0.6.7] - 2026-04-12
+
+### Highlights
+
+- New "Light" cleanup mode — removes filler words and fixes punctuation without rewriting your sentences
+- Chinese transcription now uses proper full-width punctuation (，。？！) even when AI cleanup is off
 
 ### Features
 
@@ -37,17 +51,29 @@
 
 ## [0.6.6] - 2026-04-08
 
+### Highlights
+
+- Improved reliability of the "What's New" popup after updates
+
 ### Fixes
 
 - Fixed "What's New" modal not appearing after update — eliminated cross-window IPC entirely; the settings panel now independently detects version changes via its own `lastWhatsNewVersion` store key instead of depending on flags/events from the overlay (which failed due to race conditions between the two webviews)
 
 ## [0.6.5] - 2026-04-01
 
+### Highlights
+
+- Fixed the "What's New" popup not appearing after some updates
+
 ### Fixes
 
 - Fixed "What's New" modal not appearing after update — replaced unreliable focus-based detection with a cross-window `show-whats-new` event from the overlay to the settings panel; also fixed flag being cleared before changelog read (a failed read would permanently lose the modal)
 
 ## [0.6.4] - 2026-03-23
+
+### Highlights
+
+- Better Chinese punctuation in transcribed text — full-width marks and reliable sentence endings
 
 ### Fixes
 
