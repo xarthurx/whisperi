@@ -27,6 +27,29 @@ function extractVersionChangelog(changelog: string, version: string): string {
   return sectionLines.join("\n").trim();
 }
 
+/**
+ * Extract bullets under a `### Highlights` heading within a version section.
+ * Returns the bullet text array if the heading is present with at least one
+ * bullet; null otherwise (absent, present-but-empty, or no bullet lines).
+ */
+function extractHighlights(sectionMarkdown: string): string[] | null {
+  const lines = sectionMarkdown.split("\n");
+  const startIdx = lines.findIndex((line) => line.trim() === "### Highlights");
+  if (startIdx === -1) return null;
+
+  const endIdx = lines.findIndex(
+    (line, i) => i > startIdx && /^#{2,3}\s/.test(line)
+  );
+  const bodyLines = lines.slice(startIdx + 1, endIdx === -1 ? undefined : endIdx);
+
+  const bullets = bodyLines
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2));
+
+  return bullets.length > 0 ? bullets : null;
+}
+
 function ChangelogContent({ markdown }: { markdown: string }) {
   const lines = markdown.split("\n");
   const elements: React.ReactNode[] = [];
@@ -63,6 +86,7 @@ function ChangelogContent({ markdown }: { markdown: string }) {
 export default function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalProps) {
   const { t } = useTranslation();
   const sectionMarkdown = extractVersionChangelog(changelog, version);
+  const highlights = extractHighlights(sectionMarkdown);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -74,7 +98,15 @@ export default function WhatsNewModal({ version, changelog, onDismiss }: WhatsNe
         </div>
 
         <div className="px-5 py-4 overflow-y-auto flex-1">
-          {sectionMarkdown ? (
+          {highlights ? (
+            <ul className="space-y-1.5">
+              {highlights.map((bullet, i) => (
+                <li key={i} className="text-sm text-foreground/80 ml-4 list-disc">
+                  {bullet}
+                </li>
+              ))}
+            </ul>
+          ) : sectionMarkdown ? (
             <ChangelogContent markdown={sectionMarkdown} />
           ) : (
             <p className="text-sm text-muted-foreground">{t("whatsNew.noChangelog")}</p>
