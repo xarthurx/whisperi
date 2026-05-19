@@ -52,7 +52,7 @@ Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, i18next 
 
 ## Workflow Rules
 
-- **Version bump** — update `docs/CHANGELOG.md` first, then create a git tag (`vX.Y.Z`) after bumping
+- **Version bump** — update `docs/CHANGELOG.md` first, then create a git tag (`vX.Y.Z`) after bumping. Every version entry must start with a `### Highlights` stanza of 1–4 plain-English bullets (no code, no file names, no framework jargon) — this is what end users see in the "What's New" popup; the rest of the entry stays technical for devs/agents
 - **Context compression** — re-read this file (`CLAUDE.md`) after compression to restore context
 - **End of conversation** — update relevant markdown files (`docs/CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/TODO.md`, `docs/PROGRESS.md`) to reflect changes made
 

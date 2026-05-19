@@ -37,3 +37,7 @@ The "What's New" modal relies on two independent mechanisms to trigger after an 
 2. **Secondary (explicit flag):** `AboutSection` sets `openSettingsAfterUpdate = true` in the store **before** calling `downloadAndInstall()`, so the flag is persisted to disk before the process is killed.
 
 Both mechanisms independently trigger the settings window. `SettingsPanel` detects `pendingWhatsNewVersion` via two layers: an initial `loaded` check and an `onFocusChanged` listener (to cover the race where the store flag is written after the initial check).
+
+## CHANGELOG Highlights convention
+
+Every version entry in `docs/CHANGELOG.md` must start with a `### Highlights` stanza of 1–4 plain-English, user-facing bullets. This is what end users see in the "What's New" popup (`src/components/ui/WhatsNewModal.tsx`). The rest of the version block stays technical for developers and agents.
