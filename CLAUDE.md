@@ -44,10 +44,11 @@ Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, i18next 
 
 ## Winget Manifests
 
-- `wingetcreate update --submit` in CI handles manifest generation; metadata is inherited from previous version
-- **License**: SPDX identifier `MIT` (not `MIT License`), include `LicenseUrl`
-- **ShortDescription**: single concise phrase only; longer text goes in `Description`
-- **`ReleaseDate`** in installer manifest is valid (schema 1.2.0+) — don't move it
+- `wingetcreate update --submit` in CI handles manifest generation; metadata is **inherited verbatim from the previous version's manifest in `microsoft/winget-pkgs`**. Once a bad field lands, every future submission propagates it — the rules below must be enforced by patching the PR, not by hoping `wingetcreate` will fix it.
+- **License**: SPDX identifier `MIT` (not `MIT License`), and include `LicenseUrl: https://github.com/xarthurx/whisperi/blob/main/LICENSE`. Copilot review flags `MIT License` as non-SPDX (precedent: [PR #376335](https://github.com/microsoft/winget-pkgs/pull/376335))
+- **ShortDescription**: single concise phrase only (~one line); longer text goes in `Description`
+- **`ReleaseDate`** in installer manifest is **valid** (schema 1.2.0+, see [installer schema 1.12.0](https://github.com/microsoft/winget-pkgs/blob/master/doc/manifest/schema/1.12.0/manifest.installer.1.12.0.json)) — Copilot has incorrectly flagged this as needing to move to the version manifest; don't move it
+- **After every release tag**, when the CI-submitted winget PR appears under `microsoft/winget-pkgs`: open the generated `*.locale.en-US.yaml` and verify all four rules above before letting it merge. Push fixes onto the PR branch (`xarthurx.Whisperi-<version>-<uuid>` on `xarthurx/winget-pkgs`) — do not wait for the next version, since the next `wingetcreate` run will re-inherit whatever is in the latest accepted manifest.
 - See [docs/PROGRESS.md](docs/PROGRESS.md) for full winget notes
 
 ## Workflow Rules
