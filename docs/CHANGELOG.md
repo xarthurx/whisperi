@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.6.10] - 2026-05-19
+
+### Highlights
+
+- The "What's New" popup now leads with a short, plain-English summary of what changed — no more wading through technical notes to find what's new for you
+- Every future release will include this human-readable summary at the top
+
+### Features
+
+- "What's New" modal now extracts and renders the `### Highlights` stanza as a bulleted list when present, instead of dumping the full Features/Fixes sections at the user — keeps the popup short and reader-friendly while preserving the full technical entry below the fold for devs/agents reading the CHANGELOG directly
+- Added `extractHighlights` parser helper that pulls the Highlights bullets out of a CHANGELOG entry; falls back to the previous Highlights/Features/Fixes section-rendering when no stanza is present, so older versions still render correctly
+- Backfilled `### Highlights` stanzas for 0.6.4 through 0.6.9 so the popup looks consistent regardless of which version the user is upgrading from
+
+### Internal
+
+- CLAUDE.md workflow rule updated: every CHANGELOG version entry must start with a `### Highlights` stanza of 1–4 plain-English bullets (no code, no file names, no framework jargon). The rest of the entry stays technical for devs/agents
+- Added spec + implementation plan docs for the humanize-whats-new feature (`docs/superpowers/specs/2026-05-19-humanize-whats-new-design.md`, `docs/superpowers/plans/2026-05-19-humanize-whats-new.md`)
+- Added spec doc for the upcoming statistics tab (`docs/superpowers/specs/2026-05-19-statistics-tab-design.md`)
+
 ## [0.6.9] - 2026-05-15
 
 ### Highlights
