@@ -58,10 +58,12 @@ impl RealtimeOpenAiCompatibleClient {
         let msg = msg.context("ws read")?;
         match msg {
             Message::Text(text) => {
-                log::debug!(
+                // INFO (was debug) — we want every server event visible in the
+                // dev terminal while Live mode stabilises.
+                log::info!(
                     "[Live] WS recv ({} bytes): {}",
                     text.len(),
-                    if text.len() > 400 { &text[..400] } else { &text }
+                    if text.len() > 600 { &text[..600] } else { &text }
                 );
                 Self::parse_event(&text, &mut self.utterance_seq)
             }

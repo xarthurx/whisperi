@@ -183,7 +183,10 @@ pub async fn start_live_session(
                     }
                 }
                 _ = cancel_rx.changed() => {
-                    if *cancel_rx.borrow() { break; }
+                    if *cancel_rx.borrow() {
+                        log::info!("[Live] audio pump received cancel signal, entering soft-flush");
+                        break;
+                    }
                 }
             }
         }
@@ -212,6 +215,7 @@ pub async fn start_live_session(
         }
 
         let _ = client.close().await;
+        log::info!("[Live] audio pump task exiting, session_id={}", session_id);
         let _ = app_for_task.emit("live-session-closed", session_id);
     });
 
@@ -229,6 +233,7 @@ pub async fn stop_live_session(
     sessions: State<'_, LiveSessionState>,
     session_id: u64,
 ) -> Result<(), String> {
+    log::info!("[Live] stop_live_session: session_id={}", session_id);
     // Find and remove the handle, claiming ownership
     let handle = sessions
         .remove(session_id)
@@ -242,7 +247,11 @@ pub async fn stop_live_session(
     // Wait for the task to finish its cancel sequence, up to a 1.5s bound. Returns
     // immediately on short utterances (typical case) rather than blocking the command
     // for the full 1.5s.
-    let _ = tokio::time::timeout(Duration::from_millis(1500), handle.task).await;
+    let result = tokio::time::timeout(Duration::from_millis(1500), handle.task).await;
+    log::info!(
+        "[Live] stop_live_session: task join result = {}",
+        if result.is_ok() { "done" } else { "timeout" }
+    );
 
     Ok(())
 }

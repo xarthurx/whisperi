@@ -13,6 +13,8 @@ import {
   onLiveUtterance,
   onLiveError,
   onLiveSessionClosed,
+  onAudioLevel,
+  onRecordingError,
   getApiKey,
   getSetting,
   setSetting,
@@ -83,7 +85,7 @@ function isDictionaryEcho(text: string, dictionary: string[]): boolean {
 
 export function useLiveDictation({ onToast }: Options = {}) {
   const [phase, setPhase] = useState<LivePhase>("idle");
-  const [audioLevel] = useState(0); // Live mode shares audio-level via existing onAudioLevel; wired by overlay
+  const [audioLevel, setAudioLevel] = useState(0);
 
   const sessionIdRef = useRef<number | null>(null);
   const targetHwndRef = useRef<number | null>(null);
@@ -148,12 +150,36 @@ export function useLiveDictation({ onToast }: Options = {}) {
         if (cancelled) return;
         setPhase((p) => (p === "recording" ? "idle" : p));
       });
+      // Live mode shares cpal with Standard mode — subscribe to audio-level
+      // so the overlay's mic ring pulses while Live mode is recording.
+      const unlistenLevel = await onAudioLevel((level) => {
+        if (!cancelled) setAudioLevel(level);
+      });
+      const unlistenRecErr = await onRecordingError((error) => {
+        if (cancelled) return;
+        console.warn("[Live] recording-error:", error);
+        void setSetting("liveLastError", `Recording error: ${error}`);
+        onToast?.({
+          title: "Recording error",
+          description: error,
+          variant: "destructive",
+        });
+        setPhase("idle");
+      });
       if (!cancelled) {
-        unlistenRef.current = [unlistenUtt, unlistenErr, unlistenClosed];
+        unlistenRef.current = [
+          unlistenUtt,
+          unlistenErr,
+          unlistenClosed,
+          unlistenLevel,
+          unlistenRecErr,
+        ];
       } else {
         unlistenUtt();
         unlistenErr();
         unlistenClosed();
+        unlistenLevel();
+        unlistenRecErr();
       }
     }
     subscribe();
@@ -325,141 +351,128 @@ export function useLiveDictation({ onToast }: Options = {}) {
 
   const stop = useCallback(async () => {
     if (phase !== "recording") return;
+    console.log("[Live] stop() invoked");
     setPhase("polishing");
     const durationMs =
       recordingStartRef.current !== null
         ? Math.round(performance.now() - recordingStartRef.current)
         : null;
     recordingStartRef.current = null;
-    const soundEnabled = await getSetting<boolean>("soundEnabled");
-    if (soundEnabled !== false) playStopSound();
 
-    if (sessionIdRef.current !== null) {
-      try {
-        await stopLiveSession(sessionIdRef.current);
-      } catch {
-        // ignore
-      }
-      sessionIdRef.current = null;
-    }
     try {
-      await apiStopRecording();
-    } catch {
-      // Expected in Live mode: the audio pump drains the cpal samples buffer
-      // incrementally, so by the time we get here the buffer may be empty and
-      // stop_recording returns NotRecording. The WAV bytes aren't needed in
-      // Live mode (audio went over WS); we just need the cpal thread joined.
-    }
+      const soundEnabled = await getSetting<boolean>("soundEnabled");
+      if (soundEnabled !== false) playStopSound();
 
-    const raw = accumulatedRawRef.current.trim();
-    if (!raw && sessionErrorRef.current === null) {
-      // Empty session — no row written
-      setPhase("idle");
-      return;
-    }
-
-    // Run enhancement on the joined transcript
-    let enhanced = raw;
-    let agentName = "";
-    let useReasoning: boolean | null = null;
-    try {
-      const language = await getSetting<string>("preferredLanguage");
-      const [
-        dict,
-        name,
-        aliases,
-        useLocal,
-        whisperModel,
-        cloudProvider,
-        cloudModel,
-        useR,
-        rModel,
-        rProvider,
-        intensity,
-        autoPaste,
-        useCustom,
-        customPrompt,
-        debugMode,
-      ] = await Promise.all([
-        getCustomDictionary(),
-        getAgentName(),
-        getAgentAliases(),
-        getSetting<boolean>("useLocalWhisper"),
-        getSetting<string>("whisperModel"),
-        getSetting<string>("cloudTranscriptionProvider"),
-        getSetting<string>("cloudTranscriptionModel"),
-        getSetting<boolean>("useReasoningModel"),
-        getSetting<string>("reasoningModel"),
-        getSetting<string>("reasoningProvider"),
-        getSetting<EnhancementIntensity>("enhancementIntensity"),
-        getSetting<boolean>("autoPaste"),
-        getSetting<boolean>("useCustomPrompt"),
-        getSetting<string>("customSystemPrompt"),
-        getSetting<boolean>("debugMode"),
-      ]);
-      agentName = name;
-      useReasoning = useR;
-      const dictionary = buildTranscriptionDictionary(dict, name, aliases);
-      const settings: TranscriptionSettings = {
-        useLocal,
-        whisperModel,
-        cloudProvider,
-        cloudModel,
-        language,
-        dictionary,
-        useReasoning: useR,
-        reasoningModel: rModel,
-        reasoningProvider: rProvider,
-        enhancementIntensity: intensity,
-        autoPaste,
-        useCustomPrompt: useCustom,
-        customSystemPrompt: customPrompt,
-        agentName: name,
-        agentAliases: aliases,
-        debugMode,
-      };
-      const result = await enhance(raw, settings, dictionary, language ?? null);
-      enhanced = result.finalText;
-    } catch (e) {
-      console.error("[Live] enhance failed:", e);
-    }
-
-    // Swap if enhanced differs
-    if (enhanced !== raw && targetHwndRef.current !== null) {
-      try {
-        const result = await swapTypedText(
-          totalCharsTypedRef.current,
-          enhanced,
-          targetHwndRef.current,
-        );
-        if (result === "SkippedFocusDrift") {
-          onToast?.({
-            title: "Polish skipped",
-            description:
-              "You switched windows mid-dictation. Your dictated text is preserved as-is.",
-            variant: "default",
-          });
+      if (sessionIdRef.current !== null) {
+        try {
+          await stopLiveSession(sessionIdRef.current);
+        } catch (e) {
+          console.warn("[Live] stopLiveSession failed:", e);
         }
-      } catch (e) {
-        console.error("[Live] swap_typed_text failed:", e);
+        sessionIdRef.current = null;
       }
-    }
+      try {
+        await apiStopRecording();
+      } catch {
+        // Expected: audio pump drained the cpal buffer. The WAV bytes aren't
+        // needed in Live mode; we only need the cpal thread joined.
+      }
 
-    // DB write
-    try {
-      await saveTranscription(
-        raw,
-        enhanced !== raw ? enhanced : null,
-        "live", // always "live" regardless of enhance branch
-        agentName,
-        sessionErrorRef.current,
-        durationMs,
-      );
+      const raw = accumulatedRawRef.current.trim();
+      if (!raw && sessionErrorRef.current === null) {
+        console.log("[Live] stop: empty session, no DB row");
+        return;
+      }
+
+      // Enhance with a hard timeout — a hung network call must NOT trap the
+      // button in polishing phase forever.
+      let enhanced = raw;
+      let agentName = "";
+      try {
+        const language = await getSetting<string>("preferredLanguage");
+        const [
+          dict, name, aliases, useLocal, whisperModel, cloudProvider, cloudModel,
+          useR, rModel, rProvider, intensity, autoPaste, useCustom, customPrompt, debugMode,
+        ] = await Promise.all([
+          getCustomDictionary(),
+          getAgentName(),
+          getAgentAliases(),
+          getSetting<boolean>("useLocalWhisper"),
+          getSetting<string>("whisperModel"),
+          getSetting<string>("cloudTranscriptionProvider"),
+          getSetting<string>("cloudTranscriptionModel"),
+          getSetting<boolean>("useReasoningModel"),
+          getSetting<string>("reasoningModel"),
+          getSetting<string>("reasoningProvider"),
+          getSetting<EnhancementIntensity>("enhancementIntensity"),
+          getSetting<boolean>("autoPaste"),
+          getSetting<boolean>("useCustomPrompt"),
+          getSetting<string>("customSystemPrompt"),
+          getSetting<boolean>("debugMode"),
+        ]);
+        agentName = name;
+        const dictionary = buildTranscriptionDictionary(dict, name, aliases);
+        const settings: TranscriptionSettings = {
+          useLocal, whisperModel, cloudProvider, cloudModel, language, dictionary,
+          useReasoning: useR, reasoningModel: rModel, reasoningProvider: rProvider,
+          enhancementIntensity: intensity, autoPaste, useCustomPrompt: useCustom,
+          customSystemPrompt: customPrompt, agentName: name, agentAliases: aliases,
+          debugMode,
+        };
+        // 30s timeout on enhancement — Promise.race so a hung HTTP call doesn't trap us.
+        const enhancePromise = enhance(raw, settings, dictionary, language ?? null);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("enhance() timed out after 30s")), 30_000),
+        );
+        const result = await Promise.race([enhancePromise, timeoutPromise]);
+        enhanced = result.finalText;
+      } catch (e) {
+        console.error("[Live] enhance failed/timed out:", e);
+        // Fall through with enhanced = raw; user's typed text is preserved.
+      }
+
+      // Swap if enhanced differs
+      if (enhanced !== raw && targetHwndRef.current !== null) {
+        try {
+          const result = await swapTypedText(
+            totalCharsTypedRef.current,
+            enhanced,
+            targetHwndRef.current,
+          );
+          if (result === "SkippedFocusDrift") {
+            onToast?.({
+              title: "Polish skipped",
+              description:
+                "You switched windows mid-dictation. Your dictated text is preserved as-is.",
+              variant: "default",
+            });
+          }
+        } catch (e) {
+          console.error("[Live] swap_typed_text failed:", e);
+        }
+      }
+
+      try {
+        await saveTranscription(
+          raw,
+          enhanced !== raw ? enhanced : null,
+          "live",
+          agentName,
+          sessionErrorRef.current,
+          durationMs,
+        );
+      } catch (e) {
+        console.error("[Live] saveTranscription failed:", e);
+      }
     } catch (e) {
-      console.error("[Live] saveTranscription failed:", e);
+      console.error("[Live] stop() unexpected error:", e);
+    } finally {
+      // ALWAYS return to idle so the button never gets stuck disabled, no
+      // matter what failed or hung above. This is the single guarantee that
+      // keeps the hotkey/click responsive across sessions.
+      setPhase("idle");
+      setAudioLevel(0);
     }
-
-    setPhase("idle");
   }, [phase, onToast]);
 
   const toggle = useCallback(
@@ -471,22 +484,29 @@ export function useLiveDictation({ onToast }: Options = {}) {
   );
 
   const cancel = useCallback(async () => {
-    if (phase !== "recording") return;
-    if (sessionIdRef.current !== null) {
+    // Allow cancel from ANY non-idle phase so the user can force-recover from
+    // a stuck polishing/processing state.
+    if (phase === "idle") return;
+    console.log("[Live] cancel() invoked, phase =", phase);
+    try {
+      if (sessionIdRef.current !== null) {
+        try {
+          await cancelLiveSession(sessionIdRef.current);
+        } catch (e) {
+          console.warn("[Live] cancelLiveSession failed:", e);
+        }
+        sessionIdRef.current = null;
+      }
       try {
-        await cancelLiveSession(sessionIdRef.current);
+        await apiStopRecording();
       } catch {
         // ignore
       }
-      sessionIdRef.current = null;
+    } finally {
+      recordingStartRef.current = null;
+      setPhase("idle");
+      setAudioLevel(0);
     }
-    try {
-      await apiStopRecording();
-    } catch {
-      // ignore
-    }
-    recordingStartRef.current = null;
-    setPhase("idle");
   }, [phase]);
 
   return {
