@@ -1,5 +1,6 @@
 pub mod cloud;
 pub mod normalize;
+pub mod streaming;
 mod t2s_table;
 pub mod whisper;
 pub use normalize::finalize_chinese_text;

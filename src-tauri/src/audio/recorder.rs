@@ -507,6 +507,11 @@ fn encode_wav(samples: &[f32], sample_rate: u32) -> Result<Vec<u8>, AudioError> 
 }
 
 #[cfg(test)]
+pub(crate) fn resample_for_tests(samples: &[f32], from: u32, to: u32) -> Vec<f32> {
+    resample(samples, from, to)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
