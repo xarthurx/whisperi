@@ -138,11 +138,25 @@ fn build_session_update(
     let with_model = template.replace("{model}", model);
     let mut value: serde_json::Value =
         serde_json::from_str(&with_model).context("parse session template")?;
+
+    // The transcription config lives at one of two paths depending on provider:
+    //   - OpenAI Realtime (new shape): session.audio.input.transcription
+    //   - Qwen / OpenAI Realtime (legacy shape): session.input_audio_transcription
+    // Both providers' templates put `"language": "{language}"` inside that
+    // object; we navigate to it and either set the real value or drop the
+    // field (auto-detect).
+    let path = if value
+        .pointer("/session/audio/input/transcription")
+        .is_some()
+    {
+        "/session/audio/input/transcription"
+    } else {
+        "/session/input_audio_transcription"
+    };
     let transcription = value
-        .get_mut("session")
-        .and_then(|s| s.get_mut("input_audio_transcription"))
+        .pointer_mut(path)
         .and_then(|t| t.as_object_mut())
-        .ok_or_else(|| anyhow!("session template missing input_audio_transcription"))?;
+        .ok_or_else(|| anyhow!("session template missing transcription config"))?;
     match language {
         Some(lang) if !lang.is_empty() && lang != "auto" => {
             transcription.insert("language".to_string(), serde_json::json!(lang));

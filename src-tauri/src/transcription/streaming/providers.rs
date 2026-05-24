@@ -35,7 +35,9 @@ pub struct ProviderConfig {
 pub static OPENAI_REALTIME: ProviderConfig = ProviderConfig {
     id: "openai",
     display_name: "OpenAI Realtime",
-    ws_url_template: "wss://api.openai.com/v1/realtime?intent=transcription",
+    // Unified Realtime endpoint. The `session.type: "transcription"` field in
+    // session.update routes to transcription-only mode — no URL params needed.
+    ws_url_template: "wss://api.openai.com/v1/realtime",
     // gpt-4o-mini-transcribe + server VAD is the streaming-friendly path:
     // server detects utterance boundaries from silence and emits transcripts
     // automatically. The previous `gpt-realtime-whisper` + ManualCommit setup

@@ -34,7 +34,8 @@ async fn happy_path_completed_event_propagates() {
     let addr = mock_server(|mut ws| async move {
         // Expect session.update first
         let msg = ws.next().await.unwrap().unwrap();
-        assert!(msg.to_text().unwrap().contains("transcription_session.update"));
+        let txt = msg.to_text().unwrap();
+        assert!(txt.contains("\"type\":\"session.update\""), "got: {}", txt);
         // Send one completed utterance
         ws.send(Message::Text(
             r#"{"type":"conversation.item.input_audio_transcription.completed","transcript":"hello there"}"#
