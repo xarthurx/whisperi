@@ -143,8 +143,13 @@ pub fn run() {
             // Initialize audio recording state
             app.manage(audio::RecordingState::new());
 
-            // Initialize live dictation session state
-            app.manage(crate::transcription::streaming::LiveSessionState::default());
+            // Initialize live dictation session state. Wrap in Arc so the
+            // audio-pump task spawned in start_live_session can clone a handle
+            // for self-cleanup on exit (preventing HashMap leaks when a WS
+            // dies without an explicit stop/cancel command).
+            app.manage(std::sync::Arc::new(
+                crate::transcription::streaming::LiveSessionState::default(),
+            ));
 
             // Initialize database
             let app_handle = app.handle().clone();

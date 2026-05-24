@@ -96,26 +96,51 @@ export function useLiveDictation({ onToast }: Options = {}) {
   const dictionaryRef = useRef<string[]>([]);
   const sessionErrorRef = useRef<string | null>(null);
   const unlistenRef = useRef<(() => void)[]>([]);
+  /** Serialises async utterance handlers. Tauri's listen() does not await the
+   *  callback, so rapid back-to-back .completed events would otherwise run
+   *  concurrently and race on accumulatedRawRef + totalCharsTypedRef. */
+  const utteranceChainRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let cancelled = false;
     async function subscribe() {
-      const unlistenUtt = await onLiveUtterance(async (payload) => {
-        if (cancelled) return;
-        const cleaned = sanitizeUtterance(payload.text);
-        if (!cleaned) return;
-        if (isDictionaryEcho(cleaned, dictionaryRef.current)) return;
-        try {
-          const charsTyped = await typeTextChunk(cleaned);
-          const space = accumulatedRawRef.current.length > 0 ? " " : "";
-          accumulatedRawRef.current += space + cleaned;
-          totalCharsTypedRef.current += charsTyped + space.length;
-        } catch (e) {
-          console.error("[Live] type_text_chunk failed:", e);
-        }
+      const unlistenUtt = await onLiveUtterance((payload) => {
+        // Chain handlers sequentially — Tauri's listen() doesn't await async
+        // callbacks, so back-to-back .completed events would otherwise race
+        // on accumulatedRawRef + totalCharsTypedRef.
+        utteranceChainRef.current = utteranceChainRef.current
+          .catch(() => {}) // never let a prior failure break the chain
+          .then(async () => {
+            if (cancelled) return;
+            if (sessionIdRef.current === null) return; // stale event
+            const cleaned = sanitizeUtterance(payload.text);
+            if (!cleaned) return;
+            if (isDictionaryEcho(cleaned, dictionaryRef.current)) return;
+            // Prefix + cleaned must be typed AND recorded as one unit —
+            // typing only `cleaned` while recording `prefix + cleaned` would
+            // (a) drop inter-utterance spaces from the focused window, and
+            // (b) drift totalCharsTypedRef ahead of what's actually typed,
+            // making the post-stop swap delete characters that pre-existed
+            // in the focused window. Doing it together keeps the
+            // accumulator, the screen, and the counter in lockstep.
+            const prefix =
+              accumulatedRawRef.current.length > 0 ? " " : "";
+            const toType = prefix + cleaned;
+            try {
+              const charsTyped = await typeTextChunk(toType);
+              if (charsTyped <= 0) return; // Rust stripped everything
+              accumulatedRawRef.current += toType;
+              totalCharsTypedRef.current += charsTyped;
+            } catch (e) {
+              console.error("[Live] type_text_chunk failed:", e);
+            }
+          });
       });
       const unlistenErr = await onLiveError((payload: LiveErrorPayload) => {
         if (cancelled) return;
+        // Only act when we own an active session — stale events from a
+        // task that's already self-exited shouldn't override fresh state.
+        if (sessionIdRef.current === null) return;
         console.warn("[Live] live-error event:", payload);
         sessionErrorRef.current = payload.message;
         // Persist + escalate so the readiness banner surfaces it.
@@ -145,6 +170,12 @@ export function useLiveDictation({ onToast }: Options = {}) {
       });
       const unlistenRecErr = await onRecordingError((error) => {
         if (cancelled) return;
+        // Both useLiveDictation and useAudioRecording subscribe to
+        // "recording-error" because the cpal RecordingState is shared. Ignore
+        // the event unless we actually have an active Live session —
+        // otherwise a Standard-mode cpal error would spuriously open the
+        // Settings window and persist a Live error.
+        if (sessionIdRef.current === null) return;
         console.warn("[Live] recording-error:", error);
         void setSetting("liveLastError", `Recording error: ${error}`);
         onToast?.({
@@ -370,7 +401,22 @@ export function useLiveDictation({ onToast }: Options = {}) {
         // needed in Live mode; we only need the cpal thread joined.
       }
 
-      const raw = accumulatedRawRef.current.trim();
+      // Wait for any in-flight utterance handler in the chain to finish writing
+      // to accumulatedRawRef + totalCharsTypedRef before we read them. Without
+      // this, a .completed event that arrived during the soft-flush would be
+      // mid-typeTextChunk while stop() reads the refs → swap backspace count
+      // would be wrong and the trailing transcript would be missing.
+      try {
+        await utteranceChainRef.current;
+      } catch {
+        // Chain rejections were already logged inside each handler.
+      }
+
+      // Read the raw transcript AFTER draining. Use the unmodified
+      // accumulator length (not .trim()) for the swap backspace count so we
+      // never overshoot — totalCharsTypedRef tracks what was actually typed.
+      const rawUntrimmed = accumulatedRawRef.current;
+      const raw = rawUntrimmed.trim();
       if (!raw && sessionErrorRef.current === null) {
         console.log("[Live] stop: empty session, no DB row");
         return;

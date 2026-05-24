@@ -32,5 +32,11 @@ export function useDictation(opts: Options = {}) {
 
   const standard = useAudioRecording(opts);
   const live = useLiveDictation(opts);
+  // If a session is in flight on either hook, keep returning that hook so the
+  // overlay's stop/cancel buttons stay wired to it. Otherwise a mid-session
+  // mode toggle in Settings would orphan the active session — the live hook
+  // would keep typing into the focused window with no UI to stop it.
+  if (live.phase !== "idle") return live;
+  if (standard.phase !== "idle") return standard;
   return mode === "live" ? live : standard;
 }

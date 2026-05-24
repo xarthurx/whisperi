@@ -43,7 +43,7 @@ pub fn get_foreground_window_class() -> Result<Option<String>, String> {
 #[tauri::command]
 pub async fn start_live_session(
     app: AppHandle,
-    sessions: State<'_, LiveSessionState>,
+    sessions: State<'_, Arc<LiveSessionState>>,
     rec_state: State<'_, RecordingState>,
     provider_id: String,
     model: String,
@@ -96,6 +96,9 @@ pub async fn start_live_session(
     let device_sample_rate = rec_state.current_sample_rate();
 
     let app_for_task = app.clone();
+    // Clone the Arc so the task can self-remove from LiveSessionState on exit,
+    // preventing HashMap leaks when the WS dies without an explicit stop/cancel.
+    let sessions_for_task: Arc<LiveSessionState> = Arc::clone(&*sessions);
 
     // Create the client and open the WS connection up-front so that any
     // auth/network error fails the command synchronously (frontend can show a
@@ -204,6 +207,10 @@ pub async fn start_live_session(
         }
 
         let _ = client.close().await;
+        // Self-remove from state in case the loop exited without stop/cancel
+        // being called (e.g. server-side WS close, push_pcm16 error). If the
+        // command path already removed it, this is a no-op.
+        let _ = sessions_for_task.remove(session_id);
         log::info!("[Live] audio pump task exiting, session_id={}", session_id);
         let _ = app_for_task.emit("live-session-closed", session_id);
     });
@@ -219,7 +226,7 @@ pub async fn start_live_session(
 
 #[tauri::command]
 pub async fn stop_live_session(
-    sessions: State<'_, LiveSessionState>,
+    sessions: State<'_, Arc<LiveSessionState>>,
     session_id: u64,
 ) -> Result<(), String> {
     log::info!("[Live] stop_live_session: session_id={}", session_id);
@@ -247,14 +254,19 @@ pub async fn stop_live_session(
 
 #[tauri::command]
 pub async fn cancel_live_session(
-    sessions: State<'_, LiveSessionState>,
+    sessions: State<'_, Arc<LiveSessionState>>,
     session_id: u64,
 ) -> Result<(), String> {
-    let _handle = sessions
+    log::info!("[Live] cancel_live_session: session_id={}", session_id);
+    let handle = sessions
         .remove(session_id)
         .ok_or_else(|| format!("No active Live session with id {}", session_id))?;
-    // Hard cancel — no soft flush, no waiting. Task picks up the signal on next tick.
-    let _ = _handle.cancel_tx.send(true);
+    let _ = handle.cancel_tx.send(true);
+    // Await the task with a bound so the user can't rapid-fire start/cancel
+    // and produce two concurrent audio pumps racing on the shared samples_buf.
+    // The task's main loop polls cancel_rx on every ~100ms tick, then runs the
+    // 800ms soft-flush; ~1000ms is enough headroom.
+    let _ = tokio::time::timeout(Duration::from_millis(1000), handle.task).await;
     Ok(())
 }
 

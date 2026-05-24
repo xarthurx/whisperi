@@ -63,7 +63,7 @@ impl RealtimeOpenAiCompatibleClient {
                 log::info!(
                     "[Live] WS recv ({} bytes): {}",
                     text.len(),
-                    if text.len() > 600 { &text[..600] } else { &text }
+                    truncate_at_char_boundary(&text, 600),
                 );
                 Self::parse_event(&text, &mut self.utterance_seq)
             }
@@ -113,6 +113,21 @@ impl RealtimeOpenAiCompatibleClient {
             _ => Ok(None),
         }
     }
+}
+
+/// Truncate `text` to at most `max_bytes`, snapping to a UTF-8 char boundary
+/// so we never panic when the cut would land inside a multi-byte sequence
+/// (e.g. a 3-byte CJK or 4-byte emoji codepoint straddling byte 600 in a
+/// large server event).
+fn truncate_at_char_boundary(text: &str, max_bytes: usize) -> &str {
+    if text.len() <= max_bytes {
+        return text;
+    }
+    let mut end = max_bytes;
+    while end > 0 && !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    &text[..end]
 }
 
 fn classify_error(code: &str) -> ErrorKind {

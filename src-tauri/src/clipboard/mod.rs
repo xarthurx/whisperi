@@ -284,7 +284,13 @@ mod windows_keystrokes {
         unsafe {
             SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
         }
-        text.chars().count()
+        // Return UTF-16 code-unit count, NOT codepoint count: each KEYEVENTF_UNICODE
+        // event we sent corresponds to one UTF-16 code unit (surrogate pairs are
+        // two events). swap_typed_text issues one VK_BACK per backspace, matching
+        // the per-code-unit grain. For non-BMP chars (emoji, rare CJK extension)
+        // returning chars().count() would under-count and leave half-deleted
+        // surrogates after the post-stop swap.
+        text.encode_utf16().count()
     }
 
     /// Build a vector of INPUT events (KEYDOWN+KEYUP pair per character) for a
