@@ -1,14 +1,13 @@
 //! Tauri commands for Live dictation mode.
 
-use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::audio::recorder::RecordingState;
 use crate::clipboard::{
-    ClipError, SwapResult, current_foreground_hwnd, current_foreground_window_class,
-    send_text_keystrokes, swap_typed_text,
+    SwapResult, current_foreground_hwnd, current_foreground_window_class, send_text_keystrokes,
+    swap_typed_text,
 };
 use crate::transcription::streaming::{
     LiveSessionHandle, LiveSessionState, SessionConfig, StreamingEvent, StreamingTranscriber,
@@ -17,19 +16,9 @@ use crate::transcription::streaming::{
     realtime_openai_compatible::RealtimeOpenAiCompatibleClient,
 };
 
-#[derive(Debug, Serialize)]
-#[serde(tag = "kind", content = "data")]
-pub enum TypeChunkResult {
-    Typed(usize),
-    SkippedTerminalFocus,
-}
-
 #[tauri::command]
-pub async fn type_text_chunk(text: String) -> Result<TypeChunkResult, String> {
-    match send_text_keystrokes(&text) {
-        Ok(n) => Ok(TypeChunkResult::Typed(n)),
-        Err(ClipError::TerminalFocusGuard) => Ok(TypeChunkResult::SkippedTerminalFocus),
-    }
+pub async fn type_text_chunk(text: String) -> Result<usize, String> {
+    Ok(send_text_keystrokes(&text))
 }
 
 #[tauri::command]
@@ -38,7 +27,7 @@ pub async fn swap_typed_text_cmd(
     new_text: String,
     expected_hwnd: Option<isize>,
 ) -> Result<SwapResult, String> {
-    swap_typed_text(backspace_count, &new_text, expected_hwnd).map_err(|e| e.to_string())
+    Ok(swap_typed_text(backspace_count, &new_text, expected_hwnd))
 }
 
 #[tauri::command]

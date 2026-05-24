@@ -92,7 +92,6 @@ export function useLiveDictation({ onToast }: Options = {}) {
   const recordingStartRef = useRef<number | null>(null);
   const accumulatedRawRef = useRef<string>("");
   const totalCharsTypedRef = useRef<number>(0);
-  const terminalWarningShownRef = useRef<boolean>(false);
   const dictionaryRef = useRef<string[]>([]);
   const sessionErrorRef = useRef<string | null>(null);
   const unlistenRef = useRef<(() => void)[]>([]);
@@ -106,31 +105,10 @@ export function useLiveDictation({ onToast }: Options = {}) {
         if (!cleaned) return;
         if (isDictionaryEcho(cleaned, dictionaryRef.current)) return;
         try {
-          const result = await typeTextChunk(cleaned);
-          if (result.kind === "Typed") {
-            const space = accumulatedRawRef.current.length > 0 ? " " : "";
-            accumulatedRawRef.current += space + cleaned;
-            totalCharsTypedRef.current += result.data + space.length;
-          } else if (result.kind === "SkippedTerminalFocus") {
-            console.warn(
-              "[Live] terminal window focused — refusing to type (security guard). Switch focus to a non-terminal app.",
-            );
-            if (!terminalWarningShownRef.current) {
-              terminalWarningShownRef.current = true;
-              // Persist so the readiness banner makes the reason visible —
-              // OS notifications alone can be silently dropped on Windows.
-              void setSetting(
-                "liveLastError",
-                "Live mode refused to type into a terminal/console window (security guard against shell command injection). Switch focus to a non-terminal app to continue.",
-              );
-              onToast?.({
-                title: "Live paused (terminal focused)",
-                description:
-                  "Live mode refuses to type into terminal windows to prevent shell command injection. Switch focus to your target app.",
-                variant: "destructive",
-              });
-            }
-          }
+          const charsTyped = await typeTextChunk(cleaned);
+          const space = accumulatedRawRef.current.length > 0 ? " " : "";
+          accumulatedRawRef.current += space + cleaned;
+          totalCharsTypedRef.current += charsTyped + space.length;
         } catch (e) {
           console.error("[Live] type_text_chunk failed:", e);
         }
@@ -209,7 +187,6 @@ export function useLiveDictation({ onToast }: Options = {}) {
       sessionErrorRef.current = null;
       accumulatedRawRef.current = "";
       totalCharsTypedRef.current = 0;
-      terminalWarningShownRef.current = false;
       // Clear any previous error so the readiness banner doesn't show stale info.
       await setSetting("liveLastError", "").catch(() => {});
 

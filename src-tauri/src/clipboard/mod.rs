@@ -1,12 +1,5 @@
 use anyhow::Result;
 
-/// Errors specific to clipboard / keystroke injection.
-#[derive(Debug, thiserror::Error)]
-pub enum ClipError {
-    #[error("Foreground window is a terminal — Live mode does not type into terminals")]
-    TerminalFocusGuard,
-}
-
 /// Result of a [`swap_typed_text`] call.
 #[derive(Debug, serde::Serialize)]
 pub enum SwapResult {
@@ -172,7 +165,7 @@ mod windows_clipboard {
 
 #[cfg(target_os = "windows")]
 mod windows_terminal {
-    use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow};
+    use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
     /// Known terminal window class names on Windows.
     const TERMINAL_CLASSES: &[&str] = &[
@@ -211,22 +204,6 @@ mod windows_terminal {
         }
     }
 
-    /// Check if the current foreground window is a terminal/console class. Used as
-    /// a Live-mode safety guard — typing into terminals can execute shell commands
-    /// (`\nrm -rf ~\n`), so we refuse to type into them. The user is shown a toast.
-    pub fn is_foreground_window_terminal_class() -> bool {
-        let hwnd = unsafe { GetForegroundWindow() };
-        if hwnd.is_invalid() {
-            return false;
-        }
-        let mut buf = [0u16; 256];
-        let len = unsafe { GetClassNameW(hwnd, &mut buf) };
-        if len <= 0 {
-            return false;
-        }
-        let class = String::from_utf16_lossy(&buf[..len as usize]);
-        TERMINAL_CLASSES.iter().any(|tc| class.eq_ignore_ascii_case(tc))
-    }
 }
 
 #[cfg(target_os = "windows")]
@@ -361,24 +338,24 @@ mod windows_keystrokes {
 
 /// Type `text` into the current foreground window via SendInput with
 /// KEYEVENTF_UNICODE. Returns the number of Unicode code points actually typed
-/// (post-sanitization). Refuses to type into terminal-class windows.
-pub fn send_text_keystrokes(text: &str) -> std::result::Result<usize, ClipError> {
+/// (post-sanitization). Sanitization strips control chars, ANSI escapes, and
+/// converts `\n`/`\r`/`\t` to space — so a malicious transcript cannot inject
+/// a newline that would auto-execute a shell command. Even in a terminal,
+/// the user must press Enter themselves to run anything typed.
+pub fn send_text_keystrokes(text: &str) -> usize {
     #[cfg(target_os = "windows")]
     {
-        if windows_terminal::is_foreground_window_terminal_class() {
-            return Err(ClipError::TerminalFocusGuard);
-        }
         let sanitized = sanitize_for_send_input(text);
         if sanitized.is_empty() {
-            return Ok(0);
+            return 0;
         }
-        Ok(windows_keystrokes::send_text_keystrokes_inner(&sanitized))
+        windows_keystrokes::send_text_keystrokes_inner(&sanitized)
     }
 
     #[cfg(not(target_os = "windows"))]
     {
         let _ = text;
-        Err(ClipError::TerminalFocusGuard) // unreachable on non-Windows but satisfies return type
+        0
     }
 }
 
@@ -390,7 +367,7 @@ pub fn swap_typed_text(
     backspaces: usize,
     new_text: &str,
     expected_hwnd: Option<isize>,
-) -> std::result::Result<SwapResult, ClipError> {
+) -> SwapResult {
     #[cfg(target_os = "windows")]
     {
         use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
@@ -398,13 +375,13 @@ pub fn swap_typed_text(
         if let Some(want) = expected_hwnd {
             let now = unsafe { GetForegroundWindow().0 as isize };
             if now != want {
-                return Ok(SwapResult::SkippedFocusDrift);
+                return SwapResult::SkippedFocusDrift;
             }
         }
 
         let sanitized = sanitize_for_send_input(new_text);
         if backspaces == 0 && sanitized.is_empty() {
-            return Ok(SwapResult::SkippedNoChange);
+            return SwapResult::SkippedNoChange;
         }
 
         let mut inputs =
@@ -421,13 +398,13 @@ pub fn swap_typed_text(
                 std::mem::size_of::<windows::Win32::UI::Input::KeyboardAndMouse::INPUT>() as i32,
             );
         }
-        Ok(SwapResult::Swapped)
+        SwapResult::Swapped
     }
 
     #[cfg(not(target_os = "windows"))]
     {
         let _ = (backspaces, new_text, expected_hwnd);
-        Ok(SwapResult::SkippedNoChange)
+        SwapResult::SkippedNoChange
     }
 }
 
@@ -534,7 +511,7 @@ mod tests {
     #[test]
     fn swap_returns_no_change_for_empty_inputs() {
         // No HWND to match against — pass None
-        let result = swap_typed_text(0, "", None).unwrap();
+        let result = swap_typed_text(0, "", None);
         assert!(matches!(result, SwapResult::SkippedNoChange));
     }
 

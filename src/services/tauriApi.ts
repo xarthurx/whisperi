@@ -319,10 +319,6 @@ export interface LiveErrorPayload {
   kind: "AuthFailed" | "RateLimited" | "NetworkDrop" | "ServerError" | "MaxMessageExceeded" | "BadResponse";
 }
 
-export type TypeChunkResult =
-  | { kind: "Typed"; data: number }
-  | { kind: "SkippedTerminalFocus"; data: null };
-
 export type SwapResult = "Swapped" | "SkippedFocusDrift" | "SkippedNoChange";
 
 export async function startLiveSession(args: {
@@ -349,8 +345,8 @@ export async function cancelLiveSession(sessionId: number): Promise<void> {
   await invoke("cancel_live_session", { sessionId });
 }
 
-export async function typeTextChunk(text: string): Promise<TypeChunkResult> {
-  return invoke<TypeChunkResult>("type_text_chunk", { text });
+export async function typeTextChunk(text: string): Promise<number> {
+  return invoke<number>("type_text_chunk", { text });
 }
 
 export async function swapTypedText(
