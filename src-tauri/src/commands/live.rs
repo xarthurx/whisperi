@@ -154,6 +154,29 @@ pub async fn start_live_session(
             }
         }
 
+        // Soft flush: commit any pending utterance, drain final events for up to 800ms
+        let _ = client.commit_utterance().await;
+        let flush_deadline = tokio::time::Instant::now() + Duration::from_millis(800);
+        loop {
+            let remaining = flush_deadline.saturating_duration_since(tokio::time::Instant::now());
+            if remaining.is_zero() { break; }
+            tokio::select! {
+                _ = tokio::time::sleep(remaining) => break,
+                evt = client.poll_event() => {
+                    match evt {
+                        Ok(Some(StreamingEvent::UtteranceCompleted { text, utterance_seq })) => {
+                            let _ = app_for_task.emit("live-utterance", serde_json::json!({
+                                "text": text,
+                                "utterance_seq": utterance_seq,
+                            }));
+                        }
+                        Ok(_) => {}
+                        Err(_) => break,
+                    }
+                }
+            }
+        }
+
         let _ = client.close().await;
         let _ = app_for_task.emit("live-session-closed", session_id);
     });
@@ -165,6 +188,28 @@ pub async fn start_live_session(
     });
 
     Ok(session_id)
+}
+
+#[tauri::command]
+pub async fn stop_live_session(
+    sessions: State<'_, LiveSessionState>,
+    session_id: u64,
+) -> Result<(), String> {
+    // Find and remove the handle, claiming ownership
+    let _handle = sessions
+        .remove(session_id)
+        .ok_or_else(|| format!("No active Live session with id {}", session_id))?;
+
+    // Signal cancel. The spawned task's select! will pick this up on the next
+    // iteration, break the main loop, and enter the soft-flush phase (commit_utterance,
+    // drain events for 800ms, close).
+    let _ = _handle.cancel_tx.send(true);
+
+    // Soft-flush outer bound: give the task up to 1.5s to finish its cancel sequence
+    // (commit, drain trailing .completed events, and close) before we return.
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+
+    Ok(())
 }
 
 fn emit_error(app: &AppHandle, message: String, kind: crate::transcription::streaming::ErrorKind) {
