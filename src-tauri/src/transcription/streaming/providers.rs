@@ -35,15 +35,18 @@ pub struct ProviderConfig {
 pub static OPENAI_REALTIME: ProviderConfig = ProviderConfig {
     id: "openai",
     display_name: "OpenAI Realtime",
-    // Unified Realtime endpoint. The `session.type: "transcription"` field in
-    // session.update routes to transcription-only mode — no URL params needed.
-    ws_url_template: "wss://api.openai.com/v1/realtime",
-    // gpt-4o-mini-transcribe + server VAD is the streaming-friendly path:
-    // server detects utterance boundaries from silence and emits transcripts
-    // automatically. The previous `gpt-realtime-whisper` + ManualCommit setup
-    // accepts audio fine but never emits transcripts until commit, which
-    // breaks the "type as you speak" UX.
-    default_model: "gpt-4o-mini-transcribe",
+    // `?intent=transcription` is undocumented but mandatory to put the session
+    // into transcription-only mode. Without it the server treats the
+    // connection as conversational and rejects session.update with
+    // `missing_model` because it expects a different shape. We must NOT
+    // include `?model=...` here — transcription sessions reject that.
+    ws_url_template: "wss://api.openai.com/v1/realtime?intent=transcription",
+    // Use `gpt-realtime-whisper` — the documented model for the
+    // `?intent=transcription` transcription-only session mode. Combined with
+    // `turn_detection: server_vad` the server emits transcripts on detected
+    // silence (the earlier "no transcripts" issue was caused by manual-commit
+    // VAD config, not the model).
+    default_model: "gpt-realtime-whisper",
     audio_sample_rate: 24_000,
     auth_scheme: AuthScheme::Bearer,
     extra_headers: &[],
@@ -79,8 +82,10 @@ mod tests {
     fn lookup_returns_openai_config() {
         let cfg = lookup("openai").unwrap();
         assert_eq!(cfg.audio_sample_rate, 24_000);
-        assert_eq!(cfg.default_model, "gpt-4o-mini-transcribe");
+        assert_eq!(cfg.default_model, "gpt-realtime-whisper");
         assert!(matches!(cfg.vad_mode, VadMode::ServerVad { silence_ms: 500 }));
+        // Transcription-only mode requires `?intent=transcription`
+        assert!(cfg.ws_url_template.contains("intent=transcription"));
     }
 
     #[test]
