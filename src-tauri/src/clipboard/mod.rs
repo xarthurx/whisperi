@@ -18,6 +18,46 @@ pub enum SwapResult {
     SkippedNoChange,
 }
 
+/// Return the current foreground window HWND as a portable isize.
+/// Caller passes this back when starting a Live session so the swap can
+/// verify the user hasn't switched windows mid-dictation.
+pub fn current_foreground_hwnd() -> isize {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+        unsafe { GetForegroundWindow().0 as isize }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        0
+    }
+}
+
+/// Return the class name of the current foreground window (for UI display
+/// in the OS notification: "Live: typing into Notepad").
+pub fn current_foreground_window_class() -> Option<String> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow};
+        let hwnd = unsafe { GetForegroundWindow() };
+        if hwnd.is_invalid() {
+            return None;
+        }
+        let mut buf = [0u16; 256];
+        let len = unsafe { GetClassNameW(hwnd, &mut buf) };
+        if len <= 0 {
+            return None;
+        }
+        Some(String::from_utf16_lossy(&buf[..len as usize]).to_string())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        None
+    }
+}
+
 /// Write text to clipboard, simulate paste into the focused application,
 /// then restore the original clipboard contents.
 pub fn paste_text(text: &str) -> Result<()> {
