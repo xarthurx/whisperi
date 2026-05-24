@@ -84,6 +84,20 @@ pub async fn start_live_session(
         other => other.map(String::from),
     };
 
+    // Defensive fallback: if the frontend somehow passes an empty model
+    // (stale/empty setting), fall back to the provider's documented default
+    // streaming model rather than letting the server reject with
+    // "missing_model".
+    let effective_model = if model.trim().is_empty() {
+        log::warn!(
+            "[Live] start_live_session: empty model — falling back to provider default {}",
+            provider.default_model
+        );
+        provider.default_model.to_string()
+    } else {
+        model.clone()
+    };
+
     let session_id = sessions.new_id();
     let (cancel_tx, mut cancel_rx) = tokio::sync::watch::channel(false);
 
@@ -101,7 +115,7 @@ pub async fn start_live_session(
     client
         .open(SessionConfig {
             provider_id: provider.id,
-            model: model.clone(),
+            model: effective_model.clone(),
             language: language_for_session.clone(),
             api_key: api_key.clone(),
         })
@@ -110,7 +124,10 @@ pub async fn start_live_session(
             log::error!("[Live] start_live_session: open() failed: {:#}", e);
             format!("Failed to open Live session: {}", e)
         })?;
-    log::info!("[Live] start_live_session: open() succeeded");
+    log::info!(
+        "[Live] start_live_session: open() succeeded (effective_model={})",
+        effective_model
+    );
 
     let target_sample_rate = client.sample_rate();
 

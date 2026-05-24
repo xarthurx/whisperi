@@ -23,6 +23,13 @@ import {
   type LiveErrorPayload,
 } from "@/services/tauriApi";
 import { playStartSound, playStopSound } from "@/utils/sounds";
+import modelRegistry from "@/models/modelRegistryData.json";
+
+interface RegistryProvider {
+  id: string;
+  name: string;
+  models: { id: string; name: string; streaming?: boolean }[];
+}
 import {
   enhance,
   buildTranscriptionDictionary,
@@ -243,7 +250,32 @@ export function useLiveDictation({ onToast }: Options = {}) {
         return;
       }
 
-      const model = (await getSetting<string>("liveTranscriptionModel")) ?? "";
+      // Resolve a valid streaming model. Pull from setting; if it's empty or
+      // points at a model that's no longer streaming-capable in our registry,
+      // pick the first streaming model for the active provider and persist it
+      // so the readiness banner and pre-flight stay consistent.
+      const persistedModel =
+        (await getSetting<string>("liveTranscriptionModel")) ?? "";
+      const streamingProvider = (
+        modelRegistry.transcriptionProviders as RegistryProvider[]
+      ).find((p) => p.id === provider);
+      const streamingModels =
+        streamingProvider?.models.filter((m) => m.streaming === true) ?? [];
+      const modelIsValid = streamingModels.some(
+        (m) => m.id === persistedModel,
+      );
+      const model =
+        modelIsValid && persistedModel
+          ? persistedModel
+          : streamingModels[0]?.id ?? "";
+      if (model !== persistedModel) {
+        console.warn(
+          "[Live] persisted model invalid/empty, switching to",
+          model,
+        );
+        await setSetting("liveTranscriptionModel", model);
+      }
+
       // language === "auto" or null → the Rust adapter omits the field from
       // session.update, letting the provider auto-detect from audio.
       const sessionLanguage =
