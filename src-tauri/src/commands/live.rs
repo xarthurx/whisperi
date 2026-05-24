@@ -212,6 +212,19 @@ pub async fn stop_live_session(
     Ok(())
 }
 
+#[tauri::command]
+pub async fn cancel_live_session(
+    sessions: State<'_, LiveSessionState>,
+    session_id: u64,
+) -> Result<(), String> {
+    let _handle = sessions
+        .remove(session_id)
+        .ok_or_else(|| format!("No active Live session with id {}", session_id))?;
+    // Hard cancel — no soft flush, no waiting. Task picks up the signal on next tick.
+    let _ = _handle.cancel_tx.send(true);
+    Ok(())
+}
+
 fn emit_error(app: &AppHandle, message: String, kind: crate::transcription::streaming::ErrorKind) {
     let _ = app.emit("live-error", serde_json::json!({
         "message": message,
