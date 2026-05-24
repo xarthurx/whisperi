@@ -3,7 +3,7 @@ import { SettingsSection } from "@/components/ui/SettingsSection";
 import { getTranscriptionProviders } from "./providerHelpers";
 import ProviderModelSelector from "./ProviderModelSelector";
 import LiveProviderModelSelector from "./LiveProviderModelSelector";
-// import { LiveConsentModal } from "@/components/ui/LiveConsentModal"; // TASK 26 - not yet implemented
+import { LiveConsentModal } from "@/components/ui/LiveConsentModal";
 import type { SectionProps } from "./types";
 
 export default function TranscriptionSection({ settings, update }: SectionProps) {
@@ -82,7 +82,7 @@ export default function TranscriptionSection({ settings, update }: SectionProps)
             onModelChange={(v) => update("liveTranscriptionModel", v)}
           />
           <p className="text-xs text-text-tertiary">{t("transcription.live.description", "Live dictation streams audio directly to a provider for real-time transcription.")}</p>
-          {/* LiveConsentModal — added in Task 26 */}
+          <LiveConsentModal />
         </div>
       )}
     </SettingsSection>
