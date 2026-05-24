@@ -39,6 +39,11 @@ export interface Settings {
   autoPaste: boolean;
   soundEnabled: boolean;
 
+  // Live dictation mode
+  dictationMode: "standard" | "live";
+  liveTranscriptionProvider: string;
+  liveTranscriptionModel: string;
+
   // Microphone
   selectedMicDeviceId: string;
 
@@ -79,6 +84,9 @@ const DEFAULTS: Settings = {
   soundEnabled: true,
   dictationKey: "",
   activationMode: "tap",
+  dictationMode: "standard",
+  liveTranscriptionProvider: "openai",
+  liveTranscriptionModel: "",
   selectedMicDeviceId: "",
   agentName: "Whisperi",
   agentAliases: [],
@@ -97,6 +105,7 @@ const DEFAULTS: Settings = {
 const STORE_KEYS = [
   "useLocalWhisper", "whisperModel", "preferredLanguage",
   "cloudTranscriptionProvider", "cloudTranscriptionModel",
+  "dictationMode", "liveTranscriptionProvider", "liveTranscriptionModel",
   "useReasoningModel", "reasoningModel", "reasoningProvider", "enhancementIntensity",
   "useCustomPrompt", "customSystemPrompt",
   "autoPaste", "soundEnabled", "dictationKey", "activationMode",
