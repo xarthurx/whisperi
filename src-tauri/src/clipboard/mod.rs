@@ -219,3 +219,83 @@ mod windows_paste {
         }
     }
 }
+
+/// Sanitize text before it goes through SendInput. Strips control characters,
+/// ANSI escape sequences, and translates whitespace control chars to space.
+/// This prevents a malicious transcript from injecting shell commands or
+/// terminal escapes into the focused window.
+pub fn sanitize_for_send_input(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            // ANSI escape: ESC [ ... <final-byte 0x40-0x7E>
+            '\x1B' if chars.peek() == Some(&'[') => {
+                chars.next(); // consume '['
+                // Drop parameter bytes 0x30-0x3F and intermediate 0x20-0x2F until final 0x40-0x7E
+                for cc in chars.by_ref() {
+                    if ('\x40'..='\x7E').contains(&cc) {
+                        break;
+                    }
+                }
+            }
+            // Newline / tab → space
+            '\n' | '\r' | '\t' => out.push(' '),
+            // C0 control chars (other than CR/LF/Tab handled above)
+            c if (c as u32) < 0x20 => { /* drop */ }
+            // DEL + C1 control chars
+            c if (c as u32) >= 0x7F && (c as u32) <= 0x9F => { /* drop */ }
+            // Everything else passes through (including all printable Unicode + emoji)
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sanitize_strips_c0_control_chars() {
+        let input = "hello\x00\x01\x02world\x08";
+        let out = sanitize_for_send_input(input);
+        assert_eq!(out, "helloworld");
+    }
+
+    #[test]
+    fn sanitize_strips_c1_control_chars() {
+        // U+007F (DEL) and U+009F (a C1 control char, using surrogate pair representation)
+        let input = "hello\x7Fworld";
+        let out = sanitize_for_send_input(input);
+        assert_eq!(out, "helloworld");
+    }
+
+    #[test]
+    fn sanitize_strips_ansi_escapes() {
+        let input = "before\x1B[31mred\x1B[0mafter";
+        let out = sanitize_for_send_input(input);
+        assert_eq!(out, "beforeredafter");
+    }
+
+    #[test]
+    fn sanitize_translates_newline_to_space() {
+        let input = "line1\nline2\nline3";
+        let out = sanitize_for_send_input(input);
+        assert_eq!(out, "line1 line2 line3");
+    }
+
+    #[test]
+    fn sanitize_translates_tab_to_space() {
+        let input = "col1\tcol2";
+        let out = sanitize_for_send_input(input);
+        assert_eq!(out, "col1 col2");
+    }
+
+    #[test]
+    fn sanitize_preserves_unicode() {
+        let input = "café 你好 🎉";
+        let out = sanitize_for_send_input(input);
+        assert_eq!(out, "café 你好 🎉");
+    }
+}
