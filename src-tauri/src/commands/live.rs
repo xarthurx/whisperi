@@ -62,14 +62,27 @@ pub async fn start_live_session(
     api_key: String,
     expected_hwnd: Option<isize>,
 ) -> Result<u64, String> {
+    log::info!(
+        "[Live] start_live_session: provider_id={} model={} language={:?} expected_hwnd={:?} key_len={}",
+        provider_id,
+        model,
+        language,
+        expected_hwnd,
+        api_key.len()
+    );
+
     // Validate provider exists
     let provider = providers::lookup(&provider_id)
         .ok_or_else(|| format!("Unknown Live provider: {}", provider_id))?;
 
-    // Validate language is not "auto"
-    if matches!(language.as_deref(), Some("auto")) {
-        return Err("Live mode requires an explicit language (not 'auto').".into());
-    }
+    // Language is now optional (matches Standard mode's auto-detect). The
+    // adapter omits the field from session.update when caller passes None or
+    // "auto", letting the provider auto-detect from audio. We normalize "auto"
+    // to None here so the adapter sees a consistent value.
+    let language_for_session = match language.as_deref() {
+        Some("auto") | Some("") => None,
+        other => other.map(String::from),
+    };
 
     let session_id = sessions.new_id();
     let (cancel_tx, mut cancel_rx) = tokio::sync::watch::channel(false);
@@ -89,11 +102,15 @@ pub async fn start_live_session(
         .open(SessionConfig {
             provider_id: provider.id,
             model: model.clone(),
-            language: language.clone(),
+            language: language_for_session.clone(),
             api_key: api_key.clone(),
         })
         .await
-        .map_err(|e| format!("Failed to open Live session: {}", e))?;
+        .map_err(|e| {
+            log::error!("[Live] start_live_session: open() failed: {:#}", e);
+            format!("Failed to open Live session: {}", e)
+        })?;
+    log::info!("[Live] start_live_session: open() succeeded");
 
     let target_sample_rate = client.sample_rate();
 

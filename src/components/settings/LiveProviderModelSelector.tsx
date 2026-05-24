@@ -148,6 +148,26 @@ export default function LiveProviderModelSelector({
           helpText={t("providerModel.apiKeyHelp", { provider: selectedProvider })}
         />
 
+        {/* Last error from a Live start attempt (cleared on next successful start).
+            Surfaces silent failures from cpal/WS/runtime errors. */}
+        {settings.liveLastError ? (
+          <div className="text-xs rounded-control border border-destructive/40 bg-destructive/10 p-3 space-y-1">
+            <div className="text-destructive font-medium">
+              {t("transcription.live.lastError.title", {
+                defaultValue: "Last Live attempt failed",
+              })}
+            </div>
+            <div className="text-text-secondary break-words">{settings.liveLastError}</div>
+            <button
+              onClick={() => update("liveLastError", "")}
+              className="mt-1 text-text-tertiary underline hover:text-text-secondary"
+              type="button"
+            >
+              {t("transcription.live.lastError.dismiss", { defaultValue: "Dismiss" })}
+            </button>
+          </div>
+        ) : null}
+
         {/* Readiness banner: shows exactly what's blocking Live mode so the
             user doesn't have to test the hotkey and parse OS notifications. */}
         <div className="text-xs rounded-control border border-border bg-surface-1 p-3">

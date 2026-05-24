@@ -43,6 +43,9 @@ export interface Settings {
   dictationMode: "standard" | "live";
   liveTranscriptionProvider: string;
   liveTranscriptionModel: string;
+  /** Last Live-mode failure message (cleared on successful start). Shown in
+   *  the Live readiness banner so silent failures are visible. */
+  liveLastError: string;
 
   // Microphone
   selectedMicDeviceId: string;
@@ -87,6 +90,7 @@ const DEFAULTS: Settings = {
   dictationMode: "standard",
   liveTranscriptionProvider: "openai",
   liveTranscriptionModel: "",
+  liveLastError: "",
   selectedMicDeviceId: "",
   agentName: "Whisperi",
   agentAliases: [],
@@ -105,7 +109,7 @@ const DEFAULTS: Settings = {
 const STORE_KEYS = [
   "useLocalWhisper", "whisperModel", "preferredLanguage",
   "cloudTranscriptionProvider", "cloudTranscriptionModel",
-  "dictationMode", "liveTranscriptionProvider", "liveTranscriptionModel",
+  "dictationMode", "liveTranscriptionProvider", "liveTranscriptionModel", "liveLastError",
   "useReasoningModel", "reasoningModel", "reasoningProvider", "enhancementIntensity",
   "useCustomPrompt", "customSystemPrompt",
   "autoPaste", "soundEnabled", "dictationKey", "activationMode",

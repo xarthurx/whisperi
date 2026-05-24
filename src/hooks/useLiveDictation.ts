@@ -15,6 +15,7 @@ import {
   onLiveSessionClosed,
   getApiKey,
   getSetting,
+  setSetting,
   getAgentName,
   getAgentAliases,
   getCustomDictionary,
@@ -118,12 +119,19 @@ export function useLiveDictation({ onToast }: Options = {}) {
       });
       const unlistenErr = await onLiveError((payload: LiveErrorPayload) => {
         if (cancelled) return;
+        console.warn("[Live] live-error event:", payload);
         sessionErrorRef.current = payload.message;
+        // Persist + escalate so the readiness banner surfaces it.
+        void setSetting(
+          "liveLastError",
+          `Live session error (${payload.kind}): ${payload.message}`,
+        );
         onToast?.({
           title: "Live session error",
           description: `${payload.message} (${payload.kind})`,
           variant: "destructive",
         });
+        void showSettings();
         setPhase("idle");
       });
       // If the WS task exits cleanly (server-side close, soft-flush completed) without
@@ -151,23 +159,28 @@ export function useLiveDictation({ onToast }: Options = {}) {
 
   const start = useCallback(
     async (deviceId?: string) => {
-      if (phase !== "idle") return;
+      console.log("[Live] start() invoked, current phase =", phase);
+      if (phase !== "idle") {
+        console.log("[Live] start: phase != idle, ignoring");
+        return;
+      }
       sessionErrorRef.current = null;
       accumulatedRawRef.current = "";
       totalCharsTypedRef.current = 0;
       terminalWarningShownRef.current = false;
+      // Clear any previous error so the readiness banner doesn't show stale info.
+      await setSetting("liveLastError", "").catch(() => {});
 
-      // Pre-flight: provider + key + language + consent.
-      //
-      // All four are *config* failures (not session-time errors). When any of
-      // them trips we ALSO open the Settings window so the user can fix it
-      // immediately — OS notifications are unreliable on Windows when
-      // permission was never granted, and silent toasts make the hotkey feel
-      // broken. Settings opening guarantees the user sees the problem.
-      const escalate = (title: string, description: string) => {
+      // Persist + escalate on any failure path. The readiness banner watches
+      // `liveLastError` and shows it prominently — guarantees visibility even
+      // when Windows silently drops OS notifications.
+      const fail = async (title: string, description: string) => {
+        console.warn("[Live] start failed:", title, "—", description);
+        await setSetting("liveLastError", `${title}: ${description}`).catch(() => {});
         onToast?.({ title, description, variant: "destructive" });
         void showSettings();
       };
+      const escalate = fail;
 
       const provider = await getSetting<string>("liveTranscriptionProvider");
       if (!provider) {
@@ -219,25 +232,31 @@ export function useLiveDictation({ onToast }: Options = {}) {
       targetHwndRef.current = hwnd;
       const targetClass = await getForegroundWindowClass();
 
+      console.log("[Live] starting cpal recording, deviceId =", deviceId);
       recordingStartRef.current = performance.now();
       try {
         await apiStartRecording(deviceId);
+        console.log("[Live] cpal started");
       } catch (e) {
         recordingStartRef.current = null;
-        onToast?.({
-          title: "Failed to start recording",
-          description: String(e),
-          variant: "destructive",
-        });
+        await fail("Failed to start recording", String(e));
         return;
       }
 
       const model = (await getSetting<string>("liveTranscriptionModel")) ?? "";
+      // language === "auto" or null → the Rust adapter omits the field from
+      // session.update, letting the provider auto-detect from audio.
+      const sessionLanguage =
+        !language || language === "auto" ? null : language;
+      console.log(
+        "[Live] opening WS session: provider =",
+        provider,
+        "model =",
+        model,
+        "language =",
+        sessionLanguage,
+      );
       try {
-        // language === "auto" or null → the Rust adapter omits the field from
-        // session.update, letting the provider auto-detect from audio.
-        const sessionLanguage =
-          !language || language === "auto" ? null : language;
         const sid = await startLiveSession({
           providerId: provider,
           model,
@@ -246,6 +265,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
           expectedHwnd: hwnd,
         });
         sessionIdRef.current = sid;
+        console.log("[Live] WS session opened, session_id =", sid);
         setPhase("recording");
 
         // Sound + notification AFTER WS handshake succeeds
@@ -265,11 +285,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
         }
       } catch (e) {
         await apiStopRecording().catch(() => {});
-        onToast?.({
-          title: "Failed to open Live session",
-          description: String(e),
-          variant: "destructive",
-        });
+        await fail("Failed to open Live session", String(e));
       }
     },
     [phase, onToast],

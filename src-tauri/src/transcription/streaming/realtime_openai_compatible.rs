@@ -57,8 +57,18 @@ impl RealtimeOpenAiCompatibleClient {
         };
         let msg = msg.context("ws read")?;
         match msg {
-            Message::Text(text) => Self::parse_event(&text, &mut self.utterance_seq),
-            Message::Close(_) => Err(anyhow!("websocket closed by server")),
+            Message::Text(text) => {
+                log::debug!(
+                    "[Live] WS recv ({} bytes): {}",
+                    text.len(),
+                    if text.len() > 400 { &text[..400] } else { &text }
+                );
+                Self::parse_event(&text, &mut self.utterance_seq)
+            }
+            Message::Close(frame) => {
+                log::warn!("[Live] WS close frame: {:?}", frame);
+                Err(anyhow!("websocket closed by server"))
+            }
             _ => Ok(None),
         }
     }
@@ -165,6 +175,13 @@ impl StreamingTranscriber for RealtimeOpenAiCompatibleClient {
     async fn open(&mut self, cfg: SessionConfig) -> Result<()> {
         // Build URL with model substitution
         let url_str = self.cfg.ws_url_template.replace("{model}", &cfg.model);
+        log::info!(
+            "[Live] WS connecting: provider={} url={} model={} language={:?}",
+            self.cfg.id,
+            url_str,
+            cfg.model,
+            cfg.language
+        );
         let mut request = url_str
             .as_str()
             .into_client_request()
@@ -191,9 +208,11 @@ impl StreamingTranscriber for RealtimeOpenAiCompatibleClient {
         ws_config.max_frame_size = Some(256 * 1024);
         ws_config.accept_unmasked_frames = false;
 
-        let (stream, _resp): (WsStream, _) = connect_async_with_config(request, Some(ws_config), false)
-            .await
-            .context("ws connect")?;
+        let (stream, _resp): (WsStream, _) =
+            connect_async_with_config(request, Some(ws_config), false)
+                .await
+                .context("ws connect")?;
+        log::info!("[Live] WS handshake complete, sending session.update");
 
         let (sink, source) = stream.split();
         self.sink = Some(sink);
@@ -203,7 +222,9 @@ impl StreamingTranscriber for RealtimeOpenAiCompatibleClient {
         // field when caller passes None — both OpenAI Realtime and Qwen3-ASR
         // auto-detect from audio in that case (parity with Standard mode's
         // whisper.cpp behaviour, which the user explicitly asked for).
-        let session_update = build_session_update(self.cfg.session_template, &cfg.model, cfg.language.as_deref())?;
+        let session_update =
+            build_session_update(self.cfg.session_template, &cfg.model, cfg.language.as_deref())?;
+        log::info!("[Live] session.update payload: {}", session_update);
         self.send_text(&session_update).await?;
         Ok(())
     }
