@@ -6,6 +6,8 @@
 
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use futures_util::{SinkExt, StreamExt, stream::SplitSink, stream::SplitStream};
 use serde_json::Value;
 use tokio::net::TcpStream;
@@ -110,6 +112,22 @@ fn classify_error(code: &str) -> ErrorKind {
     }
 }
 
+/// Build the JSON string for an `input_audio_buffer.append` event.
+/// PCM16 samples are converted to little-endian bytes and base64-encoded.
+fn build_audio_event(samples: &[i16]) -> String {
+    let mut bytes = Vec::with_capacity(samples.len() * 2);
+    for &s in samples {
+        bytes.extend_from_slice(&s.to_le_bytes());
+    }
+    let encoded = BASE64.encode(&bytes);
+    serde_json::json!({
+        "event_id": uuid::Uuid::new_v4().to_string(),
+        "type": "input_audio_buffer.append",
+        "audio": encoded,
+    })
+    .to_string()
+}
+
 #[async_trait]
 impl StreamingTranscriber for RealtimeOpenAiCompatibleClient {
     async fn open(&mut self, cfg: SessionConfig) -> Result<()> {
@@ -160,9 +178,12 @@ impl StreamingTranscriber for RealtimeOpenAiCompatibleClient {
         Ok(())
     }
 
-    async fn push_pcm16(&mut self, _samples: &[i16]) -> Result<()> {
-        // Implemented in Task 8
-        unimplemented!("Task 8")
+    async fn push_pcm16(&mut self, samples: &[i16]) -> Result<()> {
+        if samples.is_empty() {
+            return Ok(());
+        }
+        let event = build_audio_event(samples);
+        self.send_text(&event).await
     }
 
     async fn commit_utterance(&mut self) -> Result<()> {
@@ -232,5 +253,22 @@ mod tests {
         let mut seq = 0u32;
         let json = r#"{"type":"session.created","session":{"id":"x"}}"#;
         assert!(RealtimeOpenAiCompatibleClient::parse_event(json, &mut seq).unwrap().is_none());
+    }
+
+    #[test]
+    fn push_pcm16_event_shape() {
+        // We can't run an actual WS round-trip here; instead, test the JSON shape
+        // by extracting the build_audio_event helper.
+        let samples = [0i16, 1, -1, i16::MAX, i16::MIN];
+        let json = build_audio_event(&samples);
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["type"], "input_audio_buffer.append");
+        assert!(v["event_id"].as_str().unwrap().len() > 0);
+        let b64 = v["audio"].as_str().unwrap();
+        let decoded = base64::engine::general_purpose::STANDARD.decode(b64).unwrap();
+        assert_eq!(decoded.len(), samples.len() * 2);
+        // Little-endian i16
+        assert_eq!(decoded[0], 0);
+        assert_eq!(decoded[2], 1);
     }
 }
