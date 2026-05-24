@@ -7,6 +7,17 @@ pub enum ClipError {
     TerminalFocusGuard,
 }
 
+/// Result of a [`swap_typed_text`] call.
+#[derive(Debug, serde::Serialize)]
+pub enum SwapResult {
+    /// Backspaces were sent and new text was typed.
+    Swapped,
+    /// Foreground HWND no longer matches `expected_hwnd`; nothing was sent.
+    SkippedFocusDrift,
+    /// Nothing to do: zero backspaces and empty new text.
+    SkippedNoChange,
+}
+
 /// Write text to clipboard, simulate paste into the focused application,
 /// then restore the original clipboard contents.
 pub fn paste_text(text: &str) -> Result<()> {
@@ -247,7 +258,8 @@ mod windows_paste {
 #[cfg(target_os = "windows")]
 mod windows_keystrokes {
     use windows::Win32::UI::Input::KeyboardAndMouse::{
-        SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE,
+        SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP,
+        KEYEVENTF_UNICODE, VIRTUAL_KEY,
     };
 
     pub fn send_text_keystrokes_inner(text: &str) -> usize {
@@ -262,14 +274,14 @@ mod windows_keystrokes {
     /// string. Uses KEYEVENTF_UNICODE so the chars are injected directly without
     /// going through the IME composition queue. Surrogate pairs are sent as two
     /// separate events.
-    pub fn build_unicode_input_events(text: &str) -> Vec<INPUT> {
+    pub(super) fn build_unicode_input_events(text: &str) -> Vec<INPUT> {
         let mut inputs = Vec::with_capacity(text.encode_utf16().count() * 2);
         for code_unit in text.encode_utf16() {
             let down = INPUT {
                 r#type: INPUT_KEYBOARD,
                 Anonymous: INPUT_0 {
                     ki: KEYBDINPUT {
-                        wVk: windows::Win32::UI::Input::KeyboardAndMouse::VIRTUAL_KEY(0),
+                        wVk: VIRTUAL_KEY(0),
                         wScan: code_unit,
                         dwFlags: KEYEVENTF_UNICODE,
                         time: 0,
@@ -284,6 +296,26 @@ mod windows_keystrokes {
             inputs.push(up);
         }
         inputs
+    }
+
+    /// Build a single VK-based key event (KEYDOWN or KEYUP).
+    pub(super) fn make_vk_event(vk: u16, key_up: bool) -> INPUT {
+        INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VIRTUAL_KEY(vk),
+                    wScan: 0,
+                    dwFlags: if key_up {
+                        KEYEVENTF_KEYUP
+                    } else {
+                        KEYBD_EVENT_FLAGS(0)
+                    },
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
+        }
     }
 }
 
@@ -319,6 +351,55 @@ pub fn is_foreground_window_terminal_class() -> bool {
     #[cfg(not(target_os = "windows"))]
     {
         false
+    }
+}
+
+/// Replace the last `backspaces` typed characters in the focused window with
+/// `new_text`. Refuses to act if the foreground HWND has drifted from
+/// `expected_hwnd` — this is the central safety invariant of the post-stop
+/// swap. The HWND check happens BEFORE any keystroke is sent.
+pub fn swap_typed_text(
+    backspaces: usize,
+    new_text: &str,
+    expected_hwnd: Option<isize>,
+) -> std::result::Result<SwapResult, ClipError> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+
+        if let Some(want) = expected_hwnd {
+            let now = unsafe { GetForegroundWindow().0 as isize };
+            if now != want {
+                return Ok(SwapResult::SkippedFocusDrift);
+            }
+        }
+
+        let sanitized = sanitize_for_send_input(new_text);
+        if backspaces == 0 && sanitized.is_empty() {
+            return Ok(SwapResult::SkippedNoChange);
+        }
+
+        let mut inputs =
+            Vec::with_capacity(backspaces * 2 + sanitized.encode_utf16().count() * 2);
+        for _ in 0..backspaces {
+            inputs.push(windows_keystrokes::make_vk_event(0x08, false));
+            inputs.push(windows_keystrokes::make_vk_event(0x08, true));
+        }
+        inputs.extend(windows_keystrokes::build_unicode_input_events(&sanitized));
+
+        unsafe {
+            windows::Win32::UI::Input::KeyboardAndMouse::SendInput(
+                &inputs,
+                std::mem::size_of::<windows::Win32::UI::Input::KeyboardAndMouse::INPUT>() as i32,
+            );
+        }
+        Ok(SwapResult::Swapped)
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (backspaces, new_text, expected_hwnd);
+        Ok(SwapResult::SkippedNoChange)
     }
 }
 
@@ -421,4 +502,14 @@ mod tests {
         let out = sanitize_for_send_input(input);
         assert_eq!(out, "café 你好 🎉");
     }
+
+    #[test]
+    fn swap_returns_no_change_for_empty_inputs() {
+        // No HWND to match against — pass None
+        let result = swap_typed_text(0, "", None).unwrap();
+        assert!(matches!(result, SwapResult::SkippedNoChange));
+    }
+
+    // NOTE: testing the HWND-mismatch path requires a running window manager.
+    // The build itself validates the focus-drift check compiles correctly.
 }
