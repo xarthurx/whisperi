@@ -89,7 +89,7 @@ const DEFAULTS: Settings = {
   activationMode: "tap",
   dictationMode: "standard",
   liveTranscriptionProvider: "openai",
-  liveTranscriptionModel: "gpt-realtime-whisper",
+  liveTranscriptionModel: "gpt-4o-mini-transcribe",
   liveLastError: "",
   selectedMicDeviceId: "",
   agentName: "Whisperi",

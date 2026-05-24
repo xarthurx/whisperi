@@ -41,12 +41,11 @@ pub static OPENAI_REALTIME: ProviderConfig = ProviderConfig {
     // `missing_model` because it expects a different shape. We must NOT
     // include `?model=...` here — transcription sessions reject that.
     ws_url_template: "wss://api.openai.com/v1/realtime?intent=transcription",
-    // Use `gpt-realtime-whisper` — the documented model for the
-    // `?intent=transcription` transcription-only session mode. Combined with
-    // `turn_detection: server_vad` the server emits transcripts on detected
-    // silence (the earlier "no transcripts" issue was caused by manual-commit
-    // VAD config, not the model).
-    default_model: "gpt-realtime-whisper",
+    // `gpt-4o-mini-transcribe` is OpenAI's documented streaming transcription
+    // model. Sent via the new `session.audio.input.transcription` shape with
+    // `session.type: "transcription"` in session.update, which is what the
+    // server's session.created event confirms it expects.
+    default_model: "gpt-4o-mini-transcribe",
     audio_sample_rate: 24_000,
     auth_scheme: AuthScheme::Bearer,
     extra_headers: &[],
@@ -82,7 +81,7 @@ mod tests {
     fn lookup_returns_openai_config() {
         let cfg = lookup("openai").unwrap();
         assert_eq!(cfg.audio_sample_rate, 24_000);
-        assert_eq!(cfg.default_model, "gpt-realtime-whisper");
+        assert_eq!(cfg.default_model, "gpt-4o-mini-transcribe");
         assert!(matches!(cfg.vad_mode, VadMode::ServerVad { silence_ms: 500 }));
         // Transcription-only mode requires `?intent=transcription`
         assert!(cfg.ws_url_template.contains("intent=transcription"));
