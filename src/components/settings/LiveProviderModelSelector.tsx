@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import modelRegistry from "@/models/modelRegistryData.json";
 import ApiKeyInput from "@/components/ui/ApiKeyInput";
@@ -6,6 +7,7 @@ import { SettingsRow } from "@/components/ui/SettingsSection";
 import { ProviderTabs, type ProviderTabItem } from "@/components/ui/ProviderTabs";
 import type { Settings } from "@/hooks/useSettings";
 import { getApiKey, getApiKeyField } from "./providerHelpers";
+import { getSetting } from "@/services/tauriApi";
 
 interface RegistryModel {
   id: string;
@@ -32,7 +34,7 @@ export default function LiveProviderModelSelector({
 }: LiveProviderModelSelectorProps) {
   const { t } = useTranslation();
 
-  // Filter registry to providers that have at least one streaming-capable model.
+  // Filter registry to providers with at least one streaming model.
   const streamingProviders: RegistryProvider[] = (
     modelRegistry.transcriptionProviders as RegistryProvider[]
   )
@@ -45,8 +47,6 @@ export default function LiveProviderModelSelector({
     hasKey: !!getApiKey(settings, p.id),
   }));
 
-  // Resolve current selection with fallbacks so the UI always shows something
-  // even before the user has explicitly picked.
   const selectedProvider =
     streamingProviders.find((p) => p.id === settings.liveTranscriptionProvider)
       ?.id ?? streamingProviders[0]?.id ?? "openai";
@@ -59,6 +59,63 @@ export default function LiveProviderModelSelector({
     (m) => m.id === selectedModel,
   );
 
+  // Persist the fallback selection so pre-flight in `useLiveDictation` reads
+  // a valid provider+model. Without this, the UI shows "OpenAI selected" but
+  // the underlying setting is empty, and pre-flight fails silently.
+  useEffect(() => {
+    if (settings.liveTranscriptionProvider !== selectedProvider) {
+      update("liveTranscriptionProvider", selectedProvider);
+    }
+    if (settings.liveTranscriptionModel !== selectedModel && selectedModel) {
+      update("liveTranscriptionModel", selectedModel);
+    }
+    // We intentionally don't depend on `update` to avoid spurious re-runs;
+    // it's stable across renders of useSettings.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    settings.liveTranscriptionProvider,
+    settings.liveTranscriptionModel,
+    selectedProvider,
+    selectedModel,
+  ]);
+
+  // Read per-provider consent so the readiness banner can reflect it.
+  const [consented, setConsented] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedProvider) {
+      setConsented(null);
+      return;
+    }
+    getSetting<boolean>(`liveConsent.${selectedProvider}`).then((v) => {
+      if (!cancelled) setConsented(!!v);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProvider]);
+
+  const apiKey = getApiKey(settings, selectedProvider);
+  const hasKey = apiKey.length > 0;
+  const language = settings.preferredLanguage;
+  const languageOK = !!language && language !== "auto";
+  const ready = hasKey && languageOK && consented === true;
+
+  const missing: string[] = [];
+  if (!hasKey) missing.push(t("transcription.live.missing.apiKey", { defaultValue: "API key" }));
+  if (!languageOK)
+    missing.push(
+      t("transcription.live.missing.language", {
+        defaultValue: "Output language (currently Auto — set one in General)",
+      }),
+    );
+  if (consented === false)
+    missing.push(
+      t("transcription.live.missing.consent", {
+        defaultValue: "Consent (a dialog will appear in this section)",
+      }),
+    );
+
   return (
     <>
       <ProviderTabs
@@ -66,8 +123,6 @@ export default function LiveProviderModelSelector({
         selectedId={selectedProvider}
         onSelect={(id) => {
           update("liveTranscriptionProvider", id);
-          // Auto-pick first streaming model for the new provider so the
-          // pre-flight in useLiveDictation never sees an empty model id.
           const provider = streamingProviders.find((p) => p.id === id);
           if (provider?.models[0]) {
             update("liveTranscriptionModel", provider.models[0].id);
@@ -92,11 +147,36 @@ export default function LiveProviderModelSelector({
           </p>
         ) : null}
         <ApiKeyInput
-          apiKey={getApiKey(settings, selectedProvider)}
+          apiKey={apiKey}
           setApiKey={(key) => update(getApiKeyField(selectedProvider), key)}
           label={t("providerModel.apiKeyLabel", { provider: selectedProvider })}
           helpText={t("providerModel.apiKeyHelp", { provider: selectedProvider })}
         />
+
+        {/* Readiness banner: shows exactly what's blocking Live mode so the
+            user doesn't have to test the hotkey and parse OS notifications. */}
+        <div className="text-xs rounded-control border border-border bg-surface-1 p-3">
+          {ready ? (
+            <span className="text-success font-medium">
+              {t("transcription.live.ready", {
+                defaultValue: "✓ Live mode ready — press your dictation hotkey to start.",
+              })}
+            </span>
+          ) : (
+            <div className="space-y-1">
+              <div className="text-warning font-medium">
+                {t("transcription.live.notReady", {
+                  defaultValue: "Live mode is not ready yet. Configure:",
+                })}
+              </div>
+              <ul className="list-disc pl-5 text-text-secondary">
+                {missing.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
