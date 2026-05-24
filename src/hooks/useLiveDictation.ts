@@ -185,14 +185,10 @@ export function useLiveDictation({ onToast }: Options = {}) {
         );
         return;
       }
+      // Language is optional — "auto"/null means the provider auto-detects from
+      // the audio (same as Standard mode's whisper.cpp behavior). We pass null
+      // downstream so the Rust adapter can omit the field from session.update.
       const language = await getSetting<string>("preferredLanguage");
-      if (language === "auto") {
-        escalate(
-          "Explicit language required",
-          "Live mode needs an explicit output language. Open Settings → General.",
-        );
-        return;
-      }
 
       // Consent check (settings flag per provider)
       const consentKey = `liveConsent.${provider}`;
@@ -238,10 +234,14 @@ export function useLiveDictation({ onToast }: Options = {}) {
 
       const model = (await getSetting<string>("liveTranscriptionModel")) ?? "";
       try {
+        // language === "auto" or null → the Rust adapter omits the field from
+        // session.update, letting the provider auto-detect from audio.
+        const sessionLanguage =
+          !language || language === "auto" ? null : language;
         const sid = await startLiveSession({
           providerId: provider,
           model,
-          language: language ?? "en",
+          language: sessionLanguage,
           apiKey,
           expectedHwnd: hwnd,
         });

@@ -112,6 +112,38 @@ fn classify_error(code: &str) -> ErrorKind {
     }
 }
 
+/// Build the `session.update` JSON for a session. The template carries a
+/// placeholder `{model}` and a literal `"language": "{language}"` field; this
+/// function substitutes the model and either substitutes a real language code
+/// or removes the language field entirely (for auto-detect).
+///
+/// Both OpenAI Realtime and Qwen3-ASR-Flash-Realtime treat an absent
+/// `language` as "auto-detect from audio" — same semantics as Standard mode's
+/// whisper.cpp without `-l`.
+fn build_session_update(
+    template: &str,
+    model: &str,
+    language: Option<&str>,
+) -> Result<String> {
+    let with_model = template.replace("{model}", model);
+    let mut value: serde_json::Value =
+        serde_json::from_str(&with_model).context("parse session template")?;
+    let transcription = value
+        .get_mut("session")
+        .and_then(|s| s.get_mut("input_audio_transcription"))
+        .and_then(|t| t.as_object_mut())
+        .ok_or_else(|| anyhow!("session template missing input_audio_transcription"))?;
+    match language {
+        Some(lang) if !lang.is_empty() && lang != "auto" => {
+            transcription.insert("language".to_string(), serde_json::json!(lang));
+        }
+        _ => {
+            transcription.remove("language");
+        }
+    }
+    Ok(serde_json::to_string(&value).context("serialize session.update")?)
+}
+
 /// Build the JSON string for an `input_audio_buffer.append` event.
 /// PCM16 samples are converted to little-endian bytes and base64-encoded.
 fn build_audio_event(samples: &[i16]) -> String {
@@ -167,13 +199,11 @@ impl StreamingTranscriber for RealtimeOpenAiCompatibleClient {
         self.sink = Some(sink);
         self.source = Some(source);
 
-        // Substitute model + language in the session template, then send
-        let language = cfg.language.clone().unwrap_or_else(|| "en".to_string());
-        let session_update = self
-            .cfg
-            .session_template
-            .replace("{model}", &cfg.model)
-            .replace("{language}", &language);
+        // Build session.update programmatically so we can OMIT the language
+        // field when caller passes None — both OpenAI Realtime and Qwen3-ASR
+        // auto-detect from audio in that case (parity with Standard mode's
+        // whisper.cpp behaviour, which the user explicitly asked for).
+        let session_update = build_session_update(self.cfg.session_template, &cfg.model, cfg.language.as_deref())?;
         self.send_text(&session_update).await?;
         Ok(())
     }

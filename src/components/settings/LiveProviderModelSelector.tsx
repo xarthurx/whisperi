@@ -97,18 +97,13 @@ export default function LiveProviderModelSelector({
 
   const apiKey = getApiKey(settings, selectedProvider);
   const hasKey = apiKey.length > 0;
-  const language = settings.preferredLanguage;
-  const languageOK = !!language && language !== "auto";
-  const ready = hasKey && languageOK && consented === true;
+  // Language is optional — the provider auto-detects when omitted. We mirror
+  // Standard mode's behaviour here so the user never has to pick a language
+  // explicitly just to use Live mode.
+  const ready = hasKey && consented === true;
 
   const missing: string[] = [];
   if (!hasKey) missing.push(t("transcription.live.missing.apiKey", { defaultValue: "API key" }));
-  if (!languageOK)
-    missing.push(
-      t("transcription.live.missing.language", {
-        defaultValue: "Output language (currently Auto — set one in General)",
-      }),
-    );
   if (consented === false)
     missing.push(
       t("transcription.live.missing.consent", {
