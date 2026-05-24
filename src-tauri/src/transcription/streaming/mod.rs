@@ -57,3 +57,47 @@ pub trait StreamingTranscriber: Send {
     /// Close the WebSocket cleanly.
     async fn close(&mut self) -> anyhow::Result<()>;
 }
+
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// Tauri-managed state for active Live sessions.
+/// Keyed by session_id; single-session in practice but use a map for forward compatibility.
+pub struct LiveSessionState {
+    sessions: Mutex<HashMap<u64, LiveSessionHandle>>,
+    next_id: AtomicU64,
+}
+
+impl Default for LiveSessionState {
+    fn default() -> Self {
+        Self {
+            sessions: Mutex::new(HashMap::new()),
+            next_id: AtomicU64::new(1),
+        }
+    }
+}
+
+pub struct LiveSessionHandle {
+    pub task: tokio::task::JoinHandle<()>,
+    pub cancel_tx: tokio::sync::watch::Sender<bool>,
+    pub expected_hwnd: Option<isize>,
+}
+
+impl LiveSessionState {
+    pub fn new_id(&self) -> u64 {
+        self.next_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn insert(&self, id: u64, handle: LiveSessionHandle) {
+        self.sessions.lock().unwrap().insert(id, handle);
+    }
+
+    pub fn remove(&self, id: u64) -> Option<LiveSessionHandle> {
+        self.sessions.lock().unwrap().remove(&id)
+    }
+
+    pub fn expected_hwnd(&self, id: u64) -> Option<isize> {
+        self.sessions.lock().unwrap().get(&id).and_then(|h| h.expected_hwnd)
+    }
+}
