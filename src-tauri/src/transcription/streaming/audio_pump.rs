@@ -77,6 +77,28 @@ impl OnlineResampler {
     }
 }
 
+/// Convert f32 audio samples in [-1.0, 1.0] to PCM16. NaN → 0, ±Inf → clamp.
+pub fn f32_to_pcm16(samples: &[f32]) -> Vec<i16> {
+    samples
+        .iter()
+        .map(|&s| {
+            if s.is_nan() {
+                0
+            } else if s == f32::INFINITY {
+                i16::MAX
+            } else if s == f32::NEG_INFINITY {
+                i16::MIN
+            } else if s >= 1.0 {
+                i16::MAX
+            } else if s <= -1.0 {
+                -i16::MAX
+            } else {
+                (s * i16::MAX as f32) as i16
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -129,5 +151,26 @@ mod tests {
         let mut r = OnlineResampler::new(48_000, 16_000);
         let out = r.process(&[]);
         assert_eq!(out, Vec::<f32>::new());
+    }
+
+    #[test]
+    fn f32_to_pcm16_clamps_above_one() {
+        let out = f32_to_pcm16(&[1.5, 2.0, -1.5, -2.0]);
+        assert_eq!(out, vec![i16::MAX, i16::MAX, -i16::MAX, -i16::MAX]);
+    }
+
+    #[test]
+    fn f32_to_pcm16_scales_full_range() {
+        let out = f32_to_pcm16(&[1.0, -1.0, 0.0, 0.5]);
+        assert_eq!(out[0], i16::MAX);
+        assert_eq!(out[1], -i16::MAX); // symmetric clamp, not i16::MIN
+        assert_eq!(out[2], 0);
+        assert!((out[3] - (i16::MAX / 2)).abs() <= 1);
+    }
+
+    #[test]
+    fn f32_to_pcm16_handles_nan_and_inf() {
+        let out = f32_to_pcm16(&[f32::NAN, f32::INFINITY, f32::NEG_INFINITY]);
+        assert_eq!(out, vec![0, i16::MAX, i16::MIN]);
     }
 }
