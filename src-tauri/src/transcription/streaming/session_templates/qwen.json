@@ -1,0 +1,14 @@
+{
+  "type": "transcription_session.update",
+  "session": {
+    "input_audio_format": "pcm16",
+    "input_audio_transcription": {
+      "model": "{model}",
+      "language": "{language}"
+    },
+    "turn_detection": {
+      "type": "server_vad",
+      "silence_duration_ms": 400
+    }
+  }
+}

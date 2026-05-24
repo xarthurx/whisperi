@@ -20,6 +20,23 @@ export function getApiKeyField(provider: string): keyof Settings {
   return API_KEY_MAP[provider] ?? "openaiApiKey";
 }
 
+/** Human-readable display name for a provider id. Use this anywhere you'd
+ *  otherwise embed the raw id (e.g. "openai") in user-facing copy — the bare
+ *  ids look like internal jargon. */
+const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  gemini: "Gemini",
+  groq: "Groq",
+  mistral: "Mistral",
+  qwen: "Qwen",
+  openrouter: "OpenRouter",
+};
+
+export function providerDisplayName(id: string): string {
+  return PROVIDER_DISPLAY_NAMES[id] ?? id;
+}
+
 export function getTranscriptionProviders(settings: Settings): ProviderTabItem[] {
   return [
     { id: "openai", name: "OpenAI", hasKey: !!settings.openaiApiKey },

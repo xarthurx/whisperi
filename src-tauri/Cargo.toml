@@ -1,6 +1,6 @@
 [package]
 name = "whisperi"
-version = "0.6.11"
+version = "0.7.0"
 edition = "2024"
 description = "Fast desktop dictation powered by whisper.cpp"
 
@@ -26,6 +26,7 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-autostart = "2"
 
+async-trait = "0.1"
 colored = "2"
 
 serde = { version = "1", features = ["derive"] }
@@ -33,6 +34,8 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
 futures-util = "0.3"
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
+url = "2"
 rusqlite = { version = "0.32", features = ["bundled"] }
 cpal = "0.15"
 hound = "3.5"
@@ -41,6 +44,7 @@ dirs = "6"
 anyhow = "1"
 base64 = "0.22"
 thiserror = "2"
+uuid = { version = "1", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = [
@@ -49,6 +53,7 @@ windows = { version = "0.58", features = [
   "Win32_UI_HiDpi",
   "Win32_System_DataExchange",
   "Win32_System_Memory",
+  "Win32_System_Threading",
   "Win32_Foundation",
   "Win32_System_RemoteDesktop",
 ] }

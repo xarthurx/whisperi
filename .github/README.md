@@ -40,6 +40,7 @@ See [Supported Providers](#supported-providers) for the full list of models and 
 - **Voice Transcription** — OpenAI, Groq, Mistral, and Qwen with model selection
 - **Text Enhancement** — Post-process transcriptions with GPT, Claude, Gemini, Groq, Qwen, or any model via OpenRouter
 - **Auto-Paste** — Transcribed text is automatically pasted into the active window, including [CLI tools](#paste-anywhere--including-cli-tools)
+- **Live dictation (Beta)** — stream text into your focused window as you speak, with OpenAI Realtime or Qwen3-ASR-Flash-Realtime
 - **Custom Dictionary** — Add names, jargon, and technical terms to improve accuracy
 - **Transcribe & Chat Modes** — Cleans up speech by default; say the agent name to switch to a conversational AI chatbot
 - **Hotkey Support** — Tap-to-toggle or push-to-talk activation modes

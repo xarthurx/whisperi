@@ -105,6 +105,7 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 |--------|---------|----------------|
 | **audio** | `audio/recorder.rs` | Device enumeration, recording lifecycle, sample-rate negotiation (16k → 44.1k → 48k → default), WAV encoding (16-bit PCM mono), audio-level events |
 | **transcription** | `transcription/whisper.rs`, `cloud.rs` | Local whisper.cpp sidecar invocation; cloud providers (OpenAI, Groq, Mistral, Qwen, OpenRouter) — multipart HTTP or multimodal chat completions |
+| **transcription/streaming** | `transcription/streaming/{mod.rs, audio_pump.rs, providers.rs, realtime_openai_compatible.rs}` | Live mode: WebSocket streaming ASR over the OpenAI Realtime API wire protocol. Online resampler + PCM16 encoder feeds 100ms audio chunks; `.completed` utterance events emit Tauri events for the frontend to type into the focused window. |
 | **reasoning** | `reasoning/openai.rs`, `anthropic.rs`, `gemini.rs` | AI text enhancement. OpenAI-compatible (OpenAI, Groq, Qwen, OpenRouter) via Chat Completions; Anthropic via Messages API; Gemini via Generative API |
 | **clipboard** | `clipboard/mod.rs` | Win32 clipboard get/set, foreground-window terminal detection, paste via `SendInput` with terminal-aware key combos |
 | **database** | `database/mod.rs`, `migrations.rs` | SQLite via rusqlite. Single `transcriptions` table. Auto-migrates on startup. `Mutex<Connection>` for thread safety |
@@ -178,6 +179,43 @@ Language codes from `languageRegistry.json` use locale format (`en-US`, `en-GB`)
         ↓
 9.  invoke("paste_text", { text })
     → Rust: clipboard write + terminal detection + SendInput
+```
+
+### Live Dictation Pipeline
+
+Live mode streams audio over WebSocket to a cloud ASR provider, typing utterances into the focused window as they complete:
+
+```
+1.  User presses hotkey with mode=live
+        ↓
+2.  useLiveDictation.start() snapshots foreground HWND
+        ↓
+3.  invoke("start_live_session", { provider, api_key, model, language })
+    → Rust opens WebSocket to provider
+    → Spawns audio pump tokio task; returns the new `session_id` (u64)
+        ↓
+4.  cpal feeds samples at 100ms ticks → pump online-resamples to provider rate, encodes PCM16, sends base64 over WS
+        ↓
+5.  WS receives `.completed` utterance events
+    → Tauri emits "live-utterance" {{ text, utterance_seq }} payload
+    → Frontend accumulates raw transcript locally and invokes invoke("type_text_chunk", { text })
+    → Rust simulates SendInput keystrokes (with sanitization), returns UTF-16 unit count typed
+    On error: Tauri emits "live-error" {{ message, kind }}; on natural close: "live-session-closed" (session_id)
+        ↓
+6.  User releases hotkey / clicks stop
+        ↓
+7.  invoke("stop_live_session", { session_id })  →  returns ()
+    → Rust signals cancel, runs ~800ms soft-flush (commit_utterance + drain), closes WS
+    → Final "live-utterance" events may arrive during the soft-flush; the frontend chains them onto its accumulator
+        ↓
+8.  Enhancement (optional):
+    Raw transcript → invoke("process_reasoning", ...) → enhanced version
+        ↓
+9.  If enhanced text differs from raw AND foreground HWND matches session snapshot:
+    invoke("swap_typed_text_cmd", { backspace_count, new_text })
+    → Backspace + retype the window's content
+        ↓
+10. invoke("save_transcription", { original: raw, processed: enhanced, method: "live", agent })
 ```
 
 ### Settings Flow

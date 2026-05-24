@@ -306,3 +306,88 @@ export async function getAgentAliases(): Promise<string[]> {
 export async function setAgentAliases(aliases: string[]): Promise<void> {
   return setSetting("agentAliases", aliases);
 }
+
+// ---- Live mode ----
+
+export interface LiveUtterancePayload {
+  text: string;
+  utterance_seq: number;
+}
+
+export interface LiveErrorPayload {
+  message: string;
+  kind: "AuthFailed" | "RateLimited" | "NetworkDrop" | "ServerError" | "MaxMessageExceeded" | "BadResponse";
+}
+
+export type SwapResult = "Swapped" | "SkippedFocusDrift" | "SkippedNoChange";
+
+export async function startLiveSession(args: {
+  providerId: string;
+  model: string;
+  language: string | null;
+  apiKey: string;
+  expectedHwnd: number | null;
+}): Promise<number> {
+  return invoke<number>("start_live_session", {
+    providerId: args.providerId,
+    model: args.model,
+    language: args.language,
+    apiKey: args.apiKey,
+    expectedHwnd: args.expectedHwnd,
+  });
+}
+
+export async function stopLiveSession(sessionId: number): Promise<void> {
+  await invoke("stop_live_session", { sessionId });
+}
+
+export async function cancelLiveSession(sessionId: number): Promise<void> {
+  await invoke("cancel_live_session", { sessionId });
+}
+
+export async function typeTextChunk(text: string): Promise<number> {
+  return invoke<number>("type_text_chunk", { text });
+}
+
+export async function swapTypedText(
+  backspaceCount: number,
+  newText: string,
+  expectedHwnd: number | null,
+): Promise<SwapResult> {
+  return invoke<SwapResult>("swap_typed_text_cmd", {
+    backspaceCount,
+    newText,
+    expectedHwnd,
+  });
+}
+
+export async function getForegroundWindow(): Promise<number> {
+  return invoke<number>("get_foreground_window");
+}
+
+export async function getForegroundWindowClass(): Promise<string | null> {
+  return invoke<string | null>("get_foreground_window_class");
+}
+
+export async function onLiveUtterance(
+  callback: (payload: LiveUtterancePayload) => void,
+): Promise<UnlistenFn> {
+  return listen<LiveUtterancePayload>("live-utterance", (e) => callback(e.payload));
+}
+
+export async function onLiveError(
+  callback: (payload: LiveErrorPayload) => void,
+): Promise<UnlistenFn> {
+  return listen<LiveErrorPayload>("live-error", (e) => callback(e.payload));
+}
+
+export async function onLiveSessionClosed(
+  callback: (sessionId: number) => void,
+): Promise<UnlistenFn> {
+  return listen<number>("live-session-closed", (e) => callback(e.payload));
+}
+
+// Settings change event
+export async function onSettingsChanged(callback: () => void): Promise<UnlistenFn> {
+  return listen("settings-changed", () => callback());
+}

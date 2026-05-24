@@ -5,7 +5,7 @@ mod database;
 pub(crate) mod http;
 mod models;
 mod reasoning;
-mod transcription;
+pub mod transcription;
 
 use tauri::Manager;
 use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder};
@@ -143,6 +143,14 @@ pub fn run() {
             // Initialize audio recording state
             app.manage(audio::RecordingState::new());
 
+            // Initialize live dictation session state. Wrap in Arc so the
+            // audio-pump task spawned in start_live_session can clone a handle
+            // for self-cleanup on exit (preventing HashMap leaks when a WS
+            // dies without an explicit stop/cancel command).
+            app.manage(std::sync::Arc::new(
+                crate::transcription::streaming::LiveSessionState::default(),
+            ));
+
             // Initialize database
             let app_handle = app.handle().clone();
             database::init(&app_handle)?;
@@ -235,6 +243,13 @@ pub fn run() {
             commands::app::quit_app,
             commands::app::show_settings,
             commands::changelog::read_changelog,
+            commands::live::start_live_session,
+            commands::live::stop_live_session,
+            commands::live::cancel_live_session,
+            commands::live::type_text_chunk,
+            commands::live::swap_typed_text_cmd,
+            commands::live::get_foreground_window,
+            commands::live::get_foreground_window_class,
         ])
         .run(tauri::generate_context!())
         .expect("error while running whisperi");

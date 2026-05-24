@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.7.0] - 2026-05-24
+
+### Highlights
+
+- Live mode — words appear in your focused window as you speak (Beta)
+- Auto-detects spoken language; works for any language the provider supports
+- Optional "Polish text on stop" can re-run AI enhancement on the full transcript when you're done
+
+### Features
+
+- Live dictation mode: parallel pipeline alongside the existing Standard mode, streaming microphone audio over WebSocket to a cloud streaming-ASR provider and typing each utterance into the focused window via Win32 SendInput. Mode toggle lives in Settings → Transcription.
+- Two streaming providers in v0.7: OpenAI Realtime (`gpt-4o-mini-transcribe` via `?intent=transcription`, server VAD with 300 ms silence) and Qwen3-ASR-Flash-Realtime (DashScope, server VAD with 400 ms silence). Provider/model picker reuses existing `ProviderTabs` filtered to streaming-capable entries.
+- Per-mode "Polish text on stop" toggle (Settings → Transcription → Live). On stop, runs the existing AI enhancement on the concatenated raw transcript; if the result differs and the foreground window matches the session-start snapshot, the typed text is replaced via backspace + retype. Turn off for raw streaming-only output. When off, the AI Models tab is visibly disabled to make the dependency clear.
+- First-run per-provider consent modal explaining the continuous audio stream. Inline readiness banner shows exactly which config is missing (API key, consent) before you press the hotkey.
+- Live mode inherits the global hotkey and overlay click — no separate keybinding to learn.
+
+### Internal
+
+- New module: `src-tauri/src/transcription/streaming/` (StreamingTranscriber trait, audio pump with online resampler, OpenAI-Realtime-compatible WebSocket adapter, provider registry, session templates).
+- New Tauri commands: `start_live_session`, `stop_live_session`, `cancel_live_session`, `type_text_chunk`, `swap_typed_text_cmd`, `get_foreground_window`, `get_foreground_window_class`.
+- New deps: `tokio-tungstenite` (rustls-tls-webpki-roots), `url`, `uuid`, `async-trait`.
+- Security: SendInput input sanitization (C0/C1 strip, ANSI CSI escape strip, `\n`/`\r`/`\t` → space) so transcripts can't auto-execute commands. Foreground-HWND match check on the post-stop swap. WebSocket message cap at 1 MB.
+- Per-provider language is now optional — sending `None` causes the adapter to omit the field from session.update, matching Standard mode's auto-detect behaviour.
+- `useDictation` dispatcher returns whichever hook (Standard/Live) has an active session, so a mid-session mode-switch in Settings can't orphan the running session.
+- `LiveSessionState` lives in `Arc` so the spawned audio-pump task can clone a handle and self-remove from the registry on exit — prevents HashMap growth across WS-drop cycles.
+- Utterance handlers serialised via a `Promise<void>` chain so back-to-back `.completed` events can't race on the accumulated transcript or backspace counter.
+- Win32 keystroke count returned as UTF-16 code units (not codepoints) so the post-stop swap deletes correctly for supplementary-plane characters (emoji, rare CJK extension).
+- 25 new i18n keys across 9 locales.
+- No DB schema change; `processing_method="live"` is a new TEXT value.
+
 ## [0.6.11] - 2026-05-19
 
 ### Highlights

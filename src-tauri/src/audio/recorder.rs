@@ -98,6 +98,17 @@ impl RecordingState {
             Arc::clone(&self.recording_error),
         )
     }
+
+    /// Expose the samples buffer for Live mode's audio pump.
+    pub fn samples_buf(&self) -> Arc<Mutex<Vec<f32>>> {
+        Arc::clone(&self.samples)
+    }
+
+    /// Current cpal stream sample rate (the rate samples are produced at,
+    /// before any resample).
+    pub fn current_sample_rate(&self) -> u32 {
+        *self.sample_rate.lock().unwrap()
+    }
 }
 
 impl AudioRecorder {
@@ -504,6 +515,11 @@ fn encode_wav(samples: &[f32], sample_rate: u32) -> Result<Vec<u8>, AudioError> 
     }
 
     Ok(cursor.into_inner())
+}
+
+#[cfg(test)]
+pub(crate) fn resample_for_tests(samples: &[f32], from: u32, to: u32) -> Vec<f32> {
+    resample(samples, from, to)
 }
 
 #[cfg(test)]
