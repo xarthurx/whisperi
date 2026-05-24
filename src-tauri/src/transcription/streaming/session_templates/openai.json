@@ -1,0 +1,11 @@
+{
+  "type": "transcription_session.update",
+  "session": {
+    "input_audio_format": "pcm16",
+    "input_audio_transcription": {
+      "model": "{model}",
+      "language": "{language}"
+    },
+    "turn_detection": null
+  }
+}
