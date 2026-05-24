@@ -5,7 +5,7 @@ mod database;
 pub(crate) mod http;
 mod models;
 mod reasoning;
-mod transcription;
+pub mod transcription;
 
 use tauri::Manager;
 use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder};
