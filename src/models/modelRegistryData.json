@@ -165,8 +165,8 @@
     },
     {
       "id": "qwen",
-      "name": "Qwen (Alibaba)",
-      "baseUrl": "https://dashscope-intl.aliyuncs.com",
+      "name": "Qwen",
+      "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
       "models": [
         {
           "id": "qwen3-asr-flash-realtime",
