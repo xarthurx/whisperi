@@ -18,3 +18,9 @@
 - [ ] Clean up dead `"processing"` variant in `useLiveDictation.ts` `LivePhase` union (only `"polishing"` is ever set in Live mode).
 - [ ] Verify `Win32_System_Threading` Cargo feature is needed (added in Task 1 anticipating `AttachThreadInput`, but never used yet).
 - [ ] Add `Drop` impl on `LiveSessionState` to abort active task handles on app shutdown (prevents detached tokio tasks if app exits mid-session).
+- [ ] `useLiveDictation.ts` `Promise.race([enhance, timeout])` leaves the `setTimeout` running after enhance resolves — clear it on success to avoid stray unhandled-rejection warnings (and a duplicate timer under React StrictMode dev double-invoke).
+- [ ] `notifyError` in `DictationOverlay.tsx` is wrapped in `useCallback([t])`; every i18n language change rebinds it and tears down/re-subscribes all 5 Live event listeners. Move `t` inside via a ref so the callback identity is stable.
+- [ ] Replace `std::sync::Mutex` access on `samples_buf` in the audio-pump tokio task with `tokio::sync::Mutex` (or move the drain into `spawn_blocking`) — reduces executor jitter under cpal callback contention.
+- [ ] Skip `commit_utterance()` in the soft-flush path when the loop exited via error AND when the provider is `ServerVad` — currently it's always sent, generating a spurious "buffer too small" server error event that the drain loop silently discards.
+- [ ] Call `resampler.flush()` after the audio-pump main loop exits — currently the trailing interpolated sample is dropped (sub-ms audio loss; matters only on perfectly-aligned utterance-end boundaries).
+- [ ] In `useLiveDictation.ts` `subscribe()`, register each unlisten function into `unlistenRef.current` immediately after each `await` resolves instead of all-at-once at the end — if a later `await` rejects, earlier successfully-registered listeners are currently leaked.
