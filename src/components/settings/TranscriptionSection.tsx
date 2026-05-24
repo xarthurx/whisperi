@@ -75,14 +75,12 @@ export default function TranscriptionSection({ settings, update }: SectionProps)
       {/* Live mode controls */}
       {settings.dictationMode === "live" && (
         <div className="space-y-4">
-          <LiveProviderModelSelector
-            selectedProvider={settings.liveTranscriptionProvider ?? "openai"}
-            selectedModel={settings.liveTranscriptionModel ?? ""}
-            onProviderChange={(v) => update("liveTranscriptionProvider", v)}
-            onModelChange={(v) => update("liveTranscriptionModel", v)}
-          />
+          <LiveProviderModelSelector settings={settings} update={update} />
           <p className="text-xs text-text-tertiary">{t("transcription.live.description", "Live dictation streams audio directly to a provider for real-time transcription.")}</p>
-          <LiveConsentModal />
+          <LiveConsentModal
+            mode={settings.dictationMode}
+            provider={settings.liveTranscriptionProvider || "openai"}
+          />
         </div>
       )}
     </SettingsSection>

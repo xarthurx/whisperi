@@ -2,32 +2,39 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getSetting, setSetting } from "@/services/tauriApi";
 
+interface LiveConsentModalProps {
+  /** Current dictation mode — modal only triggers when "live". */
+  mode: "standard" | "live";
+  /** Active live-mode provider — consent is per-provider. */
+  provider: string;
+}
+
 /**
- * First-run consent modal — shown once per (Live provider) selection.
+ * First-run consent modal — shown when the user is in Live mode for a provider
+ * they have not yet consented to. Controlled by `mode`/`provider` props so it
+ * re-evaluates whenever those change (the older mount-only `useEffect` missed
+ * mode/provider switches that happened after the Settings window opened).
+ *
  * Settings store: `liveConsent.{provider}` boolean.
  */
-export function LiveConsentModal() {
+export function LiveConsentModal({ mode, provider }: LiveConsentModalProps) {
   const { t } = useTranslation();
   const [show, setShow] = useState(false);
-  const [provider, setProvider] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
-    async function check() {
-      const mode = await getSetting<string>("dictationMode");
-      if (mode !== "live") return;
-      const p = (await getSetting<string>("liveTranscriptionProvider")) ?? "openai";
-      const consented = await getSetting<boolean>(`liveConsent.${p}`);
-      if (!cancelled && !consented) {
-        setProvider(p);
-        setShow(true);
-      }
+    if (mode !== "live" || !provider) {
+      setShow(false);
+      return;
     }
-    check();
+    (async () => {
+      const consented = await getSetting<boolean>(`liveConsent.${provider}`);
+      if (!cancelled) setShow(!consented);
+    })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [mode, provider]);
 
   async function accept() {
     await setSetting(`liveConsent.${provider}`, true);

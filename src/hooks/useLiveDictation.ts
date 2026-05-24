@@ -18,6 +18,7 @@ import {
   getAgentName,
   getAgentAliases,
   getCustomDictionary,
+  showSettings,
   type LiveErrorPayload,
 } from "@/services/tauriApi";
 import { playStartSound, playStopSound } from "@/utils/sounds";
@@ -156,34 +157,40 @@ export function useLiveDictation({ onToast }: Options = {}) {
       totalCharsTypedRef.current = 0;
       terminalWarningShownRef.current = false;
 
-      // Pre-flight: provider + key + language
+      // Pre-flight: provider + key + language + consent.
+      //
+      // All four are *config* failures (not session-time errors). When any of
+      // them trips we ALSO open the Settings window so the user can fix it
+      // immediately — OS notifications are unreliable on Windows when
+      // permission was never granted, and silent toasts make the hotkey feel
+      // broken. Settings opening guarantees the user sees the problem.
+      const escalate = (title: string, description: string) => {
+        onToast?.({ title, description, variant: "destructive" });
+        void showSettings();
+      };
+
       const provider = await getSetting<string>("liveTranscriptionProvider");
       if (!provider) {
-        onToast?.({
-          title: "Live provider required",
-          description:
-            "Open Settings → Transcription to pick a Live provider.",
-          variant: "destructive",
-        });
+        escalate(
+          "Live provider required",
+          "Open Settings → Transcription to pick a Live provider.",
+        );
         return;
       }
       const apiKey = await getApiKey(provider);
       if (!apiKey) {
-        onToast?.({
-          title: "API key required",
-          description: `No API key for ${provider}. Open Settings → Other Tab to add one.`,
-          variant: "destructive",
-        });
+        escalate(
+          "API key required",
+          `Open Settings → Transcription to set the ${provider} API key.`,
+        );
         return;
       }
       const language = await getSetting<string>("preferredLanguage");
       if (language === "auto") {
-        onToast?.({
-          title: "Explicit language required",
-          description:
-            "Live mode needs an explicit output language. Open Settings → General to set one.",
-          variant: "destructive",
-        });
+        escalate(
+          "Explicit language required",
+          "Live mode needs an explicit output language. Open Settings → General.",
+        );
         return;
       }
 
@@ -191,11 +198,10 @@ export function useLiveDictation({ onToast }: Options = {}) {
       const consentKey = `liveConsent.${provider}`;
       const consented = await getSetting<boolean>(consentKey);
       if (!consented) {
-        onToast?.({
-          title: "Consent required",
-          description: `Open Settings → Transcription and confirm Live mode consent for ${provider}.`,
-          variant: "destructive",
-        });
+        escalate(
+          "Consent required",
+          `Open Settings → Transcription and confirm Live mode consent for ${provider}.`,
+        );
         return;
       }
 
