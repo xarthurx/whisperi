@@ -1,5 +1,12 @@
 use anyhow::Result;
 
+/// Errors specific to clipboard / keystroke injection.
+#[derive(Debug, thiserror::Error)]
+pub enum ClipError {
+    #[error("Foreground window is a terminal — Live mode does not type into terminals")]
+    TerminalFocusGuard,
+}
+
 /// Write text to clipboard, simulate paste into the focused application,
 /// then restore the original clipboard contents.
 pub fn paste_text(text: &str) -> Result<()> {
@@ -114,7 +121,7 @@ mod windows_clipboard {
 
 #[cfg(target_os = "windows")]
 mod windows_terminal {
-    use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+    use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow};
 
     /// Known terminal window class names on Windows.
     const TERMINAL_CLASSES: &[&str] = &[
@@ -151,6 +158,23 @@ mod windows_terminal {
                 .iter()
                 .any(|tc| class_str.eq_ignore_ascii_case(tc))
         }
+    }
+
+    /// Check if the current foreground window is a terminal/console class. Used as
+    /// a Live-mode safety guard — typing into terminals can execute shell commands
+    /// (`\nrm -rf ~\n`), so we refuse to type into them. The user is shown a toast.
+    pub fn is_foreground_window_terminal_class() -> bool {
+        let hwnd = unsafe { GetForegroundWindow() };
+        if hwnd.is_invalid() {
+            return false;
+        }
+        let mut buf = [0u16; 256];
+        let len = unsafe { GetClassNameW(hwnd, &mut buf) };
+        if len <= 0 {
+            return false;
+        }
+        let class = String::from_utf16_lossy(&buf[..len as usize]);
+        TERMINAL_CLASSES.iter().any(|tc| class.eq_ignore_ascii_case(tc))
     }
 }
 
@@ -220,6 +244,84 @@ mod windows_paste {
     }
 }
 
+#[cfg(target_os = "windows")]
+mod windows_keystrokes {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE,
+    };
+
+    pub fn send_text_keystrokes_inner(text: &str) -> usize {
+        let inputs = build_unicode_input_events(text);
+        unsafe {
+            SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
+        }
+        text.chars().count()
+    }
+
+    /// Build a vector of INPUT events (KEYDOWN+KEYUP pair per character) for a
+    /// string. Uses KEYEVENTF_UNICODE so the chars are injected directly without
+    /// going through the IME composition queue. Surrogate pairs are sent as two
+    /// separate events.
+    pub fn build_unicode_input_events(text: &str) -> Vec<INPUT> {
+        let mut inputs = Vec::with_capacity(text.encode_utf16().count() * 2);
+        for code_unit in text.encode_utf16() {
+            let down = INPUT {
+                r#type: INPUT_KEYBOARD,
+                Anonymous: INPUT_0 {
+                    ki: KEYBDINPUT {
+                        wVk: windows::Win32::UI::Input::KeyboardAndMouse::VIRTUAL_KEY(0),
+                        wScan: code_unit,
+                        dwFlags: KEYEVENTF_UNICODE,
+                        time: 0,
+                        dwExtraInfo: 0,
+                    },
+                },
+            };
+            let mut up = down;
+            // SAFETY: ki union variant was set in `down` above; we only update dwFlags
+            up.Anonymous.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+            inputs.push(down);
+            inputs.push(up);
+        }
+        inputs
+    }
+}
+
+/// Type `text` into the current foreground window via SendInput with
+/// KEYEVENTF_UNICODE. Returns the number of Unicode code points actually typed
+/// (post-sanitization). Refuses to type into terminal-class windows.
+pub fn send_text_keystrokes(text: &str) -> std::result::Result<usize, ClipError> {
+    #[cfg(target_os = "windows")]
+    {
+        if windows_terminal::is_foreground_window_terminal_class() {
+            return Err(ClipError::TerminalFocusGuard);
+        }
+        let sanitized = sanitize_for_send_input(text);
+        if sanitized.is_empty() {
+            return Ok(0);
+        }
+        Ok(windows_keystrokes::send_text_keystrokes_inner(&sanitized))
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = text;
+        Err(ClipError::TerminalFocusGuard) // unreachable on non-Windows but satisfies return type
+    }
+}
+
+/// Check if the current foreground window is a terminal/console class.
+pub fn is_foreground_window_terminal_class() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        windows_terminal::is_foreground_window_terminal_class()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        false
+    }
+}
+
 /// Sanitize text before it goes through SendInput. Strips control characters,
 /// ANSI escape sequences, and translates whitespace control chars to space.
 /// This prevents a malicious transcript from injecting shell commands or
@@ -255,6 +357,27 @@ pub fn sanitize_for_send_input(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn build_unicode_input_events_pair_per_char() {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{KEYEVENTF_KEYUP, KEYEVENTF_UNICODE};
+        let events = windows_keystrokes::build_unicode_input_events("ab");
+        assert_eq!(events.len(), 4); // 2 chars × (down + up)
+        assert_eq!(unsafe { events[0].Anonymous.ki.wScan }, b'a' as u16);
+        assert_eq!(unsafe { events[0].Anonymous.ki.dwFlags }, KEYEVENTF_UNICODE);
+        assert_eq!(
+            unsafe { events[1].Anonymous.ki.dwFlags },
+            KEYEVENTF_UNICODE | KEYEVENTF_KEYUP
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn build_unicode_input_events_handles_surrogate_pair() {
+        let events = windows_keystrokes::build_unicode_input_events("🎉"); // U+1F389, surrogate pair in UTF-16
+        assert_eq!(events.len(), 4); // 2 code units × 2 events
+    }
 
     #[test]
     fn sanitize_strips_c0_control_chars() {
