@@ -96,25 +96,35 @@
       "baseUrl": "https://api.openai.com/v1",
       "models": [
         {
+          "id": "gpt-realtime-whisper",
+          "name": "GPT Realtime Whisper",
+          "description": "Lowest-cost streaming transcription. 24 kHz audio. ($0.017/min)",
+          "streaming": true
+        },
+        {
           "id": "gpt-4o-mini-transcribe",
           "name": "GPT-4o Mini Transcribe",
-          "description": "Fast and accurate transcription"
+          "description": "Fast and accurate transcription",
+          "streaming": false
         },
         {
           "id": "gpt-4o-transcribe",
           "name": "GPT-4o Transcribe",
-          "description": "Most accurate transcription"
+          "description": "Most accurate transcription",
+          "streaming": false
         },
         {
           "id": "gpt-4o-transcribe-diarize",
           "name": "GPT-4o Transcribe + Diarize",
-          "description": "Transcription with speaker identification"
+          "description": "Transcription with speaker identification",
+          "streaming": false
         },
         {
           "id": "whisper-1",
           "name": "Whisper",
           "params": "1.5B",
-          "description": "Original Whisper model"
+          "description": "Original Whisper model",
+          "streaming": false
         }
       ]
     },
@@ -127,13 +137,15 @@
           "id": "whisper-large-v3-turbo",
           "name": "Whisper Large v3 Turbo",
           "params": "809M",
-          "description": "216x real-time, good balance of speed and quality"
+          "description": "216x real-time, good balance of speed and quality",
+          "streaming": false
         },
         {
           "id": "whisper-large-v3",
           "name": "Whisper Large v3",
           "params": "1.55B",
-          "description": "299x real-time, highest accuracy, multilingual"
+          "description": "299x real-time, highest accuracy, multilingual",
+          "streaming": false
         }
       ]
     },
@@ -146,19 +158,27 @@
           "id": "voxtral-mini-latest",
           "name": "Voxtral Mini",
           "params": "3B",
-          "description": "Fast multilingual transcription, 13 languages"
+          "description": "Fast multilingual transcription, 13 languages",
+          "streaming": false
         }
       ]
     },
     {
       "id": "qwen",
-      "name": "Qwen",
-      "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      "name": "Qwen (Alibaba)",
+      "baseUrl": "https://dashscope-intl.aliyuncs.com",
       "models": [
+        {
+          "id": "qwen3-asr-flash-realtime",
+          "name": "Qwen3-ASR-Flash Realtime",
+          "description": "Streaming ASR, 16 kHz audio. 30 langs + 22 Chinese dialects. (~$0.002/min)",
+          "streaming": true
+        },
         {
           "id": "qwen3-asr-flash",
           "name": "Qwen3 ASR Flash",
-          "description": "Fast multilingual ASR, excellent for CJK languages"
+          "description": "Fast multilingual ASR, excellent for CJK languages",
+          "streaming": false
         }
       ]
     },
