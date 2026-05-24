@@ -7,7 +7,7 @@ use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 
-use whisperi_lib::transcription::streaming::{SessionConfig, StreamingEvent, StreamingTranscriber};
+use whisperi_lib::transcription::streaming::{SessionConfig, StreamingEvent, StreamingTranscriber, ErrorKind};
 use whisperi_lib::transcription::streaming::realtime_openai_compatible::RealtimeOpenAiCompatibleClient;
 use whisperi_lib::transcription::streaming::providers::{ProviderConfig, AuthScheme, VadMode, OPENAI_REALTIME};
 
@@ -83,4 +83,86 @@ fn test_provider_for(addr: SocketAddr) -> &'static ProviderConfig {
         vad_mode: VadMode::ManualCommit,
         session_template: OPENAI_REALTIME.session_template,
     }))
+}
+
+#[tokio::test]
+async fn auth_failure_emits_auth_failed_error() {
+    let addr = mock_server(|mut ws| async move {
+        let _ = ws.next().await; // consume session.update
+        ws.send(Message::Text(
+            r#"{"type":"error","error":{"message":"bad key","code":"invalid_api_key"}}"#.to_string(),
+        ))
+        .await
+        .unwrap();
+    })
+    .await;
+
+    let mut client = RealtimeOpenAiCompatibleClient::new(test_provider_for(addr));
+    client
+        .open(SessionConfig {
+            provider_id: "test",
+            model: "test-model".to_string(),
+            language: Some("en".to_string()),
+            api_key: "sk-bad".to_string(),
+        })
+        .await
+        .unwrap();
+
+    let event = client.poll_event().await.unwrap().unwrap();
+    match event {
+        StreamingEvent::Error {
+            kind: ErrorKind::AuthFailed,
+            ..
+        } => {}
+        e => panic!("expected AuthFailed, got {:?}", e),
+    }
+}
+
+#[tokio::test]
+async fn server_close_propagates_error() {
+    let addr = mock_server(|mut ws| async move {
+        let _ = ws.next().await; // consume session.update
+        ws.send(Message::Close(None)).await.unwrap();
+    })
+    .await;
+
+    let mut client = RealtimeOpenAiCompatibleClient::new(test_provider_for(addr));
+    client
+        .open(SessionConfig {
+            provider_id: "test",
+            model: "test-model".to_string(),
+            language: Some("en".to_string()),
+            api_key: "sk-x".to_string(),
+        })
+        .await
+        .unwrap();
+
+    let result = client.poll_event().await;
+    assert!(result.is_err(), "expected error on server close");
+}
+
+#[tokio::test]
+async fn max_message_size_enforced() {
+    let addr = mock_server(|mut ws| async move {
+        let _ = ws.next().await;
+        // 2 MB string — exceeds 1 MB cap
+        let huge = "x".repeat(2 * 1024 * 1024);
+        let payload = format!(r#"{{"type":"junk","payload":"{}"}}"#, huge);
+        let _ = ws.send(Message::Text(payload.into())).await;
+    })
+    .await;
+
+    let mut client = RealtimeOpenAiCompatibleClient::new(test_provider_for(addr));
+    client
+        .open(SessionConfig {
+            provider_id: "test",
+            model: "test-model".to_string(),
+            language: Some("en".to_string()),
+            api_key: "sk-x".to_string(),
+        })
+        .await
+        .unwrap();
+
+    let result = client.poll_event().await;
+    assert!(result.is_err(), "expected error on oversize message");
 }
