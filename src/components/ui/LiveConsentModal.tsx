@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getSetting, setSetting } from "@/services/tauriApi";
+import { providerDisplayName } from "@/components/settings/providerHelpers";
 
 interface LiveConsentModalProps {
   /** Current dictation mode — modal only triggers when "live". */
@@ -43,19 +44,21 @@ export function LiveConsentModal({ mode, provider }: LiveConsentModalProps) {
 
   if (!show) return null;
 
+  const providerName = providerDisplayName(provider);
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-background border border-border rounded-control p-6 max-w-md space-y-4">
         <h2 className="text-lg font-semibold">
           {t("dictation.live.consent.title", {
-            defaultValue: `Enable Live Dictation`,
-            provider,
+            defaultValue: `Enable Live Dictation with ${providerName}`,
+            provider: providerName,
           })}
         </h2>
         <p className="text-sm text-text-secondary leading-relaxed">
           {t("dictation.live.consent.body", {
-            defaultValue: `Live dictation streams your audio directly to ${provider} in real-time for instant transcription. Your audio will be sent to their servers.`,
-            provider,
+            defaultValue: `Live dictation streams your audio directly to ${providerName} in real-time for instant transcription. Your audio will be sent to their servers.`,
+            provider: providerName,
           })}
         </p>
         <div className="flex gap-2 justify-end">

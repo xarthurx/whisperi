@@ -26,6 +26,7 @@ import {
 } from "@/services/tauriApi";
 import { playStartSound, playStopSound } from "@/utils/sounds";
 import modelRegistry from "@/models/modelRegistryData.json";
+import { providerDisplayName } from "@/components/settings/providerHelpers";
 
 interface RegistryProvider {
   id: string;
@@ -213,7 +214,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
       if (!apiKey) {
         escalate(
           "API key required",
-          `Open Settings → Transcription to set the ${provider} API key.`,
+          `Open Settings → Transcription to set the ${providerDisplayName(provider)} API key.`,
         );
         return;
       }
@@ -228,7 +229,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
       if (!consented) {
         escalate(
           "Consent required",
-          `Open Settings → Transcription and confirm Live mode consent for ${provider}.`,
+          `Open Settings → Transcription and confirm Live mode consent for ${providerDisplayName(provider)}.`,
         );
         return;
       }
