@@ -390,3 +390,8 @@ export async function onLiveSessionClosed(
 ): Promise<UnlistenFn> {
   return listen<number>("live-session-closed", (e) => callback(e.payload));
 }
+
+// Settings change event
+export async function onSettingsChanged(callback: () => void): Promise<UnlistenFn> {
+  return listen("settings-changed", () => callback());
+}

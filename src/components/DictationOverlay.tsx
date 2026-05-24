@@ -7,7 +7,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { Mic } from "lucide-react";
-import { useAudioRecording } from "@/hooks/useAudioRecording";
+import { useDictation } from "@/hooks/useDictation";
 import { useSettings } from "@/hooks/useSettings";
 import { useHotkey } from "@/hooks/useHotkey";
 import { LoadingDots } from "@/components/ui/LoadingDots";
@@ -21,7 +21,7 @@ function DictationOverlayInner() {
   }, [t]);
 
   const { phase, isRecording, isProcessing, audioLevel, start, stop, toggle, cancel } =
-    useAudioRecording({ onToast: notifyError });
+    useDictation({ onToast: notifyError });
 
   const { settings, loaded } = useSettings();
 
