@@ -112,12 +112,21 @@ export function useLiveDictation({ onToast }: Options = {}) {
             accumulatedRawRef.current += space + cleaned;
             totalCharsTypedRef.current += result.data + space.length;
           } else if (result.kind === "SkippedTerminalFocus") {
+            console.warn(
+              "[Live] terminal window focused — refusing to type (security guard). Switch focus to a non-terminal app.",
+            );
             if (!terminalWarningShownRef.current) {
               terminalWarningShownRef.current = true;
+              // Persist so the readiness banner makes the reason visible —
+              // OS notifications alone can be silently dropped on Windows.
+              void setSetting(
+                "liveLastError",
+                "Live mode refused to type into a terminal/console window (security guard against shell command injection). Switch focus to a non-terminal app to continue.",
+              );
               onToast?.({
-                title: "Live paused",
+                title: "Live paused (terminal focused)",
                 description:
-                  "Live mode does not type into terminal windows. Switch focus to enable.",
+                  "Live mode refuses to type into terminal windows to prevent shell command injection. Switch focus to your target app.",
                 variant: "destructive",
               });
             }
@@ -265,13 +274,18 @@ export function useLiveDictation({ onToast }: Options = {}) {
       targetHwndRef.current = hwnd;
       const targetClass = await getForegroundWindowClass();
 
-      console.log("[Live] starting cpal recording, deviceId =", deviceId);
+      // Pre-flight is done. Show recording UI IMMEDIATELY for snappy feedback.
+      // The slow cpal+WS work runs in the background. On failure we roll the
+      // phase back to idle.
       recordingStartRef.current = performance.now();
+      setPhase("recording");
+      console.log("[Live] starting cpal recording, deviceId =", deviceId);
       try {
         await apiStartRecording(deviceId);
         console.log("[Live] cpal started");
       } catch (e) {
         recordingStartRef.current = null;
+        setPhase("idle");
         await fail("Failed to start recording", String(e));
         return;
       }
@@ -324,7 +338,6 @@ export function useLiveDictation({ onToast }: Options = {}) {
         });
         sessionIdRef.current = sid;
         console.log("[Live] WS session opened, session_id =", sid);
-        setPhase("recording");
 
         // Sound + notification AFTER WS handshake succeeds
         const soundEnabled = await getSetting<boolean>("soundEnabled");
@@ -343,6 +356,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
         }
       } catch (e) {
         await apiStopRecording().catch(() => {});
+        setPhase("idle");
         await fail("Failed to open Live session", String(e));
       }
     },
