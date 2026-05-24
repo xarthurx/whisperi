@@ -1,1 +1,59 @@
+//! Streaming transcription — Live mode backend.
+//!
+//! `StreamingTranscriber` is the trait every realtime ASR backend implements.
+//! Two providers ship MVP: OpenAI Realtime (`gpt-realtime-whisper`) and
+//! Alibaba Qwen3-ASR-Flash-Realtime. Both speak the OpenAI Realtime API wire
+//! protocol so they share a single concrete implementation, parameterized by
+//! `ProviderConfig`.
+
 pub mod audio_pump;
+pub mod providers;
+pub mod realtime_openai_compatible;
+
+use async_trait::async_trait;
+use serde::Serialize;
+
+#[derive(Debug, Clone)]
+pub struct SessionConfig {
+    pub provider_id: &'static str,
+    pub model: String,
+    /// ISO 639-1 language code. Must NOT be "auto" — Live mode requires an
+    /// explicit language because OpenAI Realtime / Qwen Realtime don't expose
+    /// language ID, and the post-stop enhance step needs a resolved language.
+    pub language: Option<String>,
+    pub api_key: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub enum StreamingEvent {
+    UtteranceCompleted { text: String, utterance_seq: u32 },
+    Error { message: String, kind: ErrorKind },
+    SessionClosed,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub enum ErrorKind {
+    AuthFailed,
+    RateLimited,
+    NetworkDrop,
+    ServerError,
+    MaxMessageExceeded,
+    BadResponse,
+}
+
+#[async_trait]
+pub trait StreamingTranscriber: Send {
+    /// Open the WebSocket and send the initial `session.update`.
+    async fn open(&mut self, cfg: SessionConfig) -> anyhow::Result<()>;
+
+    /// Push 16-bit signed PCM at the provider's target sample rate.
+    async fn push_pcm16(&mut self, samples: &[i16]) -> anyhow::Result<()>;
+
+    /// Send `input_audio_buffer.commit` to flush any pending utterance.
+    /// Used for manual-commit providers (OpenAI gpt-realtime-whisper) and as
+    /// the soft-flush trigger on stop for all providers.
+    async fn commit_utterance(&mut self) -> anyhow::Result<()>;
+
+    /// Close the WebSocket cleanly.
+    async fn close(&mut self) -> anyhow::Result<()>;
+}
