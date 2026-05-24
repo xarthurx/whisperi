@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.7.0] - 2026-05-24
+
+### Highlights
+
+- Live mode — words appear in your focused window as you speak (Beta)
+- Choose between OpenAI Realtime (sub-second latency) and Qwen3-ASR-Flash-Realtime (cheaper, multilingual)
+- AI enhancement still runs at the end, replacing the typed text with a polished version
+
+### Features
+
+- Live dictation mode: parallel pipeline that streams microphone audio over WebSocket to a cloud streaming-ASR provider and types each utterance into the focused window via Win32 SendInput. Mode toggle lives in Settings → Transcription.
+- Two streaming providers MVP: OpenAI Realtime (`gpt-realtime-whisper`, 24 kHz, manual-commit VAD) and Qwen3-ASR-Flash-Realtime (16 kHz, server VAD, 400ms silence).
+- Post-stop AI enhancement: the concatenated raw transcript runs through the existing enhancement pipeline; if the result differs and the foreground window matches the session-start snapshot, the typed text is replaced via backspace + retype.
+
+### Internal
+
+- New module: `src-tauri/src/transcription/streaming/` (trait, audio pump, OpenAI-Realtime-compatible WS adapter, provider registry).
+- New Tauri commands: `start_live_session`, `stop_live_session`, `cancel_live_session`, `type_text_chunk`, `swap_typed_text_cmd`, `get_foreground_window`, `get_foreground_window_class`.
+- New deps: `tokio-tungstenite` (rustls), `url`, `uuid`, `async-trait`.
+- Security: SendInput input sanitization (C0/C1 strip, ANSI escape strip, `\n` → space), terminal-class focus guard, foreground-HWND match check on swap, 1 MB WebSocket message cap.
+- 25 new i18n keys across 9 locales.
+- No DB schema change; `processing_method="live"` is a new TEXT value.
+
 ## [0.6.11] - 2026-05-19
 
 ### Highlights
