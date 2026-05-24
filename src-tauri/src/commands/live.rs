@@ -196,18 +196,19 @@ pub async fn stop_live_session(
     session_id: u64,
 ) -> Result<(), String> {
     // Find and remove the handle, claiming ownership
-    let _handle = sessions
+    let handle = sessions
         .remove(session_id)
         .ok_or_else(|| format!("No active Live session with id {}", session_id))?;
 
     // Signal cancel. The spawned task's select! will pick this up on the next
     // iteration, break the main loop, and enter the soft-flush phase (commit_utterance,
     // drain events for 800ms, close).
-    let _ = _handle.cancel_tx.send(true);
+    let _ = handle.cancel_tx.send(true);
 
-    // Soft-flush outer bound: give the task up to 1.5s to finish its cancel sequence
-    // (commit, drain trailing .completed events, and close) before we return.
-    tokio::time::sleep(Duration::from_millis(1500)).await;
+    // Wait for the task to finish its cancel sequence, up to a 1.5s bound. Returns
+    // immediately on short utterances (typical case) rather than blocking the command
+    // for the full 1.5s.
+    let _ = tokio::time::timeout(Duration::from_millis(1500), handle.task).await;
 
     Ok(())
 }

@@ -12,6 +12,7 @@ import {
   getForegroundWindowClass,
   onLiveUtterance,
   onLiveError,
+  onLiveSessionClosed,
   getApiKey,
   getSetting,
   getAgentName,
@@ -124,11 +125,19 @@ export function useLiveDictation({ onToast }: Options = {}) {
         });
         setPhase("idle");
       });
+      // If the WS task exits cleanly (server-side close, soft-flush completed) without
+      // surfacing an error, the frontend would otherwise stay stuck in "recording".
+      // The handler runs setPhase("idle") only when we are not already mid-stop.
+      const unlistenClosed = await onLiveSessionClosed(() => {
+        if (cancelled) return;
+        setPhase((p) => (p === "recording" ? "idle" : p));
+      });
       if (!cancelled) {
-        unlistenRef.current = [unlistenUtt, unlistenErr];
+        unlistenRef.current = [unlistenUtt, unlistenErr, unlistenClosed];
       } else {
         unlistenUtt();
         unlistenErr();
+        unlistenClosed();
       }
     }
     subscribe();
@@ -282,7 +291,10 @@ export function useLiveDictation({ onToast }: Options = {}) {
     try {
       await apiStopRecording();
     } catch {
-      // ignore
+      // Expected in Live mode: the audio pump drains the cpal samples buffer
+      // incrementally, so by the time we get here the buffer may be empty and
+      // stop_recording returns NotRecording. The WAV bytes aren't needed in
+      // Live mode (audio went over WS); we just need the cpal thread joined.
     }
 
     const raw = accumulatedRawRef.current.trim();
