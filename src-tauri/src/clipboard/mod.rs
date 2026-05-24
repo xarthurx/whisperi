@@ -382,18 +382,6 @@ pub fn send_text_keystrokes(text: &str) -> std::result::Result<usize, ClipError>
     }
 }
 
-/// Check if the current foreground window is a terminal/console class.
-pub fn is_foreground_window_terminal_class() -> bool {
-    #[cfg(target_os = "windows")]
-    {
-        windows_terminal::is_foreground_window_terminal_class()
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        false
-    }
-}
-
 /// Replace the last `backspaces` typed characters in the focused window with
 /// `new_text`. Refuses to act if the foreground HWND has drifted from
 /// `expected_hwnd` — this is the central safety invariant of the post-stop
