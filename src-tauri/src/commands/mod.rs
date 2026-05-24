@@ -3,6 +3,7 @@ pub mod audio;
 pub mod changelog;
 pub mod clipboard;
 pub mod database;
+pub mod live;
 pub mod models;
 pub mod reasoning;
 pub mod settings;
