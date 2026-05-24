@@ -96,22 +96,16 @@
       "baseUrl": "https://api.openai.com/v1",
       "models": [
         {
-          "id": "gpt-realtime-whisper",
-          "name": "GPT Realtime Whisper",
-          "description": "Lowest-cost streaming transcription. 24 kHz audio. ($0.017/min)",
-          "streaming": true
-        },
-        {
           "id": "gpt-4o-mini-transcribe",
           "name": "GPT-4o Mini Transcribe",
-          "description": "Fast and accurate transcription",
-          "streaming": false
+          "description": "Streaming-friendly server VAD. Fastest + cheapest.",
+          "streaming": true
         },
         {
           "id": "gpt-4o-transcribe",
           "name": "GPT-4o Transcribe",
-          "description": "Most accurate transcription",
-          "streaming": false
+          "description": "Streaming-friendly server VAD. Highest accuracy.",
+          "streaming": true
         },
         {
           "id": "gpt-4o-transcribe-diarize",

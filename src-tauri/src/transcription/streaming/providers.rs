@@ -36,11 +36,16 @@ pub static OPENAI_REALTIME: ProviderConfig = ProviderConfig {
     id: "openai",
     display_name: "OpenAI Realtime",
     ws_url_template: "wss://api.openai.com/v1/realtime?intent=transcription",
-    default_model: "gpt-realtime-whisper",
+    // gpt-4o-mini-transcribe + server VAD is the streaming-friendly path:
+    // server detects utterance boundaries from silence and emits transcripts
+    // automatically. The previous `gpt-realtime-whisper` + ManualCommit setup
+    // accepts audio fine but never emits transcripts until commit, which
+    // breaks the "type as you speak" UX.
+    default_model: "gpt-4o-mini-transcribe",
     audio_sample_rate: 24_000,
     auth_scheme: AuthScheme::Bearer,
     extra_headers: &[],
-    vad_mode: VadMode::ManualCommit,
+    vad_mode: VadMode::ServerVad { silence_ms: 500 },
     session_template: include_str!("session_templates/openai.json"),
 };
 
@@ -72,7 +77,8 @@ mod tests {
     fn lookup_returns_openai_config() {
         let cfg = lookup("openai").unwrap();
         assert_eq!(cfg.audio_sample_rate, 24_000);
-        assert_eq!(cfg.vad_mode, VadMode::ManualCommit);
+        assert_eq!(cfg.default_model, "gpt-4o-mini-transcribe");
+        assert!(matches!(cfg.vad_mode, VadMode::ServerVad { silence_ms: 500 }));
     }
 
     #[test]
