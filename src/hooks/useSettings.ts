@@ -43,6 +43,10 @@ export interface Settings {
   dictationMode: "standard" | "live";
   liveTranscriptionProvider: string;
   liveTranscriptionModel: string;
+  /** If true, Live mode runs AI enhancement on the full transcript when you
+   *  stop, then backspaces what was typed and re-types the polished version.
+   *  If false, the live-typed text is left as-spoken (no post-stop snap). */
+  liveEnhancement: boolean;
   /** Last Live-mode failure message (cleared on successful start). Shown in
    *  the Live readiness banner so silent failures are visible. */
   liveLastError: string;
@@ -90,6 +94,7 @@ const DEFAULTS: Settings = {
   dictationMode: "standard",
   liveTranscriptionProvider: "openai",
   liveTranscriptionModel: "gpt-4o-mini-transcribe",
+  liveEnhancement: true,
   liveLastError: "",
   selectedMicDeviceId: "",
   agentName: "Whisperi",
@@ -109,7 +114,7 @@ const DEFAULTS: Settings = {
 const STORE_KEYS = [
   "useLocalWhisper", "whisperModel", "preferredLanguage",
   "cloudTranscriptionProvider", "cloudTranscriptionModel",
-  "dictationMode", "liveTranscriptionProvider", "liveTranscriptionModel", "liveLastError",
+  "dictationMode", "liveTranscriptionProvider", "liveTranscriptionModel", "liveEnhancement", "liveLastError",
   "useReasoningModel", "reasoningModel", "reasoningProvider", "enhancementIntensity",
   "useCustomPrompt", "customSystemPrompt",
   "autoPaste", "soundEnabled", "dictationKey", "activationMode",

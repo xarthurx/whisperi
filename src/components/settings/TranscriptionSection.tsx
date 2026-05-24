@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { SettingsSection } from "@/components/ui/SettingsSection";
+import { SettingsSection, SettingsRow } from "@/components/ui/SettingsSection";
+import { Toggle } from "@/components/ui/toggle";
 import { getTranscriptionProviders } from "./providerHelpers";
 import ProviderModelSelector from "./ProviderModelSelector";
 import LiveProviderModelSelector from "./LiveProviderModelSelector";
@@ -76,6 +77,18 @@ export default function TranscriptionSection({ settings, update }: SectionProps)
       {settings.dictationMode === "live" && (
         <div className="space-y-4">
           <LiveProviderModelSelector settings={settings} update={update} />
+          <SettingsRow
+            label={t("transcription.live.enhancement.label", "Polish text on stop")}
+            description={t(
+              "transcription.live.enhancement.description",
+              "Re-run AI enhancement when you stop. Replaces the live-typed text with the polished version (visible backspace + retype). Turn off to leave words exactly as spoken.",
+            )}
+          >
+            <Toggle
+              checked={settings.liveEnhancement}
+              onChange={(v) => update("liveEnhancement", v)}
+            />
+          </SettingsRow>
           <p className="text-xs text-text-tertiary">{t("transcription.live.description", "Live dictation streams audio directly to a provider for real-time transcription.")}</p>
           <LiveConsentModal
             mode={settings.dictationMode}

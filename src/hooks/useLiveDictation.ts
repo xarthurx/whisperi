@@ -376,50 +376,54 @@ export function useLiveDictation({ onToast }: Options = {}) {
       }
 
       // Enhance with a hard timeout — a hung network call must NOT trap the
-      // button in polishing phase forever.
+      // button in polishing phase forever. Skipped entirely when the user
+      // has Live-mode enhancement turned off (no swap, no AI call, no cost).
       let enhanced = raw;
-      let agentName = "";
-      try {
-        const language = await getSetting<string>("preferredLanguage");
-        const [
-          dict, name, aliases, useLocal, whisperModel, cloudProvider, cloudModel,
-          useR, rModel, rProvider, intensity, autoPaste, useCustom, customPrompt, debugMode,
-        ] = await Promise.all([
-          getCustomDictionary(),
-          getAgentName(),
-          getAgentAliases(),
-          getSetting<boolean>("useLocalWhisper"),
-          getSetting<string>("whisperModel"),
-          getSetting<string>("cloudTranscriptionProvider"),
-          getSetting<string>("cloudTranscriptionModel"),
-          getSetting<boolean>("useReasoningModel"),
-          getSetting<string>("reasoningModel"),
-          getSetting<string>("reasoningProvider"),
-          getSetting<EnhancementIntensity>("enhancementIntensity"),
-          getSetting<boolean>("autoPaste"),
-          getSetting<boolean>("useCustomPrompt"),
-          getSetting<string>("customSystemPrompt"),
-          getSetting<boolean>("debugMode"),
-        ]);
-        agentName = name;
-        const dictionary = buildTranscriptionDictionary(dict, name, aliases);
-        const settings: TranscriptionSettings = {
-          useLocal, whisperModel, cloudProvider, cloudModel, language, dictionary,
-          useReasoning: useR, reasoningModel: rModel, reasoningProvider: rProvider,
-          enhancementIntensity: intensity, autoPaste, useCustomPrompt: useCustom,
-          customSystemPrompt: customPrompt, agentName: name, agentAliases: aliases,
-          debugMode,
-        };
-        // 30s timeout on enhancement — Promise.race so a hung HTTP call doesn't trap us.
-        const enhancePromise = enhance(raw, settings, dictionary, language ?? null);
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("enhance() timed out after 30s")), 30_000),
-        );
-        const result = await Promise.race([enhancePromise, timeoutPromise]);
-        enhanced = result.finalText;
-      } catch (e) {
-        console.error("[Live] enhance failed/timed out:", e);
-        // Fall through with enhanced = raw; user's typed text is preserved.
+      let agentName = await getAgentName();
+      const liveEnhancement = await getSetting<boolean>("liveEnhancement");
+      const skipEnhancement = liveEnhancement === false;
+      if (skipEnhancement) {
+        console.log("[Live] enhancement skipped — liveEnhancement=false");
+      } else {
+        try {
+          const language = await getSetting<string>("preferredLanguage");
+          const [
+            dict, aliases, useLocal, whisperModel, cloudProvider, cloudModel,
+            useR, rModel, rProvider, intensity, autoPaste, useCustom, customPrompt, debugMode,
+          ] = await Promise.all([
+            getCustomDictionary(),
+            getAgentAliases(),
+            getSetting<boolean>("useLocalWhisper"),
+            getSetting<string>("whisperModel"),
+            getSetting<string>("cloudTranscriptionProvider"),
+            getSetting<string>("cloudTranscriptionModel"),
+            getSetting<boolean>("useReasoningModel"),
+            getSetting<string>("reasoningModel"),
+            getSetting<string>("reasoningProvider"),
+            getSetting<EnhancementIntensity>("enhancementIntensity"),
+            getSetting<boolean>("autoPaste"),
+            getSetting<boolean>("useCustomPrompt"),
+            getSetting<string>("customSystemPrompt"),
+            getSetting<boolean>("debugMode"),
+          ]);
+          const dictionary = buildTranscriptionDictionary(dict, agentName, aliases);
+          const settings: TranscriptionSettings = {
+            useLocal, whisperModel, cloudProvider, cloudModel, language, dictionary,
+            useReasoning: useR, reasoningModel: rModel, reasoningProvider: rProvider,
+            enhancementIntensity: intensity, autoPaste, useCustomPrompt: useCustom,
+            customSystemPrompt: customPrompt, agentName, agentAliases: aliases,
+            debugMode,
+          };
+          const enhancePromise = enhance(raw, settings, dictionary, language ?? null);
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("enhance() timed out after 30s")), 30_000),
+          );
+          const result = await Promise.race([enhancePromise, timeoutPromise]);
+          enhanced = result.finalText;
+        } catch (e) {
+          console.error("[Live] enhance failed/timed out:", e);
+          // Fall through with enhanced = raw; user's typed text is preserved.
+        }
       }
 
       // Swap if enhanced differs
