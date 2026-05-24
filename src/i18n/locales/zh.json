@@ -58,6 +58,17 @@
   "transcription.live.model": "实时模型",
   "transcription.live.description": "实时模式将麦克风音频实时传输至 {{provider}}，边说边把文字输入到当前窗口。停止后 AI 会对完整文本进行润色。",
   "transcription.live.apiKeyRequired": "需要 API 密钥 — 在设置 → 其他选项卡中添加",
+  "transcription.live.enhancement.label": "停止时润色文本",
+  "transcription.live.enhancement.description": "停止时重新运行 AI 增强。将实时输入的文本替换为润色版本（可见退格 + 重新输入）。关闭以保持原话不变。",
+  "transcription.live.missing.apiKey": "API 密钥",
+  "transcription.live.missing.consent": "同意（此部分将出现对话框）",
+  "transcription.live.lastError.title": "上次 Live 尝试失败",
+  "transcription.live.lastError.dismiss": "关闭",
+  "transcription.live.ready": "✓ Live 模式就绪 — 按下听写快捷键开始。",
+  "transcription.live.notReady": "Live 模式尚未就绪。请配置：",
+
+  "enhancement.disabledByLive.title": "增强已被绕过",
+  "enhancement.disabledByLive.body": "您处于 Live 模式且\"停止时润色文本\"已关闭，因此这些设置不会应用于任何会话。在转录中重新启用切换，或切换到标准模式以使用它们。",
 
   "enhancement.title": "AI 增强",
   "enhancement.description": "使用 AI 推理模型对转录结果进行后处理",

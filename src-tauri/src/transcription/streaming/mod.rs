@@ -1,10 +1,10 @@
 //! Streaming transcription — Live mode backend.
 //!
 //! `StreamingTranscriber` is the trait every realtime ASR backend implements.
-//! Two providers ship MVP: OpenAI Realtime (`gpt-realtime-whisper`) and
-//! Alibaba Qwen3-ASR-Flash-Realtime. Both speak the OpenAI Realtime API wire
-//! protocol so they share a single concrete implementation, parameterized by
-//! `ProviderConfig`.
+//! Two providers ship MVP: OpenAI Realtime (`gpt-4o-mini-transcribe` /
+//! `gpt-4o-transcribe`) and Alibaba Qwen3-ASR-Flash-Realtime. Both speak the
+//! OpenAI Realtime API wire protocol so they share a single concrete
+//! implementation, parameterized by `ProviderConfig`.
 
 pub mod audio_pump;
 pub mod providers;
@@ -17,9 +17,11 @@ use serde::Serialize;
 pub struct SessionConfig {
     pub provider_id: &'static str,
     pub model: String,
-    /// ISO 639-1 language code. Must NOT be "auto" — Live mode requires an
-    /// explicit language because OpenAI Realtime / Qwen Realtime don't expose
-    /// language ID, and the post-stop enhance step needs a resolved language.
+    /// ISO 639-1 language code, or `None` to auto-detect. When `None`, the
+    /// adapter omits the `language` field from `session.update` so the provider
+    /// detects the language itself (matches Standard mode's auto-detect
+    /// behaviour). `start_live_session` normalizes "auto"/empty to `None`
+    /// before constructing this struct.
     pub language: Option<String>,
     pub api_key: String,
 }

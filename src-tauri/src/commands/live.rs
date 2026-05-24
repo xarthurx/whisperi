@@ -127,23 +127,16 @@ pub async fn start_live_session(
     let task = tokio::spawn(async move {
         let mut resampler = OnlineResampler::new(device_sample_rate, target_sample_rate);
         let mut tick = tokio::time::interval(Duration::from_millis(100));
-        // Keep ~5 samples of trailing context in the cpal buffer for resampler continuity
-        const TAIL_KEEP: usize = 5;
-        let mut last_pulled = 0usize;
 
         loop {
             tokio::select! {
                 _ = tick.tick() => {
-                    let chunk = {
+                    // Drain the full shared buffer each tick. OnlineResampler holds its
+                    // own trailing-sample / src_offset state for cross-chunk continuity,
+                    // so we don't need to retain any samples in the cpal buffer.
+                    let chunk: Vec<f32> = {
                         let mut buf = samples_buf.lock().unwrap();
-                        if buf.len() > last_pulled + TAIL_KEEP {
-                            let upto = buf.len() - TAIL_KEEP;
-                            let v: Vec<f32> = buf[last_pulled..upto].to_vec();
-                            // Live-mode-only drain to keep buffer bounded
-                            buf.drain(..upto);
-                            last_pulled = 0;
-                            v
-                        } else { Vec::new() }
+                        if buf.is_empty() { Vec::new() } else { buf.drain(..).collect() }
                     };
                     if !chunk.is_empty() {
                         let resampled = resampler.process(&chunk);
@@ -243,11 +236,20 @@ pub async fn stop_live_session(
     // Wait for the task to finish its cancel sequence, up to a 1.5s bound. Returns
     // immediately on short utterances (typical case) rather than blocking the command
     // for the full 1.5s.
+    //
+    // Capture an AbortHandle BEFORE moving the JoinHandle into `timeout`. If timeout
+    // elapses, the JoinHandle is dropped, which by itself only detaches the task and
+    // leaves the audio pump / WS loop running. Call abort() on the surviving handle
+    // so the task is actually cancelled.
+    let abort_handle = handle.task.abort_handle();
     let result = tokio::time::timeout(Duration::from_millis(1500), handle.task).await;
-    log::info!(
-        "[Live] stop_live_session: task join result = {}",
-        if result.is_ok() { "done" } else { "timeout" }
-    );
+    match result {
+        Ok(_) => log::info!("[Live] stop_live_session: task joined cleanly"),
+        Err(_) => {
+            log::warn!("[Live] stop_live_session: task timed out after 1500ms; aborting");
+            abort_handle.abort();
+        }
+    }
 
     Ok(())
 }
@@ -265,8 +267,17 @@ pub async fn cancel_live_session(
     // Await the task with a bound so the user can't rapid-fire start/cancel
     // and produce two concurrent audio pumps racing on the shared samples_buf.
     // The task's main loop polls cancel_rx on every ~100ms tick, then runs the
-    // 800ms soft-flush; ~1000ms is enough headroom.
-    let _ = tokio::time::timeout(Duration::from_millis(1000), handle.task).await;
+    // 800ms soft-flush; ~1000ms is enough headroom. Capture an AbortHandle BEFORE
+    // moving the JoinHandle so we can actually cancel the task on timeout — a
+    // dropped JoinHandle alone just detaches.
+    let abort_handle = handle.task.abort_handle();
+    if tokio::time::timeout(Duration::from_millis(1000), handle.task)
+        .await
+        .is_err()
+    {
+        log::warn!("[Live] cancel_live_session: task timed out after 1000ms; aborting");
+        abort_handle.abort();
+    }
     Ok(())
 }
 

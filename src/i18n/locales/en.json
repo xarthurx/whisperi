@@ -58,6 +58,17 @@
   "transcription.live.model": "Live model",
   "transcription.live.description": "Live mode streams your microphone audio to {{provider}} while typing each utterance into your focused window. The full transcript is polished by AI after you stop.",
   "transcription.live.apiKeyRequired": "API key required — open Settings → Other Tab to add one",
+  "transcription.live.enhancement.label": "Polish text on stop",
+  "transcription.live.enhancement.description": "Re-run AI enhancement when you stop. Replaces the live-typed text with the polished version (visible backspace + retype). Turn off to leave words exactly as spoken.",
+  "transcription.live.missing.apiKey": "API key",
+  "transcription.live.missing.consent": "Consent (a dialog will appear in this section)",
+  "transcription.live.lastError.title": "Last Live attempt failed",
+  "transcription.live.lastError.dismiss": "Dismiss",
+  "transcription.live.ready": "✓ Live mode ready — press your dictation hotkey to start.",
+  "transcription.live.notReady": "Live mode is not ready yet. Configure:",
+
+  "enhancement.disabledByLive.title": "Enhancement is bypassed",
+  "enhancement.disabledByLive.body": "You're in Live mode with \"Polish text on stop\" turned off, so these settings don't run on any session. Turn the toggle back on in Transcription, or switch to Standard mode, to use them.",
 
   "enhancement.title": "AI Enhancement",
   "enhancement.description": "Post-process transcriptions with an AI reasoning model",

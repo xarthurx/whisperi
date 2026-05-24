@@ -103,6 +103,22 @@ export function useLiveDictation({ onToast }: Options = {}) {
 
   useEffect(() => {
     let cancelled = false;
+    /** Centralised cleanup for remote-initiated session termination
+     *  (`live-error`, `live-session-closed`, cpal `recording-error`). Without
+     *  this the React state would flip to "idle" but `sessionIdRef.current`
+     *  would stay non-null (gating subsequent events as stale) and the cpal
+     *  recording thread would keep running — leaking the mic and blocking
+     *  the next start. */
+    const cleanupAfterRemoteEnd = async () => {
+      sessionIdRef.current = null;
+      recordingStartRef.current = null;
+      setAudioLevel(0);
+      try {
+        await apiStopRecording();
+      } catch {
+        // cpal may already be stopped (e.g. the error path); ignore.
+      }
+    };
     async function subscribe() {
       const unlistenUtt = await onLiveUtterance((payload) => {
         // Chain handlers sequentially — Tauri's listen() doesn't await async
@@ -155,13 +171,19 @@ export function useLiveDictation({ onToast }: Options = {}) {
         });
         void showSettings();
         setPhase("idle");
+        void cleanupAfterRemoteEnd();
       });
       // If the WS task exits cleanly (server-side close, soft-flush completed) without
       // surfacing an error, the frontend would otherwise stay stuck in "recording".
       // The handler runs setPhase("idle") only when we are not already mid-stop.
       const unlistenClosed = await onLiveSessionClosed(() => {
         if (cancelled) return;
+        // Only run the recording→idle cleanup if we still own an active session.
+        // The normal stop() path clears sessionIdRef before this fires (and may
+        // be in polishing phase); skipping then avoids a double-stop of cpal.
+        if (sessionIdRef.current === null) return;
         setPhase((p) => (p === "recording" ? "idle" : p));
+        void cleanupAfterRemoteEnd();
       });
       // Live mode shares cpal with Standard mode — subscribe to audio-level
       // so the overlay's mic ring pulses while Live mode is recording.
@@ -184,6 +206,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
           variant: "destructive",
         });
         setPhase("idle");
+        void cleanupAfterRemoteEnd();
       });
       if (!cancelled) {
         unlistenRef.current = [

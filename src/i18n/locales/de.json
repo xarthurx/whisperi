@@ -58,6 +58,17 @@
   "transcription.live.model": "Live-Modell",
   "transcription.live.description": "Im Live-Modus wird Ihr Mikrofonton kontinuierlich an {{provider}} übertragen und jede Äußerung direkt in das aktive Fenster eingegeben. Nach dem Stoppen wird das Transkript per KI verbessert.",
   "transcription.live.apiKeyRequired": "API-Schlüssel erforderlich — Einstellungen → Anderer Tab",
+  "transcription.live.enhancement.label": "Text nach dem Stoppen verfeinern",
+  "transcription.live.enhancement.description": "Wendet KI-Verbesserung nach dem Stoppen erneut an. Ersetzt den live eingegebenen Text durch die verfeinerte Version (sichtbares Löschen + erneutes Eingeben). Deaktivieren, um die Wörter genau wie gesprochen zu belassen.",
+  "transcription.live.missing.apiKey": "API-Schlüssel",
+  "transcription.live.missing.consent": "Einverständnis (ein Dialog erscheint in diesem Abschnitt)",
+  "transcription.live.lastError.title": "Letzter Live-Versuch fehlgeschlagen",
+  "transcription.live.lastError.dismiss": "Schließen",
+  "transcription.live.ready": "✓ Live-Modus bereit — drücken Sie Ihre Diktat-Tastenkombination zum Starten.",
+  "transcription.live.notReady": "Live-Modus ist noch nicht bereit. Konfigurieren Sie:",
+
+  "enhancement.disabledByLive.title": "Verbesserung wird umgangen",
+  "enhancement.disabledByLive.body": "Sie befinden sich im Live-Modus mit deaktivierter Option „Text nach dem Stoppen verfeinern“, daher gelten diese Einstellungen für keine Sitzung. Aktivieren Sie die Option wieder in Transkription oder wechseln Sie in den Standard-Modus, um sie zu verwenden.",
 
   "enhancement.title": "KI-Verbesserung",
   "enhancement.description": "Transkriptionen mit einem KI-Modell nachbearbeiten",

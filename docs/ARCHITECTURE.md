@@ -192,21 +192,21 @@ Live mode streams audio over WebSocket to a cloud ASR provider, typing utterance
         ↓
 3.  invoke("start_live_session", { provider, api_key, model, language })
     → Rust opens WebSocket to provider
-    → Spawns audio pump tokio task
-    → Emits "live-session-started" event
+    → Spawns audio pump tokio task; returns the new `session_id` (u64)
         ↓
 4.  cpal feeds samples at 100ms ticks → pump online-resamples to provider rate, encodes PCM16, sends base64 over WS
         ↓
 5.  WS receives `.completed` utterance events
-    → Tauri emits "live-utterance" event with text
-    → Frontend invokes invoke("type_text_chunk", { text })
-    → Rust simulates SendInput keystrokes (with sanitization)
+    → Tauri emits "live-utterance" {{ text, utterance_seq }} payload
+    → Frontend accumulates raw transcript locally and invokes invoke("type_text_chunk", { text })
+    → Rust simulates SendInput keystrokes (with sanitization), returns UTF-16 unit count typed
+    On error: Tauri emits "live-error" {{ message, kind }}; on natural close: "live-session-closed" (session_id)
         ↓
 6.  User releases hotkey / clicks stop
         ↓
-7.  invoke("stop_live_session")
-    → Rust closes WS with 1.5s soft flush (drain buffer)
-    → Returns concatenated raw transcript + final utterance list
+7.  invoke("stop_live_session", { session_id })  →  returns ()
+    → Rust signals cancel, runs ~800ms soft-flush (commit_utterance + drain), closes WS
+    → Final "live-utterance" events may arrive during the soft-flush; the frontend chains them onto its accumulator
         ↓
 8.  Enhancement (optional):
     Raw transcript → invoke("process_reasoning", ...) → enhanced version

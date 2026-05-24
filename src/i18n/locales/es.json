@@ -58,6 +58,17 @@
   "transcription.live.model": "Modelo en vivo",
   "transcription.live.description": "El modo en vivo transmite el audio del micrófono a {{provider}} mientras escribe cada enunciado en su ventana activa. La transcripción completa es mejorada por la IA al detener.",
   "transcription.live.apiKeyRequired": "Se requiere clave API — abra Configuración → Otra pestaña para agregar una",
+  "transcription.live.enhancement.label": "Pulir texto al detener",
+  "transcription.live.enhancement.description": "Vuelve a ejecutar la mejora con IA al detener. Reemplaza el texto escrito en vivo por la versión pulida (retroceso + reescritura visible). Desactívelo para dejar las palabras exactamente como se pronunciaron.",
+  "transcription.live.missing.apiKey": "Clave API",
+  "transcription.live.missing.consent": "Consentimiento (aparecerá un diálogo en esta sección)",
+  "transcription.live.lastError.title": "Último intento Live falló",
+  "transcription.live.lastError.dismiss": "Descartar",
+  "transcription.live.ready": "✓ Modo Live listo — presione su atajo de dictado para comenzar.",
+  "transcription.live.notReady": "El modo Live aún no está listo. Configure:",
+
+  "enhancement.disabledByLive.title": "La mejora está omitida",
+  "enhancement.disabledByLive.body": "Está en modo Live con \"Pulir texto al detener\" desactivado, por lo que estos ajustes no se ejecutan en ninguna sesión. Vuelva a activar el conmutador en Transcripción, o cambie al modo Estándar, para usarlos.",
 
   "enhancement.title": "Mejora con IA",
   "enhancement.description": "Postprocesar transcripciones con un modelo de razonamiento IA",

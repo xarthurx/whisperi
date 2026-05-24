@@ -21,16 +21,15 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
       {enhancementBypassed && (
         <div className="pointer-events-auto text-xs rounded-control border border-warning/40 bg-warning/10 p-3 mb-3">
           <div className="text-warning font-medium">
-            {t(
-              "enhancement.disabledByLive.title",
-              "Enhancement is bypassed",
-            )}
+            {t("enhancement.disabledByLive.title", {
+              defaultValue: "Enhancement is bypassed",
+            })}
           </div>
           <div className="text-text-secondary mt-1">
-            {t(
-              "enhancement.disabledByLive.body",
-              "You're in Live mode with \"Polish text on stop\" turned off, so these settings don't run on any session. Turn the toggle back on in Transcription, or switch to Standard mode, to use them.",
-            )}
+            {t("enhancement.disabledByLive.body", {
+              defaultValue:
+                'You\'re in Live mode with "Polish text on stop" turned off, so these settings don\'t run on any session. Turn the toggle back on in Transcription, or switch to Standard mode, to use them.',
+            })}
           </div>
         </div>
       )}

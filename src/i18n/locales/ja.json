@@ -58,6 +58,17 @@
   "transcription.live.model": "ライブモデル",
   "transcription.live.description": "ライブモードでは、マイク音声を {{provider}} にストリーミングしながら、各発話をアクティブウィンドウに入力します。停止後、AI が全体のテキストを改善します。",
   "transcription.live.apiKeyRequired": "API キーが必要です — 設定 → その他タブで追加してください",
+  "transcription.live.enhancement.label": "停止時にテキストを整形",
+  "transcription.live.enhancement.description": "停止時に AI 改善を再実行します。ライブ入力されたテキストを整形版に置き換えます（バックスペース + 再入力が表示されます）。話した通りに残すにはオフにしてください。",
+  "transcription.live.missing.apiKey": "API キー",
+  "transcription.live.missing.consent": "同意（このセクションにダイアログが表示されます）",
+  "transcription.live.lastError.title": "最後のライブ試行に失敗",
+  "transcription.live.lastError.dismiss": "閉じる",
+  "transcription.live.ready": "✓ ライブモード準備完了 — 開始するにはディクテーションのショートカットを押してください。",
+  "transcription.live.notReady": "ライブモードはまだ準備できていません。以下を設定してください：",
+
+  "enhancement.disabledByLive.title": "改善がスキップされます",
+  "enhancement.disabledByLive.body": "ライブモードで「停止時にテキストを整形」がオフのため、これらの設定はどのセッションでも実行されません。「文字起こし」で再度オンにするか、標準モードに切り替えてください。",
 
   "enhancement.title": "AI 拡張",
   "enhancement.description": "AI 推論モデルで文字起こし結果を後処理する",

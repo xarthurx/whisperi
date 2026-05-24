@@ -343,11 +343,17 @@ mod windows_keystrokes {
 }
 
 /// Type `text` into the current foreground window via SendInput with
-/// KEYEVENTF_UNICODE. Returns the number of Unicode code points actually typed
-/// (post-sanitization). Sanitization strips control chars, ANSI escapes, and
-/// converts `\n`/`\r`/`\t` to space — so a malicious transcript cannot inject
-/// a newline that would auto-execute a shell command. Even in a terminal,
-/// the user must press Enter themselves to run anything typed.
+/// KEYEVENTF_UNICODE. Returns the number of UTF-16 code units actually typed
+/// (post-sanitization) — NOT codepoints. SendInput's KEYEVENTF_UNICODE
+/// generates one input event per UTF-16 unit, so each non-BMP codepoint
+/// (emoji, some CJK extensions) costs two units. Callers that need to undo
+/// the typed text via VK_BACK must use this UTF-16 count, since backspace also
+/// deletes one UTF-16 unit at a time (see `swap_typed_text`).
+///
+/// Sanitization strips control chars, ANSI escapes, and converts
+/// `\n`/`\r`/`\t` to space — so a malicious transcript cannot inject a newline
+/// that would auto-execute a shell command. Even in a terminal, the user must
+/// press Enter themselves to run anything typed.
 pub fn send_text_keystrokes(text: &str) -> usize {
     #[cfg(target_os = "windows")]
     {

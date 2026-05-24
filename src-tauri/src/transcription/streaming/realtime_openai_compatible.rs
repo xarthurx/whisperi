@@ -58,11 +58,20 @@ impl RealtimeOpenAiCompatibleClient {
         let msg = msg.context("ws read")?;
         match msg {
             Message::Text(text) => {
-                // INFO (was debug) — we want every server event visible in the
-                // dev terminal while Live mode stabilises.
+                // INFO: type + size only (no transcript content — that's user
+                // speech and shouldn't land in production logs).
+                // DEBUG: full payload (truncated at 600 bytes on a char boundary).
+                let evt_type = serde_json::from_str::<Value>(&text)
+                    .ok()
+                    .and_then(|v| v.get("type").and_then(|t| t.as_str()).map(str::to_string))
+                    .unwrap_or_else(|| "<unparseable>".into());
                 log::info!(
-                    "[Live] WS recv ({} bytes): {}",
+                    "[Live] WS recv type={} ({} bytes)",
+                    evt_type,
                     text.len(),
+                );
+                log::debug!(
+                    "[Live] WS recv payload: {}",
                     truncate_at_char_boundary(&text, 600),
                 );
                 Self::parse_event(&text, &mut self.utterance_seq)

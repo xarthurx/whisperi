@@ -58,6 +58,17 @@
   "transcription.live.model": "Modèle live",
   "transcription.live.description": "Le mode Live diffuse votre audio en continu vers {{provider}} tout en saisissant chaque énoncé dans votre fenêtre active. La transcription complète est améliorée par l'IA après l'arrêt.",
   "transcription.live.apiKeyRequired": "Clé API requise — ouvrez Paramètres → Autre onglet pour en ajouter une",
+  "transcription.live.enhancement.label": "Polir le texte à l'arrêt",
+  "transcription.live.enhancement.description": "Réexécute l'amélioration IA à l'arrêt. Remplace le texte saisi en direct par la version polie (retour arrière + ressaisie visible). Désactivez pour laisser les mots exactement comme prononcés.",
+  "transcription.live.missing.apiKey": "Clé API",
+  "transcription.live.missing.consent": "Consentement (une boîte de dialogue apparaîtra dans cette section)",
+  "transcription.live.lastError.title": "Dernière tentative Live échouée",
+  "transcription.live.lastError.dismiss": "Ignorer",
+  "transcription.live.ready": "✓ Mode Live prêt — appuyez sur votre raccourci de dictée pour commencer.",
+  "transcription.live.notReady": "Le mode Live n'est pas encore prêt. Configurez :",
+
+  "enhancement.disabledByLive.title": "L'amélioration est contournée",
+  "enhancement.disabledByLive.body": "Vous êtes en mode Live avec « Polir le texte à l'arrêt » désactivé, donc ces paramètres ne s'exécutent sur aucune session. Réactivez le bouton dans Transcription, ou basculez en mode Standard, pour les utiliser.",
 
   "enhancement.title": "Amélioration IA",
   "enhancement.description": "Post-traiter les transcriptions avec un modèle de raisonnement IA",

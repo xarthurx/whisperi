@@ -14,11 +14,11 @@ export default function TranscriptionSection({ settings, update }: SectionProps)
       {/* Mode toggle */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-text-secondary">
-          {t("transcription.mode.label", "Dictation Mode")}
+          {t("transcription.mode.label", { defaultValue: "Dictation Mode" })}
         </label>
         <div
           role="radiogroup"
-          aria-label={t("transcription.mode.label", "Dictation Mode")}
+          aria-label={t("transcription.mode.label", { defaultValue: "Dictation Mode" })}
           className="inline-flex bg-background-secondary p-1 rounded-control border border-border"
         >
           <button
@@ -31,7 +31,7 @@ export default function TranscriptionSection({ settings, update }: SectionProps)
                 : "text-text-secondary"
             }`}
           >
-            {t("transcription.mode.standard", "Standard")}
+            {t("transcription.mode.standard", { defaultValue: "Standard" })}
           </button>
           <button
             role="radio"
@@ -43,16 +43,20 @@ export default function TranscriptionSection({ settings, update }: SectionProps)
                 : "text-text-secondary"
             }`}
           >
-            {t("transcription.mode.live", "Live")}{" "}
+            {t("transcription.mode.live", { defaultValue: "Live" })}{" "}
             <span className="text-primary text-[11px]">
-              {t("transcription.mode.live.beta", "Beta")}
+              {t("transcription.mode.live.beta", { defaultValue: "Beta" })}
             </span>
           </button>
         </div>
         <p className="text-xs text-text-tertiary">
           {settings.dictationMode === "live"
-            ? t("transcription.mode.live.description", "Stream audio in real-time and see text as you speak.")
-            : t("transcription.mode.standard.description", "Record then transcribe — best accuracy.")}
+            ? t("transcription.mode.live.description", {
+                defaultValue: "Stream audio in real-time and see text as you speak.",
+              })
+            : t("transcription.mode.standard.description", {
+                defaultValue: "Record then transcribe — best accuracy.",
+              })}
         </p>
       </div>
 
@@ -78,18 +82,25 @@ export default function TranscriptionSection({ settings, update }: SectionProps)
         <div className="space-y-4">
           <LiveProviderModelSelector settings={settings} update={update} />
           <SettingsRow
-            label={t("transcription.live.enhancement.label", "Polish text on stop")}
-            description={t(
-              "transcription.live.enhancement.description",
-              "Re-run AI enhancement when you stop. Replaces the live-typed text with the polished version (visible backspace + retype). Turn off to leave words exactly as spoken.",
-            )}
+            label={t("transcription.live.enhancement.label", {
+              defaultValue: "Polish text on stop",
+            })}
+            description={t("transcription.live.enhancement.description", {
+              defaultValue:
+                "Re-run AI enhancement when you stop. Replaces the live-typed text with the polished version (visible backspace + retype). Turn off to leave words exactly as spoken.",
+            })}
           >
             <Toggle
               checked={settings.liveEnhancement}
               onChange={(v) => update("liveEnhancement", v)}
             />
           </SettingsRow>
-          <p className="text-xs text-text-tertiary">{t("transcription.live.description", "Live dictation streams audio directly to a provider for real-time transcription.")}</p>
+          <p className="text-xs text-text-tertiary">
+            {t("transcription.live.description", {
+              defaultValue:
+                "Live dictation streams audio directly to a provider for real-time transcription.",
+            })}
+          </p>
           <LiveConsentModal
             mode={settings.dictationMode}
             provider={settings.liveTranscriptionProvider || "openai"}

@@ -58,6 +58,17 @@
   "transcription.live.model": "Modelo ao vivo",
   "transcription.live.description": "O modo ao vivo transmite o áudio do microfone para {{provider}} enquanto digita cada enunciado na janela ativa. A transcrição completa é aprimorada pela IA após parar.",
   "transcription.live.apiKeyRequired": "Chave API necessária — abra Configurações → Outra aba para adicionar uma",
+  "transcription.live.enhancement.label": "Polir texto ao parar",
+  "transcription.live.enhancement.description": "Re-executa o aprimoramento de IA ao parar. Substitui o texto digitado ao vivo pela versão polida (backspace + nova digitação visíveis). Desative para deixar as palavras exatamente como faladas.",
+  "transcription.live.missing.apiKey": "Chave API",
+  "transcription.live.missing.consent": "Consentimento (uma caixa de diálogo aparecerá nesta seção)",
+  "transcription.live.lastError.title": "Última tentativa Live falhou",
+  "transcription.live.lastError.dismiss": "Dispensar",
+  "transcription.live.ready": "✓ Modo Live pronto — pressione seu atalho de ditado para começar.",
+  "transcription.live.notReady": "O modo Live ainda não está pronto. Configure:",
+
+  "enhancement.disabledByLive.title": "O aprimoramento está sendo ignorado",
+  "enhancement.disabledByLive.body": "Você está no modo Live com \"Polir texto ao parar\" desativado, então essas configurações não se aplicam a nenhuma sessão. Reative o botão em Transcrição, ou alterne para o modo Padrão, para usá-las.",
 
   "enhancement.title": "Aprimoramento com IA",
   "enhancement.description": "Pós-processar transcrições com um modelo de raciocínio IA",
