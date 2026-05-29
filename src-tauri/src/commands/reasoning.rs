@@ -12,12 +12,13 @@ pub async fn process_reasoning(
     temperature: Option<f64>,
     language: Option<String>,
 ) -> Result<String, String> {
-    let key_preview = if api_key.len() > 8 {
-        format!("{}...{}", &api_key[..4], &api_key[api_key.len()-4..])
-    } else {
-        "(too short)".to_string()
-    };
-    log::info!("[Whisperi] Enhancing: provider={}, model={}, key={}", provider, model, key_preview);
+    // Never log any part of the API key (see transcribe_cloud). Presence only.
+    log::info!(
+        "[Whisperi] Enhancing: provider={}, model={}, has_key={}",
+        provider,
+        model,
+        !api_key.is_empty()
+    );
 
     let req = ReasoningRequest {
         text,
