@@ -167,3 +167,67 @@ async fn max_message_size_enforced() {
     let result = client.poll_event().await;
     assert!(result.is_err(), "expected error on oversize message");
 }
+
+/// Soft-flush boundary (client side). When a Live session stops, the audio-pump
+/// task sends `input_audio_buffer.commit` and then drains trailing utterance
+/// events for up to ~800ms (commands/live.rs). The provider may finalise the
+/// last utterance a little AFTER the commit. This test pins the client-side
+/// behaviour that drain relies on: a delayed `.completed` arriving after the
+/// commit is still received by `poll_event()` and surfaces as the final
+/// utterance. (The 800ms drain / 1.5s join wall-clock timers live in the Tauri
+/// command and are not unit-testable here without a Tauri runtime.)
+#[tokio::test]
+async fn commit_then_delayed_completed_is_drained() {
+    let addr = mock_server(|mut ws| async move {
+        // Expect session.update first.
+        let msg = ws.next().await.unwrap().unwrap();
+        assert!(
+            msg.to_text().unwrap().contains("\"type\":\"session.update\""),
+            "got: {}",
+            msg.to_text().unwrap()
+        );
+        // Expect the soft-flush commit message.
+        let commit = ws.next().await.unwrap().unwrap();
+        let commit_txt = commit.to_text().unwrap();
+        assert!(
+            commit_txt.contains("\"type\":\"input_audio_buffer.commit\""),
+            "expected input_audio_buffer.commit, got: {}",
+            commit_txt
+        );
+        // Simulate provider finalisation latency, then send the trailing
+        // utterance — this is the event the soft-flush exists to capture.
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        ws.send(Message::Text(
+            r#"{"type":"conversation.item.input_audio_transcription.completed","transcript":"final words"}"#
+                .to_string(),
+        ))
+        .await
+        .unwrap();
+    })
+    .await;
+
+    let mut client = RealtimeOpenAiCompatibleClient::new(test_provider_for(addr));
+    client
+        .open(SessionConfig {
+            provider_id: "test",
+            model: "test-model".to_string(),
+            language: Some("en".to_string()),
+            api_key: "sk-fake".to_string(),
+        })
+        .await
+        .unwrap();
+
+    // Soft-flush sequence: commit, then drain the delayed trailing utterance.
+    client.commit_utterance().await.unwrap();
+    let event = client.poll_event().await.unwrap().unwrap();
+    match event {
+        StreamingEvent::UtteranceCompleted {
+            text,
+            utterance_seq,
+        } => {
+            assert_eq!(text, "final words");
+            assert_eq!(utterance_seq, 1);
+        }
+        e => panic!("expected trailing UtteranceCompleted, got {:?}", e),
+    }
+}

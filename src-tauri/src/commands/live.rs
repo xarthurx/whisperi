@@ -142,7 +142,7 @@ pub async fn start_live_session(
                         let resampled = resampler.process(&chunk);
                         let pcm = f32_to_pcm16(&resampled);
                         if let Err(e) = client.push_pcm16(&pcm).await {
-                            emit_error(&app_for_task, format!("audio push failed: {}", e), crate::transcription::streaming::ErrorKind::NetworkDrop);
+                            emit_error(&app_for_task, session_id, format!("audio push failed: {}", e), crate::transcription::streaming::ErrorKind::NetworkDrop);
                             break;
                         }
                     }
@@ -151,18 +151,19 @@ pub async fn start_live_session(
                     match evt {
                         Ok(Some(StreamingEvent::UtteranceCompleted { text, utterance_seq })) => {
                             let payload = serde_json::json!({
+                                "session_id": session_id,
                                 "text": text,
                                 "utterance_seq": utterance_seq,
                             });
                             let _ = app_for_task.emit("live-utterance", payload);
                         }
                         Ok(Some(StreamingEvent::Error { message, kind })) => {
-                            emit_error(&app_for_task, message, kind);
+                            emit_error(&app_for_task, session_id, message, kind);
                             break;
                         }
                         Ok(Some(StreamingEvent::SessionClosed)) | Ok(None) => {}
                         Err(e) => {
-                            emit_error(&app_for_task, format!("websocket: {}", e), crate::transcription::streaming::ErrorKind::NetworkDrop);
+                            emit_error(&app_for_task, session_id, format!("websocket: {}", e), crate::transcription::streaming::ErrorKind::NetworkDrop);
                             break;
                         }
                     }
@@ -188,6 +189,7 @@ pub async fn start_live_session(
                     match evt {
                         Ok(Some(StreamingEvent::UtteranceCompleted { text, utterance_seq })) => {
                             let _ = app_for_task.emit("live-utterance", serde_json::json!({
+                                "session_id": session_id,
                                 "text": text,
                                 "utterance_seq": utterance_seq,
                             }));
@@ -281,8 +283,14 @@ pub async fn cancel_live_session(
     Ok(())
 }
 
-fn emit_error(app: &AppHandle, message: String, kind: crate::transcription::streaming::ErrorKind) {
+fn emit_error(
+    app: &AppHandle,
+    session_id: u64,
+    message: String,
+    kind: crate::transcription::streaming::ErrorKind,
+) {
     let _ = app.emit("live-error", serde_json::json!({
+        "session_id": session_id,
         "message": message,
         "kind": kind,
     }));
