@@ -6,15 +6,18 @@
 
 - Live mode no longer drops the last few words you speak right before you stop
 - Fixed a rare case where quickly stopping and restarting Live mode could mix text from the previous session into the new one
+- Quitting the app mid-dictation now flushes your final words and closes the connection cleanly instead of cutting off abruptly
 
 ### Fixes
 
 - Fixed Live dictation losing the final utterance(s) of a session. `stop()` cleared the session id immediately after `stop_live_session` resolved, but Tauri delivers the trailing soft-flush `live-utterance` events on the webview event queue, which is **not** ordered with the `invoke()` reply (the WebView2 custom-protocol response). So those final events arrived after the session id was nulled and were silently discarded by the utterance handler's stale-event guard — the tail of the transcript never reached the focused window, the AI-polish swap, or the saved DB row. `stop()` now arms a waiter for the terminal `live-session-closed` event (emitted by the Rust task *after* every soft-flush utterance, on the same FIFO event queue), awaits it (with a 2.5 s safety timeout for the case where `stop_live_session` aborts the task and never emits it), drains the serialised utterance chain, and only **then** clears the session id and reads the transcript. The `live-session-closed` handler resolves an in-flight `stop()`'s waiter (keyed by session id) and skips its own remote-end cleanup so there is no double-stop of cpal.
 - Fixed cross-session event leakage in Live mode. The `live-utterance` and `live-error` Tauri events carried no session identity, so the frontend gated them only on "a session is active" (`sessionIdRef !== null`). A late event from a prior/aborted session (e.g. one whose `stop_live_session` hit its 1.5 s abort bound) could be delivered after a fast restart and be typed into — and counted against — the **new** session, corrupting its transcript accumulator and swap backspace count. Both payloads now include `session_id` (the task already owns it), and the utterance, error, and remote-end `live-session-closed` handlers compare it against the currently-owned session, dropping any event that doesn't match.
+- Added graceful shutdown for quit-while-Live. Previously, quitting (tray "Quit" / `quit_app`) called `app.exit(0)` with no session signalling: the audio-pump task + provider WebSocket were abandoned, the final utterance's soft-flush was skipped, and the socket was torn down abruptly. The app now runs via `Builder::build(..)?.run(|app, event| ..)` and, on `RunEvent::ExitRequested`, `block_on`s a new `LiveSessionState::shutdown()` that signals cancel to every active session and awaits its soft-flush within a bounded per-session timeout (1.5 s), aborting any that overrun. It's a no-op (instant) when no Live session is active, so normal quit is unaffected.
 
 ### Tests
 
 - Added `commit_then_delayed_completed_is_drained` to `src-tauri/tests/streaming_mock_ws.rs`: after the soft-flush sends `input_audio_buffer.commit`, a *delayed* trailing `.completed` utterance is still drained by `poll_event()` — pinning the client-side behaviour the stop-path soft-flush depends on. (The 800 ms drain / 1.5 s join wall-clock timers live in the Tauri command and aren't unit-testable without a Tauri runtime.)
+- Added three `LiveSessionState::shutdown()` unit tests in `transcription/streaming/mod.rs`: it cancels and drains an active session, aborts an unresponsive task within the bounded timeout (so quit can't hang), and is an immediate no-op when idle.
 
 ## [0.7.0] - 2026-05-24
 

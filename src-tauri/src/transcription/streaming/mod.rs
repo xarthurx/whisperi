@@ -102,4 +102,121 @@ impl LiveSessionState {
     pub fn expected_hwnd(&self, id: u64) -> Option<isize> {
         self.sessions.lock().unwrap().get(&id).and_then(|h| h.expected_hwnd)
     }
+
+    /// Best-effort graceful shutdown: signal every active session to cancel and
+    /// await its soft-flush (clean WebSocket close) within a bounded per-session
+    /// timeout, aborting any task that overruns. Called from the app's
+    /// `RunEvent::ExitRequested` handler so quitting mid-Live-session flushes the
+    /// trailing utterance and closes the provider socket cleanly instead of
+    /// abandoning a detached task. Returns immediately when no session is active.
+    pub async fn shutdown(&self, per_task_timeout: std::time::Duration) {
+        // Drain the handles out from under the lock, then release it before any
+        // `.await` — the sessions map is a std::sync::Mutex and must never be
+        // held across an await point.
+        let handles: Vec<LiveSessionHandle> = {
+            let mut map = self.sessions.lock().unwrap();
+            map.drain().map(|(_, handle)| handle).collect()
+        };
+        for handle in handles {
+            let _ = handle.cancel_tx.send(true);
+            let abort = handle.task.abort_handle();
+            if tokio::time::timeout(per_task_timeout, handle.task)
+                .await
+                .is_err()
+            {
+                // Task didn't finish its soft-flush in time; abort so we don't
+                // block process exit on a wedged WebSocket.
+                abort.abort();
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::time::Duration;
+
+    /// shutdown() must signal cancel to an active session, await its clean exit,
+    /// and drain it from the registry.
+    #[tokio::test]
+    async fn shutdown_signals_cancel_and_drains() {
+        let state = LiveSessionState::default();
+        let id = state.new_id();
+        let (cancel_tx, mut cancel_rx) = tokio::sync::watch::channel(false);
+        let saw_cancel = Arc::new(AtomicBool::new(false));
+        let saw_cancel_task = saw_cancel.clone();
+        // Mimics the pump loop: runs until cancel is signalled, then exits.
+        let task = tokio::spawn(async move {
+            let _ = cancel_rx.changed().await;
+            if *cancel_rx.borrow() {
+                saw_cancel_task.store(true, Ordering::SeqCst);
+            }
+        });
+        state.insert(
+            id,
+            LiveSessionHandle {
+                task,
+                cancel_tx,
+                expected_hwnd: Some(42),
+            },
+        );
+
+        state.shutdown(Duration::from_millis(1000)).await;
+
+        assert!(
+            saw_cancel.load(Ordering::SeqCst),
+            "task should have observed the cancel signal"
+        );
+        assert!(
+            state.remove(id).is_none(),
+            "session map should be drained after shutdown"
+        );
+    }
+
+    /// shutdown() must be bounded: a task that ignores cancel is aborted once the
+    /// per-task timeout elapses, so quit never hangs.
+    #[tokio::test]
+    async fn shutdown_aborts_unresponsive_session_within_timeout() {
+        let state = LiveSessionState::default();
+        let id = state.new_id();
+        // Keep the receiver alive but never react to cancel; the task hangs.
+        let (cancel_tx, _cancel_rx) = tokio::sync::watch::channel(false);
+        let task = tokio::spawn(std::future::pending::<()>());
+        state.insert(
+            id,
+            LiveSessionHandle {
+                task,
+                cancel_tx,
+                expected_hwnd: None,
+            },
+        );
+
+        let start = tokio::time::Instant::now();
+        state.shutdown(Duration::from_millis(150)).await;
+
+        assert!(
+            start.elapsed() < Duration::from_millis(1200),
+            "shutdown must be bounded by the per-task timeout, took {:?}",
+            start.elapsed()
+        );
+        assert!(
+            state.remove(id).is_none(),
+            "session map should be drained even when the task is aborted"
+        );
+    }
+
+    /// shutdown() on an idle registry is an immediate no-op (the common quit path).
+    #[tokio::test]
+    async fn shutdown_is_noop_when_no_sessions() {
+        let state = LiveSessionState::default();
+        let start = tokio::time::Instant::now();
+        state.shutdown(Duration::from_millis(1000)).await;
+        assert!(
+            start.elapsed() < Duration::from_millis(100),
+            "no-session shutdown should return immediately"
+        );
+    }
 }
