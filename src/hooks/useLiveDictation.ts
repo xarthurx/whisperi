@@ -100,6 +100,14 @@ export function useLiveDictation({ onToast }: Options = {}) {
    *  callback, so rapid back-to-back .completed events would otherwise run
    *  concurrently and race on accumulatedRawRef + totalCharsTypedRef. */
   const utteranceChainRef = useRef<Promise<void>>(Promise.resolve());
+  /** Resolvers for a `stop()` awaiting the terminal `live-session-closed`
+   *  event of a specific session. The Rust task emits `live-session-closed`
+   *  AFTER every trailing soft-flush `live-utterance`, and Tauri delivers them
+   *  on the same FIFO event-loop queue — so once the closed callback runs,
+   *  every soft-flush utterance callback has already run and enqueued its work
+   *  onto utteranceChainRef. Keyed by session_id so a stale session's close
+   *  can't resolve the wrong waiter. */
+  const closedWaitersRef = useRef<Map<number, () => void>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -128,7 +136,15 @@ export function useLiveDictation({ onToast }: Options = {}) {
           .catch(() => {}) // never let a prior failure break the chain
           .then(async () => {
             if (cancelled) return;
-            if (sessionIdRef.current === null) return; // stale event
+            // Drop events from a prior/aborted session: a late utterance whose
+            // IPC delivery lands after a fast restart must not be typed into,
+            // or counted against, the new session (it would corrupt the new
+            // accumulator + swap backspace count and inject the wrong text).
+            if (
+              sessionIdRef.current === null ||
+              payload.session_id !== sessionIdRef.current
+            )
+              return;
             const cleaned = sanitizeUtterance(payload.text);
             if (!cleaned) return;
             if (isDictionaryEcho(cleaned, dictionaryRef.current)) return;
@@ -154,9 +170,14 @@ export function useLiveDictation({ onToast }: Options = {}) {
       });
       const unlistenErr = await onLiveError((payload: LiveErrorPayload) => {
         if (cancelled) return;
-        // Only act when we own an active session — stale events from a
-        // task that's already self-exited shouldn't override fresh state.
-        if (sessionIdRef.current === null) return;
+        // Only act on errors for the session we currently own — stale events
+        // from a task that's already self-exited (or a prior session) must not
+        // override fresh state.
+        if (
+          sessionIdRef.current === null ||
+          payload.session_id !== sessionIdRef.current
+        )
+          return;
         console.warn("[Live] live-error event:", payload);
         sessionErrorRef.current = payload.message;
         // Persist + escalate so the readiness banner surfaces it.
@@ -176,12 +197,24 @@ export function useLiveDictation({ onToast }: Options = {}) {
       // If the WS task exits cleanly (server-side close, soft-flush completed) without
       // surfacing an error, the frontend would otherwise stay stuck in "recording".
       // The handler runs setPhase("idle") only when we are not already mid-stop.
-      const unlistenClosed = await onLiveSessionClosed(() => {
+      const unlistenClosed = await onLiveSessionClosed((closedId) => {
         if (cancelled) return;
-        // Only run the recording→idle cleanup if we still own an active session.
-        // The normal stop() path clears sessionIdRef before this fires (and may
-        // be in polishing phase); skipping then avoids a double-stop of cpal.
-        if (sessionIdRef.current === null) return;
+        // If a stop() is in flight for this session, it armed a waiter and owns
+        // the chain drain + cleanup. Resolve the waiter and do NOT run the
+        // remote-end cleanup below, which would double-stop cpal and null
+        // sessionIdRef out from under stop()'s pending drain.
+        const waiter = closedWaitersRef.current.get(closedId);
+        if (waiter) {
+          closedWaitersRef.current.delete(closedId);
+          waiter();
+          return;
+        }
+        // Remote-initiated end (server-side close, or pump error with no
+        // explicit stop). Only run the recording→idle cleanup if this close is
+        // for the session we currently own — a late close from a prior session
+        // must not tear down a freshly-started one.
+        if (sessionIdRef.current === null || closedId !== sessionIdRef.current)
+          return;
         setPhase((p) => (p === "recording" ? "idle" : p));
         void cleanupAfterRemoteEnd();
       });
@@ -409,13 +442,34 @@ export function useLiveDictation({ onToast }: Options = {}) {
       const soundEnabled = await getSetting<boolean>("soundEnabled");
       if (soundEnabled !== false) playStopSound();
 
-      if (sessionIdRef.current !== null) {
+      const sid = sessionIdRef.current;
+      // Arm a waiter for this session's terminal `live-session-closed` event
+      // BEFORE signalling stop. That event is emitted by the Rust task AFTER
+      // every trailing soft-flush `live-utterance`, on the SAME FIFO event-loop
+      // queue — so once its callback runs, every soft-flush utterance callback
+      // has already run and enqueued its work onto utteranceChainRef. The
+      // invoke() reply for stopLiveSession travels on a SEPARATE, unordered
+      // channel (the WebView2 custom-protocol response), so we must NOT rely on
+      // it to know the final utterance has arrived. The timeout guards the case
+      // where stop_live_session aborts the task (its 1.5s bound) and the closed
+      // event is therefore never emitted.
+      let awaitClosed: Promise<void> = Promise.resolve();
+      if (sid !== null) {
+        awaitClosed = new Promise<void>((resolve) => {
+          const timer = setTimeout(() => {
+            closedWaitersRef.current.delete(sid);
+            resolve();
+          }, 2500);
+          closedWaitersRef.current.set(sid, () => {
+            clearTimeout(timer);
+            resolve();
+          });
+        });
         try {
-          await stopLiveSession(sessionIdRef.current);
+          await stopLiveSession(sid);
         } catch (e) {
           console.warn("[Live] stopLiveSession failed:", e);
         }
-        sessionIdRef.current = null;
       }
       try {
         await apiStopRecording();
@@ -424,16 +478,20 @@ export function useLiveDictation({ onToast }: Options = {}) {
         // needed in Live mode; we only need the cpal thread joined.
       }
 
-      // Wait for any in-flight utterance handler in the chain to finish writing
-      // to accumulatedRawRef + totalCharsTypedRef before we read them. Without
-      // this, a .completed event that arrived during the soft-flush would be
-      // mid-typeTextChunk while stop() reads the refs → swap backspace count
-      // would be wrong and the trailing transcript would be missing.
+      // Wait for the terminal `live-session-closed` event (or the safety
+      // timeout), THEN drain the serialised utterance chain so the soft-flush
+      // handlers' writes to accumulatedRawRef + totalCharsTypedRef are visible.
+      // Only AFTER both do we stop accepting events by nulling sessionIdRef —
+      // clearing it earlier (the previous bug) let the utterance handler's
+      // null-guard silently drop trailing soft-flush utterances, losing the
+      // tail of the transcript from the screen, the swap, and the saved record.
+      await awaitClosed;
       try {
         await utteranceChainRef.current;
       } catch {
         // Chain rejections were already logged inside each handler.
       }
+      sessionIdRef.current = null;
 
       // Read the raw transcript AFTER draining. Use the unmodified
       // accumulator length (not .trim()) for the swap backspace count so we
@@ -534,7 +592,10 @@ export function useLiveDictation({ onToast }: Options = {}) {
     } finally {
       // ALWAYS return to idle so the button never gets stuck disabled, no
       // matter what failed or hung above. This is the single guarantee that
-      // keeps the hotkey/click responsive across sessions.
+      // keeps the hotkey/click responsive across sessions. Also clear
+      // sessionIdRef as a safety net in case an early throw skipped the
+      // post-drain null above (the happy path already cleared it).
+      sessionIdRef.current = null;
       setPhase("idle");
       setAudioLevel(0);
     }

@@ -251,6 +251,25 @@ pub fn run() {
             commands::live::get_foreground_window,
             commands::live::get_foreground_window_class,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running whisperi");
+        .build(tauri::generate_context!())
+        .expect("error while building whisperi")
+        .run(|app_handle, event| {
+            // On quit (tray "Quit", the quit_app command, or any exit request),
+            // flush an active Live session before the process exits: signal
+            // cancel and await the soft-flush so the provider WebSocket closes
+            // cleanly and the final utterance isn't lost to a detached task.
+            // Bounded so quit never hangs; a no-op when no session is active.
+            // `app.exit()` routes through the event loop and emits
+            // ExitRequested (it does not bypass to process::exit unless the
+            // request itself fails), so this handler reliably runs on quit.
+            if let tauri::RunEvent::ExitRequested { .. } = event {
+                let sessions = app_handle
+                    .state::<std::sync::Arc<crate::transcription::streaming::LiveSessionState>>()
+                    .inner()
+                    .clone();
+                tauri::async_runtime::block_on(
+                    sessions.shutdown(std::time::Duration::from_millis(1500)),
+                );
+            }
+        });
 }

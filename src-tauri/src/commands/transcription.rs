@@ -84,12 +84,14 @@ pub async fn transcribe_cloud(
     language: Option<String>,
     dictionary: Vec<String>,
 ) -> Result<TranscriptionResult, String> {
-    let key_preview = if api_key.len() > 8 {
-        format!("{}...{}", &api_key[..4], &api_key[api_key.len()-4..])
-    } else {
-        "(too short)".to_string()
-    };
-    log::info!("[Whisperi] Transcribing: provider={}, model={}, key={}", provider, model, key_preview);
+    // Never log any part of the API key — even a 4-char prefix/suffix can leak
+    // into shipped logs or bug reports. Log only whether a key is present.
+    log::info!(
+        "[Whisperi] Transcribing: provider={}, model={}, has_key={}",
+        provider,
+        model,
+        !api_key.is_empty()
+    );
 
     let language = normalize_language(language);
     let prompt = crate::transcription::build_prompt(&dictionary, language.as_deref());

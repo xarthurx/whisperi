@@ -310,11 +310,13 @@ export async function setAgentAliases(aliases: string[]): Promise<void> {
 // ---- Live mode ----
 
 export interface LiveUtterancePayload {
+  session_id: number;
   text: string;
   utterance_seq: number;
 }
 
 export interface LiveErrorPayload {
+  session_id: number;
   message: string;
   kind: "AuthFailed" | "RateLimited" | "NetworkDrop" | "ServerError" | "MaxMessageExceeded" | "BadResponse";
 }

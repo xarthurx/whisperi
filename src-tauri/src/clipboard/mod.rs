@@ -51,6 +51,35 @@ pub fn current_foreground_window_class() -> Option<String> {
     }
 }
 
+/// Window classes that must NEVER receive simulated keystrokes — credential
+/// prompts and the lock screen. Live mode types each utterance into whatever
+/// window currently has focus ("type where you look"), so if focus lands on one
+/// of these while dictating, the transcript (attacker-influenceable audio) must
+/// not be injected into it. Best-effort: this catches dedicated secure
+/// top-level windows, NOT in-app password fields (child controls with no
+/// distinguishing top-level class). Pairs with the deferred secure-window
+/// auto-pause work.
+const SECURE_WINDOW_CLASSES: &[&str] = &[
+    "Credential Dialog Xaml Host", // Windows credential / UAC-style credential prompt
+    "LockScreenControlsWindow",    // Windows lock screen
+];
+
+/// True if `class` is a known secure/credential window class.
+fn is_secure_window_class(class: &str) -> bool {
+    SECURE_WINDOW_CLASSES
+        .iter()
+        .any(|c| class.eq_ignore_ascii_case(c))
+}
+
+/// True if the current foreground window is a secure/credential window that
+/// must not receive simulated keystrokes.
+#[cfg(target_os = "windows")]
+fn is_secure_foreground_window() -> bool {
+    current_foreground_window_class()
+        .as_deref()
+        .is_some_and(is_secure_window_class)
+}
+
 /// Write text to clipboard, simulate paste into the focused application,
 /// then restore the original clipboard contents.
 pub fn paste_text(text: &str) -> Result<()> {
@@ -357,6 +386,16 @@ mod windows_keystrokes {
 pub fn send_text_keystrokes(text: &str) -> usize {
     #[cfg(target_os = "windows")]
     {
+        // Refuse to type if focus drifted onto a credential prompt or the lock
+        // screen mid-dictation — a transcript must never be injected into a
+        // password/secure field. Returning 0 keeps the frontend's typed-char
+        // counter in lockstep (it bails when charsTyped <= 0).
+        if is_secure_foreground_window() {
+            log::warn!(
+                "[Live] suppressing keystrokes: foreground window is a secure/credential dialog"
+            );
+            return 0;
+        }
         let sanitized = sanitize_for_send_input(text);
         if sanitized.is_empty() {
             return 0;
@@ -525,6 +564,18 @@ mod tests {
         // No HWND to match against — pass None
         let result = swap_typed_text(0, "", None);
         assert!(matches!(result, SwapResult::SkippedNoChange));
+    }
+
+    #[test]
+    fn secure_window_classes_are_detected() {
+        assert!(is_secure_window_class("Credential Dialog Xaml Host"));
+        assert!(is_secure_window_class("credential dialog xaml host")); // case-insensitive
+        assert!(is_secure_window_class("LockScreenControlsWindow"));
+        // Ordinary app / terminal windows must NOT be treated as secure,
+        // otherwise normal dictation would be silently suppressed.
+        assert!(!is_secure_window_class("CASCADIA_HOSTING_WINDOW_CLASS"));
+        assert!(!is_secure_window_class("Notepad"));
+        assert!(!is_secure_window_class(""));
     }
 
     // NOTE: testing the HWND-mismatch path requires a running window manager.
