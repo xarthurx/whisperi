@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.7.2] - 2026-05-30
+
+### Highlights
+
+- Fixed dictation coming out in **English** when the language is left on **Auto-detect** — speaking Chinese (or any non-English language) now transcribes in that language instead of being pushed toward English
+- This also fixes the "strange Chinese" you'd see with AI enhancement on: the enhancement step was quietly rewriting a mis-transcribed English first pass back into Chinese; with the first pass now correct, enhancement no longer has to paper over it
+- Fixed custom-dictionary words occasionally showing up in your transcript when you didn't say them — leftover "echoes" of your vocabulary list are now trimmed, while words you actually speak (and your assistant's name) are kept
+
+### Fixes
+
+- Fixed auto-detect transcription being biased toward English in Standard mode. The Whisper conditioning `prompt` (initial/preceding-context text) is meant to improve punctuation, but Whisper continues transcription in the *prompt's* language. `build_prompt` → `punctuation_prompt` fell through to an **English** sentence (`"Hello, how are you today? I'm fine, thank you! Let's begin."`) for the `auto`/unknown case (the default `preferredLanguage` is `"auto"`), so every auto-detect request sent Groq/OpenAI Whisper an English prompt with **no** `language` field — the only language signal in the request, biasing non-English audio (e.g. Chinese) toward English output. With AI enhancement on, the reasoning step (told the verbose_json-detected language `zh`) rewrote the result into "strange" Chinese, masking the broken first pass; with enhancement off the raw English was exposed. `punctuation_prompt` now returns `Option<&'static str>` — `None` for `auto`/unknown so **no** conditioning sentence is sent (the model's own language ID runs unbiased), while every explicit language (including `en`) keeps its native, language-appropriate conditioning prompt. Affects all standard prompt-receiving providers (openai, groq, mistral, openrouter) and local whisper.cpp. Live/streaming mode was never affected (it doesn't use a conditioning prompt).
+- `whisper.rs` now omits the `--prompt` flag entirely (rather than passing an empty value) when there is no conditioning prompt and no dictionary, so local whisper.cpp also runs unbiased in auto mode.
+- Fixed custom-dictionary words leaking into the transcript as Whisper "hotword echoes." The dictionary is sent to Whisper as part of the `prompt` to bias recognition, but on silence/short audio Whisper hallucinates those words into the output. The existing `strip_prompt_echo` only removed *full* echoes (every word is a prompt word) and a *whole-prompt prefix* echo — so a single dictionary word leaked at the start/middle/end, short utterances, and (critically) an echoed ASCII term embedded in CJK speech (no whitespace to tokenise on) all slipped through; worse, the dictionary sits at the *end* of the prompt while the prefix matcher anchored at the *start*, so it structurally never fired on a dictionary-only echo. Added `strip_dictionary_edge_echo`, which trims a contiguous run of pure-dictionary words at the leading and/or trailing edge of the output, but only when genuine (non-dictionary) speech remains, and **never** stripping the agent name/aliases (passed through separately as `agent_terms`) so chat-mode detection still sees the agent name. Interior dictionary words — far more likely to be genuinely spoken — are never touched. Applies to all standard providers and local whisper.cpp; the `transcribe_local`/`transcribe_cloud` commands (and their `tauriApi` wrappers) gained an `agent_terms` argument.
+- `build_prompt` now de-duplicates dictionary entries case-insensitively and drops blank entries, so there are fewer redundant hotwords for Whisper to echo and less of the prompt's limited token budget is wasted.
+
+### Tests
+
+- Reworked the `build_prompt` unit tests in `transcription/mod.rs`: auto/`None`/unknown language now yields an empty prompt (or dictionary-only when a dictionary is set), explicit `en` still yields the English conditioning prompt, and `zh` keeps its native prompt with the dictionary appended. Added `punctuation_prompt_*` and a dictionary-dedupe test.
+- Added 13 `strip_dictionary_edge_echo` tests in `transcription/cloud.rs` covering leading/trailing/both-edge stripping, interior-word preservation, agent-name survival at the edge (chat mode), the all-dictionary (silence) no-op, punctuation handling, and the CJK leading-echo case. 174 lib tests pass; `bun run typecheck` clean.
+
 ## [0.7.1] - 2026-05-29
 
 ### Highlights

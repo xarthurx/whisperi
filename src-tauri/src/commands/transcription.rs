@@ -51,6 +51,7 @@ pub async fn transcribe_local(
     model: String,
     language: Option<String>,
     dictionary: Vec<String>,
+    agent_terms: Vec<String>,
 ) -> Result<TranscriptionResult, String> {
     let file_name = format!("ggml-{}.bin", model);
     let language = normalize_language(language);
@@ -67,6 +68,8 @@ pub async fn transcribe_local(
     .str_err()?;
 
     let stripped = transcription::cloud::strip_prompt_echo(&output.text, Some(&full_prompt));
+    let stripped =
+        transcription::cloud::strip_dictionary_edge_echo(&stripped, &dictionary, &agent_terms);
     let effective = effective_language(language.as_deref(), output.detected_language.as_deref());
     let text = transcription::finalize_chinese_text(&stripped, effective.as_deref());
     Ok(TranscriptionResult {
@@ -83,6 +86,7 @@ pub async fn transcribe_cloud(
     model: String,
     language: Option<String>,
     dictionary: Vec<String>,
+    agent_terms: Vec<String>,
 ) -> Result<TranscriptionResult, String> {
     // Never log any part of the API key — even a 4-char prefix/suffix can leak
     // into shipped logs or bug reports. Log only whether a key is present.
@@ -150,6 +154,8 @@ pub async fn transcribe_cloud(
     };
 
     let stripped = transcription::cloud::strip_prompt_echo(&output.text, Some(prompt.as_str()));
+    let stripped =
+        transcription::cloud::strip_dictionary_edge_echo(&stripped, &dictionary, &agent_terms);
     let effective = effective_language(language.as_deref(), output.detected_language.as_deref());
     let text = transcription::finalize_chinese_text(&stripped, effective.as_deref());
     Ok(TranscriptionResult {

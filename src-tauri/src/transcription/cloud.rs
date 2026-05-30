@@ -110,6 +110,89 @@ pub fn strip_prompt_echo(text: &str, prompt: Option<&str>) -> String {
     trimmed.to_string()
 }
 
+/// Strip a contiguous run of pure-dictionary words at the leading and/or
+/// trailing edge of `text`.
+///
+/// Whisper hallucinates ("echoes") the hotword dictionary from its `prompt` on
+/// silence / very short audio, leaking dictionary terms that were never spoken
+/// into the output. [`strip_prompt_echo`] only removes the cases where the
+/// *entire* output is an echo (full echo, or the whole prompt echoed as a
+/// prefix); this handles the common real-world case of a few echoed dictionary
+/// words sitting next to genuine speech — including a leaked ASCII term in front
+/// of CJK speech, which `strip_prompt_echo`'s whitespace tokenisation can't see.
+///
+/// Conservative by design:
+/// - Only the leading and trailing edges are trimmed — an interior dictionary
+///   word is far more likely to be genuine speech and is never touched.
+/// - `keep_terms` (the agent name + aliases) are NEVER stripped, so a genuinely
+///   spoken agent invocation survives for chat-mode detection.
+/// - At least one non-dictionary word must remain; an all-dictionary output is
+///   left unchanged here (it's silence, owned by the full-echo / empty guards).
+pub fn strip_dictionary_edge_echo(
+    text: &str,
+    dictionary: &[String],
+    keep_terms: &[String],
+) -> String {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    // Words that may be stripped: dictionary tokens minus the keep terms.
+    let keep: std::collections::HashSet<String> =
+        keep_terms.iter().flat_map(|t| tokenize(t)).collect();
+    let strippable: std::collections::HashSet<String> = dictionary
+        .iter()
+        .flat_map(|d| tokenize(d))
+        .filter(|w| !keep.contains(w))
+        .collect();
+    if strippable.is_empty() {
+        return trimmed.to_string();
+    }
+
+    // A word is an echo candidate iff every alphanumeric token in it is a
+    // strippable dictionary token (so "Whisperi" and "Whisperi." both match, but
+    // a word that also carries non-dictionary content does not).
+    let is_echo = |w: &str| -> bool {
+        let toks = tokenize(w);
+        !toks.is_empty() && toks.iter().all(|t| strippable.contains(t))
+    };
+
+    let words: Vec<&str> = trimmed.split_whitespace().collect();
+    let n = words.len();
+
+    let mut start = 0;
+    while start < n && is_echo(words[start]) {
+        start += 1;
+    }
+    let mut end = n;
+    while end > start && is_echo(words[end - 1]) {
+        end -= 1;
+    }
+
+    // Nothing trimmed, or the whole output is dictionary words (silence — leave
+    // it to the full-echo / empty guards): return unchanged.
+    if (start == 0 && end == n) || start >= end {
+        return trimmed.to_string();
+    }
+
+    // words[start] and words[end - 1] are guaranteed non-echo (real speech).
+    let first = words[start];
+    let last = words[end - 1];
+    let begin = first.as_ptr() as usize - trimmed.as_ptr() as usize;
+    let finish = last.as_ptr() as usize - trimmed.as_ptr() as usize + last.len();
+    let result = trimmed[begin..finish].trim();
+    if result.is_empty() {
+        return trimmed.to_string();
+    }
+    log::info!(
+        "[Whisperi] Stripped dictionary edge echo (leading: \"{}\", trailing: \"{}\")",
+        trimmed[..begin].trim(),
+        trimmed[finish..].trim()
+    );
+    result.to_string()
+}
+
 /// Log transcription result, detecting silence (empty or dictionary echo).
 pub fn log_transcription_result(provider: &str, text: &str, prompt: Option<&str>) {
     let trimmed = text.trim();
@@ -550,5 +633,120 @@ mod tests {
             ),
             "Hello, I wanted to discuss the project timeline today."
         );
+    }
+
+    // --- strip_dictionary_edge_echo ---
+
+    #[test]
+    fn edge_echo_strips_leading_single_dict_word() {
+        let dict = vec!["Whisperi".to_string(), "Tauri".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("Whisperi can you summarize this", &dict, &[]),
+            "can you summarize this"
+        );
+    }
+
+    #[test]
+    fn edge_echo_strips_trailing_dict_word() {
+        let dict = vec!["Tauri".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("let us wrap up the demo Tauri", &dict, &[]),
+            "let us wrap up the demo"
+        );
+    }
+
+    #[test]
+    fn edge_echo_strips_both_edges() {
+        let dict = vec!["Whisperi".to_string(), "Tauri".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("Whisperi the build passed Tauri", &dict, &[]),
+            "the build passed"
+        );
+    }
+
+    #[test]
+    fn edge_echo_strips_multiple_leading_dict_words() {
+        let dict = vec!["Whisperi".to_string(), "Tauri".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("Whisperi Tauri the meeting is at three", &dict, &[]),
+            "the meeting is at three"
+        );
+    }
+
+    #[test]
+    fn edge_echo_keeps_interior_dict_word() {
+        // An interior dictionary word is likely genuine speech — never stripped.
+        let dict = vec!["Whisperi".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("please open the Whisperi settings", &dict, &[]),
+            "please open the Whisperi settings"
+        );
+    }
+
+    #[test]
+    fn edge_echo_never_strips_agent_name_at_edge() {
+        // The agent name is a dictionary word but must survive at the edge so
+        // chat-mode detection still fires; a non-agent dict word at the other
+        // edge is still stripped.
+        let dict = vec!["Whisperi".to_string(), "Tauri".to_string()];
+        let keep = vec!["Whisperi".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("Whisperi the build passed Tauri", &dict, &keep),
+            "Whisperi the build passed"
+        );
+    }
+
+    #[test]
+    fn edge_echo_all_dictionary_left_unchanged() {
+        // Whole output is dictionary words → silence; left for the full-echo /
+        // empty guards, not this edge stripper.
+        let dict = vec!["Whisperi".to_string(), "Tauri".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("Whisperi Tauri", &dict, &[]),
+            "Whisperi Tauri"
+        );
+    }
+
+    #[test]
+    fn edge_echo_no_dict_words_unchanged() {
+        let dict = vec!["Whisperi".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("hello world this is real", &dict, &[]),
+            "hello world this is real"
+        );
+    }
+
+    #[test]
+    fn edge_echo_empty_dictionary_unchanged() {
+        assert_eq!(
+            strip_dictionary_edge_echo("anything goes here", &[], &[]),
+            "anything goes here"
+        );
+    }
+
+    #[test]
+    fn edge_echo_strips_dict_word_with_trailing_punctuation() {
+        let dict = vec!["Whisperi".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("Whisperi. this is the real text", &dict, &[]),
+            "this is the real text"
+        );
+    }
+
+    #[test]
+    fn edge_echo_cjk_leading_english_dict_word() {
+        // The reported case: an echoed English dict word in front of Chinese
+        // speech, which strip_prompt_echo's tokeniser cannot catch.
+        let dict = vec!["Whisperi".to_string()];
+        assert_eq!(
+            strip_dictionary_edge_echo("Whisperi 我今天去商店买牛奶", &dict, &[]),
+            "我今天去商店买牛奶"
+        );
+    }
+
+    #[test]
+    fn edge_echo_empty_text() {
+        let dict = vec!["Whisperi".to_string()];
+        assert_eq!(strip_dictionary_edge_echo("   ", &dict, &[]), "");
     }
 }

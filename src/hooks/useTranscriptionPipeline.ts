@@ -122,12 +122,21 @@ export async function transcribe(
   settings: TranscriptionSettings,
   transcriptionDict: string[],
 ): Promise<TranscribeResult> {
+  // Agent name + aliases are part of the dictionary (for recognition biasing)
+  // but must never be stripped as an echo — chat-mode detection needs them to
+  // survive in the transcript. Pass them separately so the backend can exclude
+  // them from edge-echo stripping.
+  const agentTerms = [settings.agentName, ...settings.agentAliases].filter(
+    (w): w is string => !!w?.trim(),
+  );
+
   if (settings.useLocal) {
     const result = await transcribeLocal(
       audioData,
       settings.whisperModel ?? "base",
       settings.language ?? undefined,
       transcriptionDict,
+      agentTerms,
     );
     return { text: result.text, detectedLanguage: result.detected_language };
   }
@@ -148,6 +157,7 @@ export async function transcribe(
     model,
     settings.language ?? undefined,
     transcriptionDict,
+    agentTerms,
   );
   return { text: result.text, detectedLanguage: result.detected_language };
 }

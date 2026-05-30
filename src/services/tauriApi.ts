@@ -69,12 +69,16 @@ export async function transcribeLocal(
   model: string,
   language?: string,
   dictionary?: string[],
+  /** Agent name + aliases — kept in the dictionary for biasing but never
+   *  stripped as an echo, so chat-mode detection still sees the agent name. */
+  agentTerms?: string[],
 ): Promise<TranscriptionResult> {
   return invoke("transcribe_local", {
     audioData,
     model,
     language,
     dictionary: dictionary ?? [],
+    agentTerms: agentTerms ?? [],
   });
 }
 
@@ -85,6 +89,9 @@ export async function transcribeCloud(
   model: string,
   language?: string,
   dictionary?: string[],
+  /** Agent name + aliases — kept in the dictionary for biasing but never
+   *  stripped as an echo, so chat-mode detection still sees the agent name. */
+  agentTerms?: string[],
 ): Promise<TranscriptionResult> {
   return invoke("transcribe_cloud", {
     audioData,
@@ -93,6 +100,7 @@ export async function transcribeCloud(
     model,
     language,
     dictionary: dictionary ?? [],
+    agentTerms: agentTerms ?? [],
   });
 }
 

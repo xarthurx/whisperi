@@ -94,8 +94,13 @@ pub async fn transcribe(
         }
     }
 
-    args.push("--prompt".into());
-    args.push(prompt.to_string());
+    // Omit --prompt entirely when empty (auto-detect with no dictionary): an
+    // empty or English conditioning prompt would bias whisper.cpp's output
+    // language. See `build_prompt` / `punctuation_prompt`.
+    if !prompt.is_empty() {
+        args.push("--prompt".into());
+        args.push(prompt.to_string());
+    }
 
     // Execute whisper.cpp sidecar
     let output = app
