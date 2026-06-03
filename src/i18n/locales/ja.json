@@ -169,5 +169,17 @@
   "providerModel.recommended": "推奨",
   "providerModel.apiKeyLabel": "{{provider}} API キー",
   "providerModel.apiKeyHelp": "{{provider}} の API キーを入力",
-  "providerModel.apiKeyConfigured": "API キー設定済み"
+  "providerModel.apiKeyConfigured": "API キー設定済み",
+
+  "micWarning": {
+    "noDevice": {
+      "title": "マイクが検出されません",
+      "body": "Whisperi がマイクを見つけられなかったため、録音を開始できません。マイクを接続し、システムのサウンド設定で有効になっていることを確認してから、もう一度お試しください。"
+    },
+    "selectedMissing": {
+      "title": "マイクを使用できません",
+      "body": "選択されたマイク「{{device}}」を使用できません — 切断されている可能性があります。再接続するか、以下のオーディオ設定で別のマイクを選択してから、もう一度お試しください。"
+    },
+    "close": "閉じる"
+  }
 }

@@ -158,6 +158,18 @@
   "overlay.notification.liveStarted.title": "实时模式已激活",
   "overlay.notification.liveStarted.body": "正在输入到 {{app}}",
 
+  "micWarning": {
+    "noDevice": {
+      "title": "未检测到麦克风",
+      "body": "Whisperi 未能找到麦克风，因此无法开始录音。请连接一个麦克风，并确保它已在系统声音设置中启用，然后重试。"
+    },
+    "selectedMissing": {
+      "title": "麦克风不可用",
+      "body": "您所选的麦克风\"{{device}}\"不可用——可能已断开连接。请重新连接，或在下方的音频设置中选择其他麦克风，然后重试。"
+    },
+    "close": "关闭"
+  },
+
   "hotkey.listening": "请按下快捷键组合...",
   "hotkey.empty": "点击以设置快捷键...",
 

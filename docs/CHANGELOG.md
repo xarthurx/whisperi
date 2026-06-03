@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.3] - 2026-06-03
+
+### Highlights
+
+- When no microphone is available, Whisperi now shows a clear pop-up asking you to connect or check your microphone — instead of silently doing nothing when you press the dictation key
+- The same pop-up appears if the specific microphone you picked in Settings has been unplugged or is otherwise missing
+
+### Features
+
+- Added a microphone-availability warning shown as a dismiss-only modal in the Settings window. When recording fails to start, the frontend classifies the failure by querying `list_audio_devices` rather than parsing error strings: an empty/errored device list → "no microphone detected"; an attempted device absent from a non-empty list → "selected microphone unavailable". Only these two mic-availability cases open the modal; every other start error keeps the existing OS-notification behavior.
+- Cross-window surfacing reuses the loose-store-key pattern (as with `liveConsent.{provider}`): `micWarningKind`/`micWarningDevice` are written via `set_setting` plus an explicit `settings-changed` emit (the Rust `set_setting` command does not emit it), so an already-open Settings window updates reactively, while `show_settings()` covers the cold-open case. The flag is cleared on a successful start so an open modal auto-dismisses once a mic works again.
+- Wired into both Standard (`useAudioRecording`) and Live (`useLiveDictation`) start paths. A new self-contained `MicWarningModal` (modeled on `LiveConsentModal`) is rendered by `SettingsPanel`. New UI strings are localized across all 9 locales with the `{{device}}` placeholder preserved. No backend (Rust) changes — `useSettings` is intentionally untouched (the keys are loose, internal signals).
+- Out of scope by design: mid-recording disconnect handling, proactive startup checks, and in-modal remediation buttons (Open Sound Settings / Retry / device picker).
+
+### Notes
+
+- Verified with `bun run typecheck` and `bun run build` (tsc && vite build) green, plus `cargo check` clean (no Rust changes). Implemented via a multi-agent workflow (contracts + 9 locales → consumer wiring → build verification). Design spec: `docs/superpowers/specs/2026-06-03-no-microphone-warning-design.md`.
+
 ## [0.7.2] - 2026-05-30
 
 ### Highlights

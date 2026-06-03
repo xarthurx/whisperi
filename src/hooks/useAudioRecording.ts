@@ -10,6 +10,11 @@ import {
 } from "@/services/tauriApi";
 import { playStartSound, playStopSound } from "@/utils/sounds";
 import {
+  classifyStartFailure,
+  surfaceMicWarning,
+  clearMicWarning,
+} from "@/utils/micWarning";
+import {
   loadTranscriptionSettings,
   buildTranscriptionDictionary,
   transcribe,
@@ -99,15 +104,21 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       try {
         await apiStartRecording(deviceId);
         setPhase("recording");
+        void clearMicWarning();
         const soundEnabled = await getSetting<boolean>("soundEnabled");
         if (soundEnabled !== false) playStartSound();
       } catch (e) {
         recordingStartRef.current = null;
-        onToast?.({
-          title: "Failed to start recording",
-          description: String(e),
-          variant: "destructive",
-        });
+        const warning = await classifyStartFailure(deviceId);
+        if (warning) {
+          await surfaceMicWarning(warning);
+        } else {
+          onToast?.({
+            title: "Failed to start recording",
+            description: String(e),
+            variant: "destructive",
+          });
+        }
       }
     },
     [phase, onToast],

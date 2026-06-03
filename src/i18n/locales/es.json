@@ -169,5 +169,17 @@
   "providerModel.recommended": "Recomendado",
   "providerModel.apiKeyLabel": "Clave API de {{provider}}",
   "providerModel.apiKeyHelp": "Introduzca su clave API de {{provider}}",
-  "providerModel.apiKeyConfigured": "Clave API configurada"
+  "providerModel.apiKeyConfigured": "Clave API configurada",
+
+  "micWarning": {
+    "noDevice": {
+      "title": "No se detectó ningún micrófono",
+      "body": "Whisperi no pudo encontrar un micrófono, por lo que no se puede iniciar la grabación. Conecte un micrófono y asegúrese de que esté habilitado en la configuración de sonido del sistema, luego inténtelo de nuevo."
+    },
+    "selectedMissing": {
+      "title": "Micrófono no disponible",
+      "body": "El micrófono seleccionado «{{device}}» no está disponible — puede estar desconectado. Vuelva a conectarlo o elija otro micrófono en la configuración de audio a continuación, luego inténtelo de nuevo."
+    },
+    "close": "Cerrar"
+  }
 }

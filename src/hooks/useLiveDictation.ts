@@ -25,6 +25,7 @@ import {
   type LiveErrorPayload,
 } from "@/services/tauriApi";
 import { playStartSound, playStopSound } from "@/utils/sounds";
+import { classifyStartFailure, surfaceMicWarning, clearMicWarning } from "@/utils/micWarning";
 import modelRegistry from "@/models/modelRegistryData.json";
 import { providerDisplayName } from "@/components/settings/providerHelpers";
 
@@ -348,10 +349,16 @@ export function useLiveDictation({ onToast }: Options = {}) {
       try {
         await apiStartRecording(deviceId);
         console.log("[Live] cpal started");
+        void clearMicWarning();
       } catch (e) {
         recordingStartRef.current = null;
         setPhase("idle");
-        await fail("Failed to start recording", String(e));
+        const warning = await classifyStartFailure(deviceId);
+        if (warning) {
+          await surfaceMicWarning(warning);
+        } else {
+          await fail("Failed to start recording", String(e));
+        }
         return;
       }
 

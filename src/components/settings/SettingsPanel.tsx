@@ -19,6 +19,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
 import { readChangelog, getSetting, setSetting } from "@/services/tauriApi";
 import WhatsNewModal from "@/components/ui/WhatsNewModal";
+import MicWarningModal from "@/components/ui/MicWarningModal";
 import GeneralSection from "./GeneralSection";
 import TranscriptionSection from "./TranscriptionSection";
 import AIModelsSection from "./AIModelsSection";
@@ -207,6 +208,8 @@ function SettingsPanelInner() {
           }}
         />
       )}
+
+      <MicWarningModal />
     </div>
   );
 }

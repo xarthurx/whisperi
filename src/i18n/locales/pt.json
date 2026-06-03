@@ -158,6 +158,18 @@
   "overlay.notification.liveStarted.title": "Modo ao vivo ativo",
   "overlay.notification.liveStarted.body": "Digitando em {{app}}",
 
+  "micWarning": {
+    "noDevice": {
+      "title": "Nenhum microfone detectado",
+      "body": "O Whisperi não encontrou um microfone, então a gravação não pode começar. Conecte um microfone e verifique se ele está ativado nas configurações de som do sistema, depois tente novamente."
+    },
+    "selectedMissing": {
+      "title": "Microfone indisponível",
+      "body": "O microfone selecionado \"{{device}}\" não está disponível — pode estar desconectado. Reconecte-o, ou escolha outro microfone nas configurações de áudio abaixo, depois tente novamente."
+    },
+    "close": "Fechar"
+  },
+
   "hotkey.listening": "Pressione uma combinação de teclas...",
   "hotkey.empty": "Clique para definir o atalho...",
 

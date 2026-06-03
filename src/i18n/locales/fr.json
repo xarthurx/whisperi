@@ -169,5 +169,17 @@
   "providerModel.recommended": "Recommandé",
   "providerModel.apiKeyLabel": "Clé API {{provider}}",
   "providerModel.apiKeyHelp": "Entrez votre clé API {{provider}}",
-  "providerModel.apiKeyConfigured": "Clé API configurée"
+  "providerModel.apiKeyConfigured": "Clé API configurée",
+
+  "micWarning": {
+    "noDevice": {
+      "title": "Aucun microphone détecté",
+      "body": "Whisperi n'a trouvé aucun microphone, l'enregistrement ne peut donc pas démarrer. Connectez un microphone et assurez-vous qu'il est activé dans les paramètres de son de votre système, puis réessayez."
+    },
+    "selectedMissing": {
+      "title": "Microphone indisponible",
+      "body": "Le microphone sélectionné « {{device}} » n'est pas disponible — il est peut-être déconnecté. Reconnectez-le, ou choisissez un autre microphone dans les paramètres audio ci-dessous, puis réessayez."
+    },
+    "close": "Fermer"
+  }
 }

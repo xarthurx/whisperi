@@ -169,5 +169,17 @@
   "providerModel.recommended": "Recommended",
   "providerModel.apiKeyLabel": "{{provider}} API Key",
   "providerModel.apiKeyHelp": "Enter your {{provider}} API key",
-  "providerModel.apiKeyConfigured": "API key configured"
+  "providerModel.apiKeyConfigured": "API key configured",
+
+  "micWarning": {
+    "noDevice": {
+      "title": "No microphone detected",
+      "body": "Whisperi couldn't find a microphone, so recording can't start. Connect a microphone and make sure it's enabled in your system sound settings, then try again."
+    },
+    "selectedMissing": {
+      "title": "Microphone unavailable",
+      "body": "Your selected microphone \"{{device}}\" isn't available — it may be disconnected. Reconnect it, or choose a different microphone in the audio settings below, then try again."
+    },
+    "close": "Close"
+  }
 }
