@@ -94,9 +94,19 @@ impl ReorderBuffer {
     }
 
     /// True when a completion is being held behind a not-yet-completed earlier
-    /// utterance — the signal for the caller to arm its skip-head timeout.
+    /// utterance — the signal for the caller to arm its skip-head timeout. Held
+    /// means there is pending work AND the head itself hasn't completed (were the
+    /// head present, `drain_ready` would already have released it).
     pub fn is_blocked(&self) -> bool {
-        !self.pending.is_empty()
+        !self.pending.is_empty() && !self.pending.contains_key(&self.next_emit)
+    }
+
+    /// The current head-of-line rank (`next_emit`) — the next rank eligible to
+    /// emit. The client compares this before/after a completion to detect when the
+    /// head advanced, so it can re-arm the head-of-line timeout for the
+    /// newly-exposed rank instead of inheriting the previous head's clock.
+    pub fn head(&self) -> u32 {
+        self.next_emit
     }
 
     /// Look up `item_id`'s rank, assigning the next capture-order rank on first sight.

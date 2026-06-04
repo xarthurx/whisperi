@@ -128,14 +128,6 @@ pub async fn start_live_session(
         let mut resampler = OnlineResampler::new(device_sample_rate, target_sample_rate);
         let mut tick = tokio::time::interval(Duration::from_millis(100));
 
-        // Head-of-line bound for the reorder buffer: a completion held waiting for
-        // an earlier utterance that never finishes is released after this, so a
-        // dropped segment can't stall the stream. Comfortably longer than realistic
-        // transcription latency, since a merely-slow utterance fills the gap and
-        // clears the block before the timeout is reached.
-        const REORDER_HEAD_TIMEOUT: Duration = Duration::from_millis(2500);
-        let mut reorder_blocked_since: Option<tokio::time::Instant> = None;
-
         loop {
             tokio::select! {
                 _ = tick.tick() => {
@@ -154,22 +146,11 @@ pub async fn start_live_session(
                             break;
                         }
                     }
-                    // Drive the reorder head-of-line timeout off the same tick. A
-                    // completion held behind an earlier utterance that never lands
-                    // is released after REORDER_HEAD_TIMEOUT so the stream can't
-                    // stall; a merely-slow utterance fills the gap via poll_event
-                    // and clears the block before this fires.
-                    if client.reorder_blocked() {
-                        let since = *reorder_blocked_since
-                            .get_or_insert_with(tokio::time::Instant::now);
-                        if since.elapsed() >= REORDER_HEAD_TIMEOUT {
-                            for evt in client.skip_reorder_head() {
-                                emit_utterance(&app_for_task, session_id, evt);
-                            }
-                            reorder_blocked_since = None;
-                        }
-                    } else {
-                        reorder_blocked_since = None;
+                    // Release any utterance the reorder buffer has held past its
+                    // head-of-line timeout (a dropped earlier utterance that never
+                    // arrives); the client owns the timer, the pump just ticks it.
+                    for evt in client.check_reorder_timeout(tokio::time::Instant::now()) {
+                        emit_utterance(&app_for_task, session_id, evt);
                     }
                 }
                 evt = client.poll_event() => {
