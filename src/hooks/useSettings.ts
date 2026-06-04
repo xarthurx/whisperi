@@ -19,6 +19,12 @@ export interface Settings {
   useLocalWhisper: boolean;
   whisperModel: string;
   preferredLanguage: string;
+  /** Transcription language mode. "auto" = detect from all languages;
+   *  "single" = force preferredLanguage; "bilingual" = constrain to
+   *  {preferredLanguage, secondaryLanguage}. */
+  languageMode: "auto" | "single" | "bilingual";
+  /** Secondary language code, used only in bilingual mode. "" when unset. */
+  secondaryLanguage: string;
   cloudTranscriptionProvider: string;
   cloudTranscriptionModel: string;
   customDictionary: string[];
@@ -78,6 +84,8 @@ const DEFAULTS: Settings = {
   useLocalWhisper: false,
   whisperModel: "base",
   preferredLanguage: "auto",
+  languageMode: "auto",
+  secondaryLanguage: "",
   cloudTranscriptionProvider: "openai",
   cloudTranscriptionModel: "gpt-4o-mini-transcribe",
   customDictionary: [],
@@ -112,7 +120,7 @@ const DEFAULTS: Settings = {
 
 /** Keys stored via setSetting() (not special handlers like agent name / API keys). */
 const STORE_KEYS = [
-  "useLocalWhisper", "whisperModel", "preferredLanguage",
+  "useLocalWhisper", "whisperModel", "preferredLanguage", "languageMode", "secondaryLanguage",
   "cloudTranscriptionProvider", "cloudTranscriptionModel",
   "dictationMode", "liveTranscriptionProvider", "liveTranscriptionModel", "liveEnhancement", "liveLastError",
   "useReasoningModel", "reasoningModel", "reasoningProvider", "enhancementIntensity",
@@ -154,6 +162,14 @@ export function useSettings() {
           (resolved as unknown as Record<string, unknown>)[key] = storeResults[i];
         }
       });
+      // Migration: installs predating languageMode have no stored value. Derive
+      // it from the existing preferredLanguage so a user who had a fixed
+      // language keeps "single" instead of silently flipping to "auto".
+      const languageModeIdx = STORE_KEYS.indexOf("languageMode");
+      if (storeResults[languageModeIdx] == null) {
+        resolved.languageMode = resolved.preferredLanguage === "auto" ? "auto" : "single";
+      }
+
       resolved.agentName = agentNameVal;
       resolved.agentAliases = agentAliases;
       resolved.customDictionary = customDictionary;
