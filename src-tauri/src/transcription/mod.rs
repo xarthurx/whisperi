@@ -65,8 +65,6 @@ pub fn build_prompt(dictionary: &[String], language: Option<&str>) -> String {
 /// native conditioning sentence is skipped. Returns `""` when there is nothing
 /// to send, so callers omit `--prompt` / the `prompt` field entirely (same
 /// contract as [`build_prompt`]).
-// Temporary: wired into the commands in Task 3, which removes this attribute.
-#[allow(dead_code)]
 pub fn build_bilingual_prompt(dictionary: &[String], primary: &str, secondary: &str) -> String {
     let dict = dedupe_dictionary(dictionary);
     let mut parts: Vec<&str> = Vec::new();

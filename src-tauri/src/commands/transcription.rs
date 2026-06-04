@@ -20,19 +20,6 @@ pub struct TranscriptionResult {
     pub detected_language: Option<String>,
 }
 
-/// Pick the language to use for the post-processing (T→S) decision. If the
-/// user requested auto-detect, prefer what the model reported; otherwise use
-/// what the user explicitly chose.
-fn effective_language(
-    requested: Option<&str>,
-    detected: Option<&str>,
-) -> Option<String> {
-    match requested {
-        None | Some("auto") => detected.map(str::to_string),
-        Some(other) => Some(other.to_string()),
-    }
-}
-
 /// Resolve the effective language used for post-processing (T→S) and reported
 /// back to the frontend (which forwards it to AI enhancement).
 ///
@@ -41,9 +28,6 @@ fn effective_language(
 ///   detection snaps to `primary`.
 /// - **Auto / Single** (`secondary` is `None`): unchanged — auto/empty prefers
 ///   the detected language, an explicit language wins outright.
-// Temporary: replaces effective_language at the call sites in Task 3, which
-// removes this attribute and the now-dead effective_language.
-#[allow(dead_code)]
 fn resolve_language(
     primary: Option<&str>,
     secondary: Option<&str>,
@@ -81,18 +65,31 @@ pub async fn transcribe_local(
     audio_data: Vec<u8>,
     model: String,
     language: Option<String>,
+    secondary_language: Option<String>,
     dictionary: Vec<String>,
     agent_terms: Vec<String>,
 ) -> Result<TranscriptionResult, String> {
     let file_name = format!("ggml-{}.bin", model);
-    let language = normalize_language(language);
-    let full_prompt = crate::transcription::build_prompt(&dictionary, language.as_deref());
+    let primary = normalize_language(language);
+    let secondary = normalize_language(secondary_language);
+
+    // Bilingual: prime BOTH languages and let the model detect within the pair
+    // (no forced -l). Otherwise keep today's single/auto prompt.
+    let full_prompt = match (primary.as_deref(), secondary.as_deref()) {
+        (Some(p), Some(s)) => crate::transcription::build_bilingual_prompt(&dictionary, p, s),
+        _ => crate::transcription::build_prompt(&dictionary, primary.as_deref()),
+    };
+    // In bilingual mode never force a language; auto/single pass the choice through.
+    let engine_lang: Option<String> = match secondary.as_deref() {
+        Some(_) => None,
+        None => primary.clone(),
+    };
 
     let output = transcription::whisper::transcribe(
         &app,
         &audio_data,
         &file_name,
-        language.as_deref(),
+        engine_lang.as_deref(),
         &full_prompt,
     )
     .await
@@ -101,11 +98,15 @@ pub async fn transcribe_local(
     let stripped = transcription::cloud::strip_prompt_echo(&output.text, Some(&full_prompt));
     let stripped =
         transcription::cloud::strip_dictionary_edge_echo(&stripped, &dictionary, &agent_terms);
-    let effective = effective_language(language.as_deref(), output.detected_language.as_deref());
-    let text = transcription::finalize_chinese_text(&stripped, effective.as_deref());
+    let resolved = resolve_language(
+        primary.as_deref(),
+        secondary.as_deref(),
+        output.detected_language.as_deref(),
+    );
+    let text = transcription::finalize_chinese_text(&stripped, resolved.as_deref());
     Ok(TranscriptionResult {
         text,
-        detected_language: output.detected_language,
+        detected_language: resolved,
     })
 }
 
@@ -116,6 +117,7 @@ pub async fn transcribe_cloud(
     api_key: String,
     model: String,
     language: Option<String>,
+    secondary_language: Option<String>,
     dictionary: Vec<String>,
     agent_terms: Vec<String>,
 ) -> Result<TranscriptionResult, String> {
@@ -128,15 +130,24 @@ pub async fn transcribe_cloud(
         !api_key.is_empty()
     );
 
-    let language = normalize_language(language);
-    let prompt = crate::transcription::build_prompt(&dictionary, language.as_deref());
+    let primary = normalize_language(language);
+    let secondary = normalize_language(secondary_language);
+    let prompt = match (primary.as_deref(), secondary.as_deref()) {
+        (Some(p), Some(s)) => crate::transcription::build_bilingual_prompt(&dictionary, p, s),
+        _ => crate::transcription::build_prompt(&dictionary, primary.as_deref()),
+    };
+    // Bilingual → auto-detect within the pair; auto/single pass the choice through.
+    let engine_lang: Option<String> = match secondary.as_deref() {
+        Some(_) => None,
+        None => primary.clone(),
+    };
 
     let output = match provider.as_str() {
         "openai" => transcription::cloud::transcribe_openai(
             audio_data,
             &api_key,
             &model,
-            language.as_deref(),
+            engine_lang.as_deref(),
             Some(prompt.as_str()),
             None,
         )
@@ -147,7 +158,7 @@ pub async fn transcribe_cloud(
             audio_data,
             &api_key,
             &model,
-            language.as_deref(),
+            engine_lang.as_deref(),
             Some(prompt.as_str()),
         )
         .await
@@ -165,7 +176,7 @@ pub async fn transcribe_cloud(
             audio_data,
             &api_key,
             &model,
-            language.as_deref(),
+            engine_lang.as_deref(),
             Some(prompt.as_str()),
         )
         .await
@@ -175,7 +186,7 @@ pub async fn transcribe_cloud(
             audio_data,
             &api_key,
             &model,
-            language.as_deref(),
+            engine_lang.as_deref(),
             Some(prompt.as_str()),
         )
         .await
@@ -187,11 +198,15 @@ pub async fn transcribe_cloud(
     let stripped = transcription::cloud::strip_prompt_echo(&output.text, Some(prompt.as_str()));
     let stripped =
         transcription::cloud::strip_dictionary_edge_echo(&stripped, &dictionary, &agent_terms);
-    let effective = effective_language(language.as_deref(), output.detected_language.as_deref());
-    let text = transcription::finalize_chinese_text(&stripped, effective.as_deref());
+    let resolved = resolve_language(
+        primary.as_deref(),
+        secondary.as_deref(),
+        output.detected_language.as_deref(),
+    );
+    let text = transcription::finalize_chinese_text(&stripped, resolved.as_deref());
     Ok(TranscriptionResult {
         text,
-        detected_language: output.detected_language,
+        detected_language: resolved,
     })
 }
 
@@ -353,35 +368,6 @@ pub fn get_whisper_status(app: AppHandle) -> Result<bool, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn effective_language_prefers_user_choice() {
-        // User explicitly chose Japanese — detection result is ignored.
-        assert_eq!(
-            effective_language(Some("ja"), Some("zh")),
-            Some("ja".to_string())
-        );
-    }
-
-    #[test]
-    fn effective_language_uses_detection_in_auto_mode() {
-        assert_eq!(
-            effective_language(Some("auto"), Some("zh")),
-            Some("zh".to_string())
-        );
-        assert_eq!(
-            effective_language(None, Some("ja")),
-            Some("ja".to_string())
-        );
-    }
-
-    #[test]
-    fn effective_language_falls_back_to_none_when_no_detection() {
-        // Auto mode + no detection → None. finalize_chinese_text will then
-        // use its own kana heuristic.
-        assert_eq!(effective_language(Some("auto"), None), None);
-        assert_eq!(effective_language(None, None), None);
-    }
 
     #[test]
     fn resolve_keeps_in_set_detection() {
