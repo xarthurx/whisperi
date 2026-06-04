@@ -32,11 +32,15 @@ export default function GeneralSection({ settings, update }: SectionProps) {
   // are never left on "auto" / empty.
   const setLanguageMode = (mode: "auto" | "single" | "bilingual") => {
     update("languageMode", mode);
+    // Compute the concrete primary up front so the secondary seed below decides
+    // against the value we are actually setting, not the stale closure value.
+    const nextPrimary =
+      settings.preferredLanguage === "auto" ? "en" : settings.preferredLanguage;
     if (mode !== "auto" && settings.preferredLanguage === "auto") {
-      update("preferredLanguage", "en");
+      update("preferredLanguage", nextPrimary);
     }
     if (mode === "bilingual" && !settings.secondaryLanguage) {
-      update("secondaryLanguage", settings.preferredLanguage === "zh" ? "en" : "zh");
+      update("secondaryLanguage", nextPrimary === "zh" ? "en" : "zh");
     }
   };
 

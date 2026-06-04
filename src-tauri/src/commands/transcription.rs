@@ -10,10 +10,10 @@ fn normalize_language(lang: Option<String>) -> Option<String> {
 
 /// Result of a transcription Tauri command. `text` is the post-processed
 /// (Simplified Chinese, full-width punctuation) output. `detected_language` is
-/// what whisper/cloud reported during language ID — present only when the user
-/// requested auto-detect AND the provider supports it. The frontend forwards
-/// this into the subsequent reasoning call so AI enhancement runs with the
-/// resolved language instead of "auto".
+/// the resolved language output by `resolve_language` — in bilingual mode it's
+/// the snapped-to-pair language, in single/auto mode it's the chosen/detected
+/// language. The frontend forwards this into the subsequent reasoning call so
+/// AI enhancement runs with the resolved language instead of "auto".
 #[derive(Debug, Serialize)]
 pub struct TranscriptionResult {
     pub text: String,
