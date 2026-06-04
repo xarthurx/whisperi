@@ -7,6 +7,7 @@
 - New **Bilingual** language mode: pick a main language and a supporting language so short phrases stop getting mis-recognized as a third, unrelated language
 - Your usual mix still works — long sentences that blend two languages are unchanged; this just adds a smarter option for people who regularly speak two languages
 - Set it under Settings → General → Output Language: choose **Auto-detect**, a **Single language**, or **Bilingual** (a primary plus a secondary language)
+- Live mode now types your utterances in the order you spoke them — previously a short phrase spoken right after a longer one could finish transcribing first and be typed out of order
 
 ### Features
 
@@ -14,11 +15,17 @@
 - Bilingual transcription uses a **bilingual conditioning prompt** (both languages' native sentences, the primary placed last so it is nearest the audio) to keep embedded secondary-language terms and suppress drift toward an unspoken language, combined with a **keep-detected-constrain-to-set** resolution policy (`resolve_language`): a detected language inside the chosen pair is kept as-is; a detection outside the pair snaps to the primary. There is no second decode pass — zero added latency.
 - Buffered transcription (local whisper.cpp + cloud providers) is fully covered. Live/streaming mode auto-detects within the pair (it no longer forces the primary in bilingual mode); deeper Live language handling is deferred to a future live-refinement pass.
 
+### Fixes
+
+- Fixed Live mode occasionally typing utterances out of spoken order. Server-side VAD providers transcribe each committed segment asynchronously, so a short utterance spoken after a long one could have its `.completed` event arrive — and be typed — first, reversing what you said. A new capture-order reorder buffer (`streaming/reorder.rs`), keyed by the provider's `item_id` and ranked on the `input_audio_buffer.committed` / `speech_started` events (which arrive in spoken order before transcription completes), now releases completions only in contiguous spoken order; a missing head is abandoned after a 2.5 s timeout and the buffer is flushed on stop. Providers that don't emit commit events fall back to arrival order (no regression). Fixing it in the WebSocket client corrects live typing, the accumulator, the polish-swap, and the saved record at once — no frontend change.
+- Fixed the reorder head-of-line timer measuring from a stale block: when a completion advanced the head onto a *new* still-missing rank, the skip timer kept counting from the earlier block and could drop the newly-exposed head before the timeout, surfacing an utterance out of order. Completions now route through `ingest_completed()`, which re-arms the timer whenever the head advances (keyed on head movement, so advancing past a silent rank re-arms it too).
+
 ### Notes
 
 - Verified with `cargo test` (full suite green), `cargo clippy` (no new warnings), `bun run typecheck`, and `bun run build`. The manual microphone-dictation matrix (short Chinese / short English / long mixed / third-language clip, across buffered and Live) is pending hands-on verification.
 - Design spec: `docs/superpowers/specs/2026-06-03-bilingual-language-mode-design.md`; implementation plan: `docs/superpowers/plans/2026-06-03-bilingual-language-mode.md`.
 - Deferred by design (see spec): confidence-gated re-decode upgrade for stubborn within-pair short-clip confusion, Live incremental refinement, and learned user edits.
+- The Live reorder WebSocket client was also simplified with no behavior change (each message parsed once instead of twice; the head-of-line timeout state folded into the client). 189 lib + 6 integration tests pass; clippy clean on the changed files.
 
 ## [0.7.3] - 2026-06-03
 
