@@ -24,3 +24,9 @@
 - [ ] Skip `commit_utterance()` in the soft-flush path when the loop exited via error AND when the provider is `ServerVad` — currently it's always sent, generating a spurious "buffer too small" server error event that the drain loop silently discards.
 - [ ] Call `resampler.flush()` after the audio-pump main loop exits — currently the trailing interpolated sample is dropped (sub-ms audio loss; matters only on perfectly-aligned utterance-end boundaries).
 - [ ] In `useLiveDictation.ts` `subscribe()`, register each unlisten function into `unlistenRef.current` immediately after each `await` resolves instead of all-at-once at the end — if a later `await` rejects, earlier successfully-registered listeners are currently leaked.
+
+## Bilingual language mode follow-ups
+
+- [ ] **Confidence-gated re-decode**: capture whisper's per-segment `p` confidence and re-decode forcing the primary language when a bilingual clip is low-confidence or the detected language falls outside the chosen pair (spec §10). Only pursue if within-pair short-clip confusion persists in real-world use.
+- [ ] **Live incremental refinement**: streaming rewrite of recent utterances when Live mode accumulates enough context to refine an earlier detected-language decision (spec §9).
+- [ ] **Learned user edits**: capture user post-dictation corrections into the dictionary / a corrections map so bilingual prompts can be personalized over time (spec §9).
