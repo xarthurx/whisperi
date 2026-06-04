@@ -9,6 +9,7 @@
 pub mod audio_pump;
 pub mod providers;
 pub mod realtime_openai_compatible;
+pub mod reorder;
 
 use async_trait::async_trait;
 use serde::Serialize;

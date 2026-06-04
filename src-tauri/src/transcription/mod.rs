@@ -54,6 +54,35 @@ pub fn build_prompt(dictionary: &[String], language: Option<&str>) -> String {
     }
 }
 
+/// Build a conditioning prompt for **bilingual** mode: the native conditioning
+/// sentences for BOTH languages, then the deduped dictionary. Priming both
+/// languages keeps embedded secondary-language terms alive and suppresses the
+/// decode drifting to a third, unspoken language.
+///
+/// The **primary** sentence is placed LAST (closest to the audio): Whisper
+/// continues in the language of the nearest preceding context, giving a mild
+/// lean toward the primary on genuinely ambiguous clips. A language with no
+/// native conditioning sentence is skipped. Returns `""` when there is nothing
+/// to send, so callers omit `--prompt` / the `prompt` field entirely (same
+/// contract as [`build_prompt`]).
+pub fn build_bilingual_prompt(dictionary: &[String], primary: &str, secondary: &str) -> String {
+    let dict = dedupe_dictionary(dictionary);
+    let mut parts: Vec<&str> = Vec::new();
+    if let Some(s) = punctuation_prompt(Some(secondary)) {
+        parts.push(s);
+    }
+    if let Some(p) = punctuation_prompt(Some(primary)) {
+        parts.push(p);
+    }
+    let conditioning = parts.join(" ");
+    match (conditioning.is_empty(), dict.is_empty()) {
+        (true, true) => String::new(),
+        (true, false) => dict.join(" "),
+        (false, true) => conditioning,
+        (false, false) => format!("{} {}", conditioning, dict.join(" ")),
+    }
+}
+
 /// De-duplicate dictionary entries case-insensitively (preserving first-seen
 /// order) and drop blank entries. Fewer, unique hotwords mean less for Whisper
 /// to echo back, and avoid wasting the prompt's limited token budget.
@@ -150,5 +179,38 @@ mod tests {
     #[test]
     fn punctuation_prompt_english_is_english() {
         assert_eq!(punctuation_prompt(Some("en")), Some(PUNCTUATION_PROMPT));
+    }
+
+    #[test]
+    fn bilingual_prompt_contains_both_languages_primary_last() {
+        // secondary (en) sentence first, primary (zh) sentence last so the
+        // primary is nearest the audio (mild primary lean on ambiguous clips).
+        let result = build_bilingual_prompt(&[], "zh", "en");
+        assert!(result.contains("你好")); // zh conditioning present
+        assert!(result.contains("Hello")); // en conditioning present
+        let zh_at = result.find("你好").unwrap();
+        let en_at = result.find("Hello").unwrap();
+        assert!(en_at < zh_at, "primary (zh) sentence must come last");
+    }
+
+    #[test]
+    fn bilingual_prompt_appends_dictionary() {
+        let dict = vec!["Whisperi".to_string()];
+        let result = build_bilingual_prompt(&dict, "zh", "en");
+        assert!(result.ends_with("Whisperi"));
+    }
+
+    #[test]
+    fn bilingual_prompt_skips_language_without_conditioning() {
+        // "xx" has no native conditioning sentence → only the zh sentence remains.
+        let result = build_bilingual_prompt(&[], "zh", "xx");
+        assert!(result.contains("你好"));
+        assert!(!result.contains("Hello"));
+    }
+
+    #[test]
+    fn bilingual_prompt_empty_when_nothing_to_say() {
+        // Two unknown languages + no dictionary → empty (caller omits --prompt).
+        assert_eq!(build_bilingual_prompt(&[], "xx", "yy"), "");
     }
 }

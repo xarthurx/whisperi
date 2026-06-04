@@ -41,3 +41,13 @@ Both mechanisms independently trigger the settings window. `SettingsPanel` detec
 ## CHANGELOG Highlights convention
 
 Every version entry in `docs/CHANGELOG.md` must start with a `### Highlights` stanza of 1–4 plain-English, user-facing bullets. This is what end users see in the "What's New" popup (`src/components/ui/WhatsNewModal.tsx`). The rest of the version block stays technical for developers and agents.
+
+## Bilingual Language Mode (v0.8.0)
+
+Landed on branch `feat/bilingual-language-mode`. Primary/secondary language selection with a bilingual conditioning prompt and `resolve_language` snap-to-primary policy. Buffered transcription (local whisper.cpp + all cloud providers) fully covered. Live mode auto-detects within the pair instead of forcing the primary.
+
+### Open items to verify in real use (from spec §14)
+
+- [ ] Whether Live realtime providers (OpenAI Realtime, Azure, etc.) surface a per-utterance detected language in their event stream — needed to implement snap-to-pair logic in Live mode without forcing the primary.
+- [ ] Empirically best bilingual prompt ordering for zh+en: current implementation places the primary language last (nearest the audio); validate this assumption with short Mandarin clips in a zh+en pair.
+- [ ] Which cloud providers (Azure Cognitive Services, Google Speech-to-Text, AssemblyAI) return a usable detected-language field in their bilingual / multi-language response, and whether that field is reliable enough to feed `resolve_language`.

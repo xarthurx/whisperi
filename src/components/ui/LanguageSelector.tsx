@@ -16,6 +16,9 @@ interface LanguageSelectorProps {
   className?: string;
   /** When provided, only show languages whose code is in this array */
   filterCodes?: string[];
+  /** Hide languages whose code is in this array (e.g. exclude "auto", or the
+   *  language already chosen in the other slot). */
+  excludeCodes?: string[];
 }
 
 export default function LanguageSelector({
@@ -23,16 +26,18 @@ export default function LanguageSelector({
   onChange,
   className = "",
   filterCodes,
+  excludeCodes,
 }: LanguageSelectorProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const baseOptions = filterCodes
+  const baseOptions = (filterCodes
     ? LANGUAGE_OPTIONS.filter((lang) =>
         filterCodes.some((code) => lang.value === code || lang.value.startsWith(code + "-"))
       )
-    : LANGUAGE_OPTIONS;
+    : LANGUAGE_OPTIONS
+  ).filter((lang) => !excludeCodes?.includes(lang.value));
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);

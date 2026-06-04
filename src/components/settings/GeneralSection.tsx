@@ -27,6 +27,23 @@ export default function GeneralSection({ settings, update }: SectionProps) {
     }
   }, []);
 
+  // Switching out of auto needs a concrete primary; switching to bilingual also
+  // needs a concrete, distinct secondary. Seed sensible defaults so the slots
+  // are never left on "auto" / empty.
+  const setLanguageMode = (mode: "auto" | "single" | "bilingual") => {
+    update("languageMode", mode);
+    // Compute the concrete primary up front so the secondary seed below decides
+    // against the value we are actually setting, not the stale closure value.
+    const nextPrimary =
+      settings.preferredLanguage === "auto" ? "en" : settings.preferredLanguage;
+    if (mode !== "auto" && settings.preferredLanguage === "auto") {
+      update("preferredLanguage", nextPrimary);
+    }
+    if (mode === "bilingual" && !settings.secondaryLanguage) {
+      update("secondaryLanguage", nextPrimary === "zh" ? "en" : "zh");
+    }
+  };
+
   return (
     <>
       <SettingsSection title={t("general.uiLanguage.title")} description={t("general.uiLanguage.description")}>
@@ -42,11 +59,54 @@ export default function GeneralSection({ settings, update }: SectionProps) {
       </SettingsSection>
 
       <SettingsSection title={t("general.language.title")} description={t("general.language.description")}>
-        <LanguageSelector
-          value={settings.preferredLanguage}
-          onChange={(v) => update("preferredLanguage", v)}
-          className="w-48"
-        />
+        <div className="space-y-3">
+          <div className="flex p-0.5 rounded-control bg-surface-1 w-fit">
+            {(["auto", "single", "bilingual"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setLanguageMode(mode)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-inner transition-all duration-150 ${
+                  settings.languageMode === mode
+                    ? "bg-primary/15 text-primary border border-primary/30"
+                    : "text-muted-foreground hover:text-foreground border border-transparent"
+                }`}
+              >
+                {t(`general.language.mode.${mode}`)}
+              </button>
+            ))}
+          </div>
+
+          {settings.languageMode === "single" && (
+            <LanguageSelector
+              value={settings.preferredLanguage === "auto" ? "en" : settings.preferredLanguage}
+              onChange={(v) => update("preferredLanguage", v)}
+              excludeCodes={["auto"]}
+              className="w-48"
+            />
+          )}
+
+          {settings.languageMode === "bilingual" && (
+            <div className="space-y-2">
+              <SettingsRow label={t("general.language.primary")}>
+                <LanguageSelector
+                  value={settings.preferredLanguage === "auto" ? "en" : settings.preferredLanguage}
+                  onChange={(v) => update("preferredLanguage", v)}
+                  excludeCodes={["auto", settings.secondaryLanguage]}
+                  className="w-48"
+                />
+              </SettingsRow>
+              <SettingsRow label={t("general.language.secondary")}>
+                <LanguageSelector
+                  value={settings.secondaryLanguage || "en"}
+                  onChange={(v) => update("secondaryLanguage", v)}
+                  excludeCodes={["auto", settings.preferredLanguage]}
+                  className="w-48"
+                />
+              </SettingsRow>
+              <p className="text-xs text-muted-foreground">{t("general.language.bilingualHint")}</p>
+            </div>
+          )}
+        </div>
       </SettingsSection>
 
       <SettingsSection title={t("general.hotkey.title")} description={t("general.hotkey.description")}>

@@ -48,6 +48,22 @@ import {
 
 type LivePhase = "idle" | "recording" | "polishing" | "processing";
 
+/** Resolve the language handed to the Live provider. Auto and Bilingual return
+ *  null so the provider auto-detects (Bilingual within the pair); an explicit
+ *  Single language passes through. `preferredLanguage` can be a stale single-mode
+ *  choice when `languageMode` is "auto" (the mode toggle does not reset it), so
+ *  this gates on the mode, not on the stored language. Deeper Live language
+ *  handling is deferred to the future live-refinement pass. */
+async function resolveLiveLanguage(): Promise<string | null> {
+  const [langMode, preferred] = await Promise.all([
+    getSetting<string>("languageMode"),
+    getSetting<string>("preferredLanguage"),
+  ]);
+  return langMode === "auto" || langMode === "bilingual" || !preferred || preferred === "auto"
+    ? null
+    : preferred;
+}
+
 interface Options {
   onToast?: (props: {
     title: string;
@@ -306,10 +322,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
         );
         return;
       }
-      // Language is optional — "auto"/null means the provider auto-detects from
-      // the audio (same as Standard mode's whisper.cpp behavior). We pass null
-      // downstream so the Rust adapter can omit the field from session.update.
-      const language = await getSetting<string>("preferredLanguage");
+      const language = await resolveLiveLanguage();
 
       // Consent check (settings flag per provider)
       const consentKey = `liveConsent.${provider}`;
@@ -521,7 +534,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
         console.log("[Live] enhancement skipped — liveEnhancement=false");
       } else {
         try {
-          const language = await getSetting<string>("preferredLanguage");
+          const language = await resolveLiveLanguage();
           const [
             dict, aliases, useLocal, whisperModel, cloudProvider, cloudModel,
             useR, rModel, rProvider, intensity, autoPaste, useCustom, customPrompt, debugMode,
@@ -543,7 +556,9 @@ export function useLiveDictation({ onToast }: Options = {}) {
           ]);
           const dictionary = buildTranscriptionDictionary(dict, agentName, aliases);
           const settings: TranscriptionSettings = {
-            useLocal, whisperModel, cloudProvider, cloudModel, language, dictionary,
+            useLocal, whisperModel, cloudProvider, cloudModel, language,
+            languageMode: null, secondaryLanguage: null,
+            dictionary,
             useReasoning: useR, reasoningModel: rModel, reasoningProvider: rProvider,
             enhancementIntensity: intensity, autoPaste, useCustomPrompt: useCustom,
             customSystemPrompt: customPrompt, agentName, agentAliases: aliases,

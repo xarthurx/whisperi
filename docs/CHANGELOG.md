@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.8.0] - 2026-06-04
+
+### Highlights
+
+- New **Bilingual** language mode: pick a main language and a supporting language so short phrases stop getting mis-recognized as a third, unrelated language
+- Your usual mix still works — long sentences that blend two languages are unchanged; this just adds a smarter option for people who regularly speak two languages
+- Set it under Settings → General → Output Language: choose **Auto-detect**, a **Single language**, or **Bilingual** (a primary plus a secondary language)
+
+### Features
+
+- Added an Auto / Single / **Bilingual** transcription language mode. New settings `languageMode` and `secondaryLanguage` (derived by migration from the existing `preferredLanguage`, so current setups are unchanged). The Settings → General Output-Language control is now a three-way mode toggle with Primary/Secondary language slots (the two slots cannot be the same language). New UI strings localized across all 9 locales.
+- Bilingual transcription uses a **bilingual conditioning prompt** (both languages' native sentences, the primary placed last so it is nearest the audio) to keep embedded secondary-language terms and suppress drift toward an unspoken language, combined with a **keep-detected-constrain-to-set** resolution policy (`resolve_language`): a detected language inside the chosen pair is kept as-is; a detection outside the pair snaps to the primary. There is no second decode pass — zero added latency.
+- Buffered transcription (local whisper.cpp + cloud providers) is fully covered. Live/streaming mode auto-detects within the pair (it no longer forces the primary in bilingual mode); deeper Live language handling is deferred to a future live-refinement pass.
+
+### Notes
+
+- Verified with `cargo test` (full suite green), `cargo clippy` (no new warnings), `bun run typecheck`, and `bun run build`. The manual microphone-dictation matrix (short Chinese / short English / long mixed / third-language clip, across buffered and Live) is pending hands-on verification.
+- Design spec: `docs/superpowers/specs/2026-06-03-bilingual-language-mode-design.md`; implementation plan: `docs/superpowers/plans/2026-06-03-bilingual-language-mode.md`.
+- Deferred by design (see spec): confidence-gated re-decode upgrade for stubborn within-pair short-clip confusion, Live incremental refinement, and learned user edits.
+
 ## [0.7.3] - 2026-06-03
 
 ### Highlights
