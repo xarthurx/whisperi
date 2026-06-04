@@ -1,9 +1,20 @@
 # Bilingual Language Mode — Design Spec
 
 - **Date:** 2026-06-03
-- **Status:** Proposed (awaiting approval)
+- **Status:** Implemented in v0.8.0. **UI revised 2026-06-04** — see note below.
 - **Area:** transcription language detection / selection
-- **Target case:** Chinese (primary) + English (secondary), but generic over any pair
+- **Target case:** Chinese + English, but generic over any pair
+
+> **Update (2026-06-04):** the §4 UX was changed after release. The explicit
+> **Primary**/**Secondary** labels were removed — the two languages now render as
+> equal peers on one line, because users who code-switch don't rank one over the
+> other. The data model (§5) and resolution policy (§6) are **unchanged**: the
+> first slot (`preferredLanguage`) is still the out-of-set / no-detection fallback
+> and the prompt still places it last — but these are now internal, unlabeled
+> behaviors, not a user-facing "primary." The §10 re-decode upgrade path was
+> evaluated and declined for this purpose: forcing a language coerces the output
+> script (so a script check can't choose a winner) and cloud providers — the
+> primary path — surface no comparable per-decode confidence.
 
 ## 1. Problem
 

@@ -27,20 +27,21 @@ export default function GeneralSection({ settings, update }: SectionProps) {
     }
   }, []);
 
-  // Switching out of auto needs a concrete primary; switching to bilingual also
-  // needs a concrete, distinct secondary. Seed sensible defaults so the slots
-  // are never left on "auto" / empty.
+  // Switching out of auto needs a concrete first language; bilingual also needs
+  // a concrete, distinct second one. Seed sensible defaults so the slots are
+  // never left on "auto" / empty. The two are peers in the UI — the first is
+  // only an invisible fallback for clips too short to identify.
   const setLanguageMode = (mode: "auto" | "single" | "bilingual") => {
     update("languageMode", mode);
-    // Compute the concrete primary up front so the secondary seed below decides
-    // against the value we are actually setting, not the stale closure value.
-    const nextPrimary =
+    // Compute the concrete first language up front so the second seed below
+    // decides against the value we are actually setting, not the stale closure.
+    const nextFirst =
       settings.preferredLanguage === "auto" ? "en" : settings.preferredLanguage;
     if (mode !== "auto" && settings.preferredLanguage === "auto") {
-      update("preferredLanguage", nextPrimary);
+      update("preferredLanguage", nextFirst);
     }
     if (mode === "bilingual" && !settings.secondaryLanguage) {
-      update("secondaryLanguage", nextPrimary === "zh" ? "en" : "zh");
+      update("secondaryLanguage", nextFirst === "zh" ? "en" : "zh");
     }
   };
 
@@ -87,22 +88,21 @@ export default function GeneralSection({ settings, update }: SectionProps) {
 
           {settings.languageMode === "bilingual" && (
             <div className="space-y-2">
-              <SettingsRow label={t("general.language.primary")}>
+              <div className="flex items-center gap-2">
                 <LanguageSelector
                   value={settings.preferredLanguage === "auto" ? "en" : settings.preferredLanguage}
                   onChange={(v) => update("preferredLanguage", v)}
                   excludeCodes={["auto", settings.secondaryLanguage]}
-                  className="w-48"
+                  className="w-44"
                 />
-              </SettingsRow>
-              <SettingsRow label={t("general.language.secondary")}>
+                <span className="text-muted-foreground text-sm select-none" aria-hidden="true">+</span>
                 <LanguageSelector
                   value={settings.secondaryLanguage || "en"}
                   onChange={(v) => update("secondaryLanguage", v)}
                   excludeCodes={["auto", settings.preferredLanguage]}
-                  className="w-48"
+                  className="w-44"
                 />
-              </SettingsRow>
+              </div>
               <p className="text-xs text-muted-foreground">{t("general.language.bilingualHint")}</p>
             </div>
           )}
