@@ -197,7 +197,11 @@ Live mode streams audio over WebSocket to a cloud ASR provider, typing utterance
 4.  cpal feeds samples at 100ms ticks → pump online-resamples to provider rate, encodes PCM16, sends base64 over WS
         ↓
 5.  WS receives `.completed` utterance events
-    → Tauri emits "live-utterance" {{ text, utterance_seq }} payload
+    → A capture-order ReorderBuffer (keyed by the provider's `item_id`, ranked on
+      `input_audio_buffer.committed`/`.speech_started`) holds out-of-order
+      completions so a short utterance whose transcription finishes before a
+      longer earlier one is still emitted in spoken order
+    → Tauri emits "live-utterance" {{ text, utterance_seq }} payload (in spoken order)
     → Frontend accumulates raw transcript locally and invokes invoke("type_text_chunk", { text })
     → Rust simulates SendInput keystrokes (with sanitization), returns UTF-16 unit count typed
     On error: Tauri emits "live-error" {{ message, kind }}; on natural close: "live-session-closed" (session_id)

@@ -68,6 +68,52 @@ async fn happy_path_completed_event_propagates() {
     }
 }
 
+/// The bug this whole feature fixes: with server-side VAD the provider
+/// transcribes each committed segment asynchronously, so a short utterance
+/// spoken *after* a long one can have its `.completed` arrive *first*. The client
+/// must restore spoken (commit) order before surfacing utterances, keying off the
+/// `item_id` carried by `input_audio_buffer.committed`.
+#[tokio::test]
+async fn out_of_order_completions_surface_in_spoken_order() {
+    let addr = mock_server(|mut ws| async move {
+        let _ = ws.next().await; // consume session.update
+        // Spoken order: A (long) committed first, then B (short).
+        // Completion order: B finishes first (short), then A.
+        for ev in [
+            r#"{"type":"input_audio_buffer.committed","item_id":"A"}"#,
+            r#"{"type":"input_audio_buffer.committed","item_id":"B"}"#,
+            r#"{"type":"conversation.item.input_audio_transcription.completed","item_id":"B","transcript":"world"}"#,
+            r#"{"type":"conversation.item.input_audio_transcription.completed","item_id":"A","transcript":"hello"}"#,
+        ] {
+            ws.send(Message::Text(ev.to_string())).await.unwrap();
+        }
+    })
+    .await;
+
+    let mut client = RealtimeOpenAiCompatibleClient::new(test_provider_for(addr));
+    client
+        .open(SessionConfig {
+            provider_id: "test",
+            model: "test-model".to_string(),
+            language: Some("en".to_string()),
+            api_key: "sk-fake".to_string(),
+        })
+        .await
+        .unwrap();
+
+    // Collect surfaced utterances; commit/ranking signals return Ok(None).
+    let mut texts = Vec::new();
+    while texts.len() < 2 {
+        if let Some(StreamingEvent::UtteranceCompleted { text, .. }) =
+            client.poll_event().await.unwrap()
+        {
+            texts.push(text);
+        }
+    }
+    // Spoken order (A then B), NOT completion order (B then A).
+    assert_eq!(texts, vec!["hello", "world"]);
+}
+
 /// Build a `&'static ProviderConfig` pointing at the local mock server.
 /// We leak a `Box` here because `ProviderConfig::ws_url_template` is `&'static str`;
 /// in tests this is acceptable.

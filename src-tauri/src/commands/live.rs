@@ -128,6 +128,14 @@ pub async fn start_live_session(
         let mut resampler = OnlineResampler::new(device_sample_rate, target_sample_rate);
         let mut tick = tokio::time::interval(Duration::from_millis(100));
 
+        // Head-of-line bound for the reorder buffer: a completion held waiting for
+        // an earlier utterance that never finishes is released after this, so a
+        // dropped segment can't stall the stream. Comfortably longer than realistic
+        // transcription latency, since a merely-slow utterance fills the gap and
+        // clears the block before the timeout is reached.
+        const REORDER_HEAD_TIMEOUT: Duration = Duration::from_millis(2500);
+        let mut reorder_blocked_since: Option<tokio::time::Instant> = None;
+
         loop {
             tokio::select! {
                 _ = tick.tick() => {
@@ -146,16 +154,28 @@ pub async fn start_live_session(
                             break;
                         }
                     }
+                    // Drive the reorder head-of-line timeout off the same tick. A
+                    // completion held behind an earlier utterance that never lands
+                    // is released after REORDER_HEAD_TIMEOUT so the stream can't
+                    // stall; a merely-slow utterance fills the gap via poll_event
+                    // and clears the block before this fires.
+                    if client.reorder_blocked() {
+                        let since = *reorder_blocked_since
+                            .get_or_insert_with(tokio::time::Instant::now);
+                        if since.elapsed() >= REORDER_HEAD_TIMEOUT {
+                            for evt in client.skip_reorder_head() {
+                                emit_utterance(&app_for_task, session_id, evt);
+                            }
+                            reorder_blocked_since = None;
+                        }
+                    } else {
+                        reorder_blocked_since = None;
+                    }
                 }
                 evt = client.poll_event() => {
                     match evt {
-                        Ok(Some(StreamingEvent::UtteranceCompleted { text, utterance_seq })) => {
-                            let payload = serde_json::json!({
-                                "session_id": session_id,
-                                "text": text,
-                                "utterance_seq": utterance_seq,
-                            });
-                            let _ = app_for_task.emit("live-utterance", payload);
+                        Ok(Some(evt @ StreamingEvent::UtteranceCompleted { .. })) => {
+                            emit_utterance(&app_for_task, session_id, evt);
                         }
                         Ok(Some(StreamingEvent::Error { message, kind })) => {
                             emit_error(&app_for_task, session_id, message, kind);
@@ -187,18 +207,20 @@ pub async fn start_live_session(
                 _ = tokio::time::sleep(remaining) => break,
                 evt = client.poll_event() => {
                     match evt {
-                        Ok(Some(StreamingEvent::UtteranceCompleted { text, utterance_seq })) => {
-                            let _ = app_for_task.emit("live-utterance", serde_json::json!({
-                                "session_id": session_id,
-                                "text": text,
-                                "utterance_seq": utterance_seq,
-                            }));
+                        Ok(Some(evt @ StreamingEvent::UtteranceCompleted { .. })) => {
+                            emit_utterance(&app_for_task, session_id, evt);
                         }
                         Ok(_) => {}
                         Err(_) => break,
                     }
                 }
             }
+        }
+
+        // Release any completion still held by the reorder buffer (a trailing
+        // utterance whose earlier sibling never arrived) so the tail isn't lost.
+        for evt in client.flush_reorder() {
+            emit_utterance(&app_for_task, session_id, evt);
         }
 
         let _ = client.close().await;
@@ -281,6 +303,19 @@ pub async fn cancel_live_session(
         abort_handle.abort();
     }
     Ok(())
+}
+
+/// Emit a `live-utterance` event for a completion the reorder buffer released.
+/// A no-op for any other event variant, so callers can hand it whatever the
+/// reorder helpers return without matching first.
+fn emit_utterance(app: &AppHandle, session_id: u64, evt: StreamingEvent) {
+    if let StreamingEvent::UtteranceCompleted { text, utterance_seq } = evt {
+        let _ = app.emit("live-utterance", serde_json::json!({
+            "session_id": session_id,
+            "text": text,
+            "utterance_seq": utterance_seq,
+        }));
+    }
 }
 
 fn emit_error(

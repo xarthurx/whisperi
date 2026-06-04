@@ -17,7 +17,9 @@ use tokio_tungstenite::{
 };
 
 use super::providers::{AuthScheme, ProviderConfig, VadMode};
+use super::reorder::ReorderBuffer;
 use super::{SessionConfig, StreamingEvent, StreamingTranscriber, ErrorKind};
+use std::collections::VecDeque;
 
 type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 type WsSink = SplitSink<WsStream, Message>;
@@ -27,7 +29,14 @@ pub struct RealtimeOpenAiCompatibleClient {
     cfg: &'static ProviderConfig,
     sink: Option<WsSink>,
     source: Option<WsSource>,
-    utterance_seq: u32,
+    /// Monotonic counter stamped onto each emitted (post-reorder) utterance.
+    emit_seq: u32,
+    /// Restores spoken order when the provider finalises a short later utterance
+    /// before a long earlier one (out-of-order `.completed` events).
+    reorder: ReorderBuffer,
+    /// Completions the reorder buffer has released, handed back one per
+    /// `poll_event` call.
+    ready: VecDeque<StreamingEvent>,
 }
 
 impl RealtimeOpenAiCompatibleClient {
@@ -36,7 +45,9 @@ impl RealtimeOpenAiCompatibleClient {
             cfg: provider,
             sink: None,
             source: None,
-            utterance_seq: 0,
+            emit_seq: 0,
+            reorder: ReorderBuffer::new(),
+            ready: VecDeque::new(),
         }
     }
 
@@ -48,79 +59,163 @@ impl RealtimeOpenAiCompatibleClient {
         &self.cfg.vad_mode
     }
 
-    /// Read one event from the WebSocket. Returns Ok(Some(event)) when a real event arrives,
-    /// Ok(None) on Ping/Pong/binary/non-event text, and Err on transport failure or close.
+    /// Read one streaming event. Returns `Ok(Some(event))` for a real event,
+    /// `Ok(None)` for messages we don't surface (pings, deltas, capture-order
+    /// ranking signals, or a completion the reorder buffer is still holding), and
+    /// `Err` on transport failure or close.
+    ///
+    /// Completed transcripts pass through [`ReorderBuffer`] so they surface in
+    /// spoken order even when the provider finalises a short later utterance
+    /// before a long earlier one.
     pub async fn poll_event(&mut self) -> Result<Option<StreamingEvent>> {
+        // Hand back any completion the reorder buffer already released before
+        // reading more off the socket.
+        if let Some(evt) = self.ready.pop_front() {
+            return Ok(Some(evt));
+        }
         let source = self.source.as_mut().ok_or_else(|| anyhow!("not connected"))?;
         let Some(msg) = source.next().await else {
             return Err(anyhow!("websocket closed"));
         };
-        let msg = msg.context("ws read")?;
-        match msg {
-            Message::Text(text) => {
-                // INFO: type + size only (no transcript content — that's user
-                // speech and shouldn't land in production logs).
-                // DEBUG: full payload (truncated at 600 bytes on a char boundary).
-                let evt_type = serde_json::from_str::<Value>(&text)
-                    .ok()
-                    .and_then(|v| v.get("type").and_then(|t| t.as_str()).map(str::to_string))
-                    .unwrap_or_else(|| "<unparseable>".into());
-                log::info!(
-                    "[Live] WS recv type={} ({} bytes)",
-                    evt_type,
-                    text.len(),
-                );
-                log::debug!(
-                    "[Live] WS recv payload: {}",
-                    truncate_at_char_boundary(&text, 600),
-                );
-                Self::parse_event(&text, &mut self.utterance_seq)
-            }
+        let text = match msg.context("ws read")? {
+            Message::Text(text) => text,
             Message::Close(frame) => {
                 log::warn!("[Live] WS close frame: {:?}", frame);
-                Err(anyhow!("websocket closed by server"))
+                return Err(anyhow!("websocket closed by server"));
             }
-            _ => Ok(None),
+            _ => return Ok(None),
+        };
+        // INFO: type + size only (no transcript content — that's user speech and
+        // shouldn't land in production logs). DEBUG: full payload (truncated at
+        // 600 bytes on a char boundary).
+        let evt_type = serde_json::from_str::<Value>(&text)
+            .ok()
+            .and_then(|v| v.get("type").and_then(|t| t.as_str()).map(str::to_string))
+            .unwrap_or_else(|| "<unparseable>".into());
+        log::info!("[Live] WS recv type={} ({} bytes)", evt_type, text.len());
+        log::debug!(
+            "[Live] WS recv payload: {}",
+            truncate_at_char_boundary(&text, 600)
+        );
+
+        match parse_event(&text)? {
+            WireEvent::Committed { item_id } => {
+                // Capture-order ranking signal — assign the rank now, emit nothing.
+                self.reorder.observe(&item_id);
+                Ok(None)
+            }
+            WireEvent::Completed { item_id, transcript } => {
+                let released = self.reorder.complete(&item_id, transcript);
+                let events = self.wrap_completed(released);
+                self.ready.extend(events);
+                Ok(self.ready.pop_front())
+            }
+            WireEvent::Error { message, kind } => {
+                Ok(Some(StreamingEvent::Error { message, kind }))
+            }
+            WireEvent::Ignored => Ok(None),
         }
     }
 
-    fn parse_event(text: &str, utterance_seq: &mut u32) -> Result<Option<StreamingEvent>> {
-        let v: Value = serde_json::from_str(text).context("parse event json")?;
-        let evt_type = v.get("type").and_then(|t| t.as_str()).unwrap_or("");
-        match evt_type {
-            "conversation.item.input_audio_transcription.completed"
-            | "transcription_session.completed" /* fallback variant some providers emit */ => {
-                let transcript = v
-                    .get("transcript")
-                    .and_then(|t| t.as_str())
-                    .unwrap_or("")
-                    .to_string();
-                if transcript.is_empty() {
-                    return Ok(None);
+    /// True while a completion is held behind an earlier utterance that hasn't
+    /// finished transcribing — the caller arms its skip-head timeout on this.
+    pub fn reorder_blocked(&self) -> bool {
+        self.reorder.is_blocked()
+    }
+
+    /// Abandon a missing head after the caller's timeout and release whatever the
+    /// reorder buffer can now surface, in spoken order.
+    pub fn skip_reorder_head(&mut self) -> Vec<StreamingEvent> {
+        let released = self.reorder.skip_head();
+        self.wrap_completed(released)
+    }
+
+    /// Release every still-buffered completion in spoken order. Called during the
+    /// stop soft-flush so a held tail isn't lost on close.
+    pub fn flush_reorder(&mut self) -> Vec<StreamingEvent> {
+        let released = self.reorder.flush_all();
+        self.wrap_completed(released)
+    }
+
+    /// Stamp a monotonic post-reorder sequence number onto each released text.
+    fn wrap_completed(&mut self, texts: Vec<String>) -> Vec<StreamingEvent> {
+        texts
+            .into_iter()
+            .map(|text| {
+                self.emit_seq += 1;
+                StreamingEvent::UtteranceCompleted {
+                    text,
+                    utterance_seq: self.emit_seq,
                 }
-                *utterance_seq += 1;
-                Ok(Some(StreamingEvent::UtteranceCompleted {
-                    text: transcript,
-                    utterance_seq: *utterance_seq,
-                }))
+            })
+            .collect()
+    }
+}
+
+/// A decoded wire message, before reordering.
+#[derive(Debug)]
+enum WireEvent {
+    /// An utterance's audio segment was committed, or speech started — the
+    /// capture-order ranking signal, carrying the provider's `item_id`.
+    Committed { item_id: String },
+    /// A transcription finished. `transcript` may be empty (silence/noise).
+    Completed { item_id: String, transcript: String },
+    Error { message: String, kind: ErrorKind },
+    /// A message we don't act on (session.created, deltas, pings, …).
+    Ignored,
+}
+
+fn item_id_of(v: &Value) -> Option<String> {
+    v.get("item_id").and_then(|i| i.as_str()).map(str::to_string)
+}
+
+/// Decode a single provider message into a [`WireEvent`]. Pure — all ordering
+/// and sequence-number state lives in the client, not here.
+fn parse_event(text: &str) -> Result<WireEvent> {
+    let v: Value = serde_json::from_str(text).context("parse event json")?;
+    let evt_type = v.get("type").and_then(|t| t.as_str()).unwrap_or("");
+    match evt_type {
+        // Capture-order signals: the provider emits these sequentially as the
+        // user speaks, BEFORE transcription completes, so first-sight order is
+        // spoken order. Both are observed because providers differ in which they
+        // send; whichever names an item_id first sets its rank (idempotent).
+        "input_audio_buffer.committed" | "input_audio_buffer.speech_started" => {
+            match item_id_of(&v) {
+                Some(item_id) => Ok(WireEvent::Committed { item_id }),
+                None => Ok(WireEvent::Ignored),
             }
-            "error" => {
-                let message = v
-                    .get("error")
-                    .and_then(|e| e.get("message"))
-                    .and_then(|m| m.as_str())
-                    .unwrap_or("unknown error")
-                    .to_string();
-                let code = v
-                    .get("error")
-                    .and_then(|e| e.get("code"))
-                    .and_then(|c| c.as_str())
-                    .unwrap_or("");
-                let kind = classify_error(code);
-                Ok(Some(StreamingEvent::Error { message, kind }))
-            }
-            _ => Ok(None),
         }
+        "conversation.item.input_audio_transcription.completed"
+        | "transcription_session.completed" /* fallback variant some providers emit */ => {
+            let transcript = v
+                .get("transcript")
+                .and_then(|t| t.as_str())
+                .unwrap_or("")
+                .to_string();
+            // Correlate by item_id; fall back to the unique event_id so a provider
+            // that omits item_id still gets a distinct (unobserved) rank and emits
+            // in arrival order rather than mis-correlating across utterances.
+            let item_id = item_id_of(&v)
+                .or_else(|| v.get("event_id").and_then(|e| e.as_str()).map(str::to_string))
+                .unwrap_or_default();
+            Ok(WireEvent::Completed { item_id, transcript })
+        }
+        "error" => {
+            let message = v
+                .get("error")
+                .and_then(|e| e.get("message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("unknown error")
+                .to_string();
+            let code = v
+                .get("error")
+                .and_then(|e| e.get("code"))
+                .and_then(|c| c.as_str())
+                .unwrap_or("");
+            let kind = classify_error(code);
+            Ok(WireEvent::Error { message, kind })
+        }
+        _ => Ok(WireEvent::Ignored),
     }
 }
 
@@ -308,42 +403,60 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_event_recognizes_completed_transcript() {
-        let mut seq = 0u32;
-        let json = r#"{"type":"conversation.item.input_audio_transcription.completed","transcript":"hello world"}"#;
-        let evt = RealtimeOpenAiCompatibleClient::parse_event(json, &mut seq).unwrap().unwrap();
-        match evt {
-            StreamingEvent::UtteranceCompleted { text, utterance_seq } => {
-                assert_eq!(text, "hello world");
-                assert_eq!(utterance_seq, 1);
+    fn parse_event_completed_carries_item_id_and_transcript() {
+        let json = r#"{"type":"conversation.item.input_audio_transcription.completed","item_id":"itm_1","transcript":"hello world"}"#;
+        match parse_event(json).unwrap() {
+            WireEvent::Completed { item_id, transcript } => {
+                assert_eq!(item_id, "itm_1");
+                assert_eq!(transcript, "hello world");
             }
-            _ => panic!("wrong event variant"),
+            e => panic!("wrong variant: {:?}", e),
         }
     }
 
     #[test]
-    fn parse_event_skips_empty_transcript() {
-        let mut seq = 0u32;
-        let json = r#"{"type":"conversation.item.input_audio_transcription.completed","transcript":""}"#;
-        assert!(RealtimeOpenAiCompatibleClient::parse_event(json, &mut seq).unwrap().is_none());
+    fn parse_event_empty_transcript_still_completes() {
+        // Empty transcripts now flow through as `Completed` so the reorder buffer
+        // can advance its head past a silent segment; the buffer (not the parser)
+        // decides to emit nothing.
+        let json = r#"{"type":"conversation.item.input_audio_transcription.completed","item_id":"itm_1","transcript":""}"#;
+        match parse_event(json).unwrap() {
+            WireEvent::Completed { transcript, .. } => assert_eq!(transcript, ""),
+            e => panic!("wrong variant: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn parse_event_committed_is_ranking_signal() {
+        let json = r#"{"type":"input_audio_buffer.committed","item_id":"itm_7","previous_item_id":"itm_6"}"#;
+        match parse_event(json).unwrap() {
+            WireEvent::Committed { item_id } => assert_eq!(item_id, "itm_7"),
+            e => panic!("wrong variant: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn parse_event_speech_started_is_ranking_signal() {
+        let json = r#"{"type":"input_audio_buffer.speech_started","item_id":"itm_8","audio_start_ms":120}"#;
+        match parse_event(json).unwrap() {
+            WireEvent::Committed { item_id } => assert_eq!(item_id, "itm_8"),
+            e => panic!("wrong variant: {:?}", e),
+        }
     }
 
     #[test]
     fn parse_event_classifies_auth_error() {
-        let mut seq = 0u32;
         let json = r#"{"type":"error","error":{"message":"invalid key","code":"invalid_api_key"}}"#;
-        let evt = RealtimeOpenAiCompatibleClient::parse_event(json, &mut seq).unwrap().unwrap();
-        match evt {
-            StreamingEvent::Error { kind: ErrorKind::AuthFailed, .. } => {}
-            _ => panic!("wrong error kind"),
+        match parse_event(json).unwrap() {
+            WireEvent::Error { kind: ErrorKind::AuthFailed, .. } => {}
+            e => panic!("wrong variant: {:?}", e),
         }
     }
 
     #[test]
     fn parse_event_ignores_unknown_types() {
-        let mut seq = 0u32;
         let json = r#"{"type":"session.created","session":{"id":"x"}}"#;
-        assert!(RealtimeOpenAiCompatibleClient::parse_event(json, &mut seq).unwrap().is_none());
+        assert!(matches!(parse_event(json).unwrap(), WireEvent::Ignored));
     }
 
     #[test]
