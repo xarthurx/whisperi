@@ -48,6 +48,18 @@ import {
 
 type LivePhase = "idle" | "recording" | "polishing" | "processing";
 
+/** Resolve the language handed to the Live provider. Bilingual mode (and
+ *  auto/empty) map to null so the provider auto-detects within the pair instead
+ *  of being forced to the primary; an explicit single language passes through.
+ *  Deeper Live language handling is deferred to the future live-refinement pass. */
+async function resolveLiveLanguage(): Promise<string | null> {
+  const [langMode, preferred] = await Promise.all([
+    getSetting<string>("languageMode"),
+    getSetting<string>("preferredLanguage"),
+  ]);
+  return langMode === "bilingual" || !preferred || preferred === "auto" ? null : preferred;
+}
+
 interface Options {
   onToast?: (props: {
     title: string;
@@ -306,16 +318,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
         );
         return;
       }
-      // Bilingual Live (first cut): don't force the primary — let the provider
-      // auto-detect within the pair (no regression for full secondary-language
-      // utterances). Auto / empty also map to null. Deeper Live language
-      // handling is deferred to the future live-refinement pass.
-      const langModeSetting = await getSetting<string>("languageMode");
-      const preferredLangSetting = await getSetting<string>("preferredLanguage");
-      const language =
-        langModeSetting === "bilingual" || !preferredLangSetting || preferredLangSetting === "auto"
-          ? null
-          : preferredLangSetting;
+      const language = await resolveLiveLanguage();
 
       // Consent check (settings flag per provider)
       const consentKey = `liveConsent.${provider}`;
@@ -527,16 +530,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
         console.log("[Live] enhancement skipped — liveEnhancement=false");
       } else {
         try {
-          // Bilingual Live (first cut): don't force the primary — let the provider
-          // auto-detect within the pair (no regression for full secondary-language
-          // utterances). Auto / empty also map to null. Deeper Live language
-          // handling is deferred to the future live-refinement pass.
-          const langModeSetting = await getSetting<string>("languageMode");
-          const preferredLangSetting = await getSetting<string>("preferredLanguage");
-          const language =
-            langModeSetting === "bilingual" || !preferredLangSetting || preferredLangSetting === "auto"
-              ? null
-              : preferredLangSetting;
+          const language = await resolveLiveLanguage();
           const [
             dict, aliases, useLocal, whisperModel, cloudProvider, cloudModel,
             useR, rModel, rProvider, intensity, autoPaste, useCustom, customPrompt, debugMode,

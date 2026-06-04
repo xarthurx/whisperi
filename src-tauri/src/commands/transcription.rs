@@ -48,6 +48,32 @@ fn resolve_language(
     }
 }
 
+/// Per-request language parameters shared by both buffered transcription
+/// commands: the normalized primary/secondary codes, the conditioning prompt
+/// (bilingual when both are set, else single/auto), and the `engine_lang` handed
+/// to the model — `None` in bilingual mode so it auto-detects within the pair,
+/// otherwise the user's choice.
+fn prepare_language_params(
+    language: Option<String>,
+    secondary_language: Option<String>,
+    dictionary: &[String],
+) -> (Option<String>, Option<String>, String, Option<String>) {
+    let primary = normalize_language(language);
+    let secondary = normalize_language(secondary_language);
+    // Bilingual: prime BOTH languages and let the model detect within the pair
+    // (no forced -l). Otherwise keep the single/auto prompt.
+    let prompt = match (primary.as_deref(), secondary.as_deref()) {
+        (Some(p), Some(s)) => crate::transcription::build_bilingual_prompt(dictionary, p, s),
+        _ => crate::transcription::build_prompt(dictionary, primary.as_deref()),
+    };
+    // In bilingual mode never force a language; auto/single pass the choice through.
+    let engine_lang = match secondary.as_deref() {
+        Some(_) => None,
+        None => primary.clone(),
+    };
+    (primary, secondary, prompt, engine_lang)
+}
+
 #[derive(Debug, Serialize)]
 pub struct WhisperModelStatus {
     pub id: String,
@@ -70,20 +96,8 @@ pub async fn transcribe_local(
     agent_terms: Vec<String>,
 ) -> Result<TranscriptionResult, String> {
     let file_name = format!("ggml-{}.bin", model);
-    let primary = normalize_language(language);
-    let secondary = normalize_language(secondary_language);
-
-    // Bilingual: prime BOTH languages and let the model detect within the pair
-    // (no forced -l). Otherwise keep today's single/auto prompt.
-    let full_prompt = match (primary.as_deref(), secondary.as_deref()) {
-        (Some(p), Some(s)) => crate::transcription::build_bilingual_prompt(&dictionary, p, s),
-        _ => crate::transcription::build_prompt(&dictionary, primary.as_deref()),
-    };
-    // In bilingual mode never force a language; auto/single pass the choice through.
-    let engine_lang: Option<String> = match secondary.as_deref() {
-        Some(_) => None,
-        None => primary.clone(),
-    };
+    let (primary, secondary, full_prompt, engine_lang) =
+        prepare_language_params(language, secondary_language, &dictionary);
 
     let output = transcription::whisper::transcribe(
         &app,
@@ -130,17 +144,8 @@ pub async fn transcribe_cloud(
         !api_key.is_empty()
     );
 
-    let primary = normalize_language(language);
-    let secondary = normalize_language(secondary_language);
-    let prompt = match (primary.as_deref(), secondary.as_deref()) {
-        (Some(p), Some(s)) => crate::transcription::build_bilingual_prompt(&dictionary, p, s),
-        _ => crate::transcription::build_prompt(&dictionary, primary.as_deref()),
-    };
-    // Bilingual → auto-detect within the pair; auto/single pass the choice through.
-    let engine_lang: Option<String> = match secondary.as_deref() {
-        Some(_) => None,
-        None => primary.clone(),
-    };
+    let (primary, secondary, prompt, engine_lang) =
+        prepare_language_params(language, secondary_language, &dictionary);
 
     let output = match provider.as_str() {
         "openai" => transcription::cloud::transcribe_openai(
