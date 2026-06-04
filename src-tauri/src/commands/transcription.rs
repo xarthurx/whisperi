@@ -33,6 +33,37 @@ fn effective_language(
     }
 }
 
+/// Resolve the effective language used for post-processing (T→S) and reported
+/// back to the frontend (which forwards it to AI enhancement).
+///
+/// - **Bilingual** (`secondary` is `Some`): keep the detected language when it
+///   is one of the two chosen languages; a third-language detection or no
+///   detection snaps to `primary`.
+/// - **Auto / Single** (`secondary` is `None`): unchanged — auto/empty prefers
+///   the detected language, an explicit language wins outright.
+// Temporary: replaces effective_language at the call sites in Task 3, which
+// removes this attribute and the now-dead effective_language.
+#[allow(dead_code)]
+fn resolve_language(
+    primary: Option<&str>,
+    secondary: Option<&str>,
+    detected: Option<&str>,
+) -> Option<String> {
+    match secondary {
+        Some(sec) => {
+            let p = primary.unwrap_or("");
+            match detected {
+                Some(d) if d == p || d == sec => Some(d.to_string()),
+                _ => primary.map(str::to_string),
+            }
+        }
+        None => match primary {
+            None | Some("auto") => detected.map(str::to_string),
+            Some(other) => Some(other.to_string()),
+        },
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct WhisperModelStatus {
     pub id: String,
@@ -350,5 +381,44 @@ mod tests {
         // use its own kana heuristic.
         assert_eq!(effective_language(Some("auto"), None), None);
         assert_eq!(effective_language(None, None), None);
+    }
+
+    #[test]
+    fn resolve_keeps_in_set_detection() {
+        // Bilingual: a detected language inside {primary, secondary} is kept.
+        assert_eq!(
+            resolve_language(Some("zh"), Some("en"), Some("en")),
+            Some("en".to_string())
+        );
+        assert_eq!(
+            resolve_language(Some("zh"), Some("en"), Some("zh")),
+            Some("zh".to_string())
+        );
+    }
+
+    #[test]
+    fn resolve_snaps_out_of_set_to_primary() {
+        // Bilingual: a third-language detection snaps to primary.
+        assert_eq!(
+            resolve_language(Some("zh"), Some("en"), Some("ko")),
+            Some("zh".to_string())
+        );
+    }
+
+    #[test]
+    fn resolve_no_detection_uses_primary_in_bilingual() {
+        assert_eq!(
+            resolve_language(Some("zh"), Some("en"), None),
+            Some("zh".to_string())
+        );
+    }
+
+    #[test]
+    fn resolve_non_bilingual_matches_legacy_behavior() {
+        // secondary = None → auto/empty prefers detection, explicit wins outright.
+        assert_eq!(resolve_language(Some("auto"), None, Some("zh")), Some("zh".to_string()));
+        assert_eq!(resolve_language(None, None, Some("ja")), Some("ja".to_string()));
+        assert_eq!(resolve_language(Some("ja"), None, Some("zh")), Some("ja".to_string()));
+        assert_eq!(resolve_language(Some("auto"), None, None), None);
     }
 }
