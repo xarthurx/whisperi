@@ -306,10 +306,16 @@ export function useLiveDictation({ onToast }: Options = {}) {
         );
         return;
       }
-      // Language is optional — "auto"/null means the provider auto-detects from
-      // the audio (same as Standard mode's whisper.cpp behavior). We pass null
-      // downstream so the Rust adapter can omit the field from session.update.
-      const language = await getSetting<string>("preferredLanguage");
+      // Bilingual Live (first cut): don't force the primary — let the provider
+      // auto-detect within the pair (no regression for full secondary-language
+      // utterances). Auto / empty also map to null. Deeper Live language
+      // handling is deferred to the future live-refinement pass.
+      const langModeSetting = await getSetting<string>("languageMode");
+      const preferredLangSetting = await getSetting<string>("preferredLanguage");
+      const language =
+        langModeSetting === "bilingual" || !preferredLangSetting || preferredLangSetting === "auto"
+          ? null
+          : preferredLangSetting;
 
       // Consent check (settings flag per provider)
       const consentKey = `liveConsent.${provider}`;
@@ -521,7 +527,16 @@ export function useLiveDictation({ onToast }: Options = {}) {
         console.log("[Live] enhancement skipped — liveEnhancement=false");
       } else {
         try {
-          const language = await getSetting<string>("preferredLanguage");
+          // Bilingual Live (first cut): don't force the primary — let the provider
+          // auto-detect within the pair (no regression for full secondary-language
+          // utterances). Auto / empty also map to null. Deeper Live language
+          // handling is deferred to the future live-refinement pass.
+          const langModeSetting = await getSetting<string>("languageMode");
+          const preferredLangSetting = await getSetting<string>("preferredLanguage");
+          const language =
+            langModeSetting === "bilingual" || !preferredLangSetting || preferredLangSetting === "auto"
+              ? null
+              : preferredLangSetting;
           const [
             dict, aliases, useLocal, whisperModel, cloudProvider, cloudModel,
             useR, rModel, rProvider, intensity, autoPaste, useCustom, customPrompt, debugMode,
