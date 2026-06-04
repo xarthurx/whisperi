@@ -48,16 +48,20 @@ import {
 
 type LivePhase = "idle" | "recording" | "polishing" | "processing";
 
-/** Resolve the language handed to the Live provider. Bilingual mode (and
- *  auto/empty) map to null so the provider auto-detects within the pair instead
- *  of being forced to the primary; an explicit single language passes through.
- *  Deeper Live language handling is deferred to the future live-refinement pass. */
+/** Resolve the language handed to the Live provider. Auto and Bilingual return
+ *  null so the provider auto-detects (Bilingual within the pair); an explicit
+ *  Single language passes through. `preferredLanguage` can be a stale single-mode
+ *  choice when `languageMode` is "auto" (the mode toggle does not reset it), so
+ *  this gates on the mode, not on the stored language. Deeper Live language
+ *  handling is deferred to the future live-refinement pass. */
 async function resolveLiveLanguage(): Promise<string | null> {
   const [langMode, preferred] = await Promise.all([
     getSetting<string>("languageMode"),
     getSetting<string>("preferredLanguage"),
   ]);
-  return langMode === "bilingual" || !preferred || preferred === "auto" ? null : preferred;
+  return langMode === "auto" || langMode === "bilingual" || !preferred || preferred === "auto"
+    ? null
+    : preferred;
 }
 
 interface Options {

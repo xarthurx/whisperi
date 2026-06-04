@@ -123,6 +123,15 @@ export interface TranscribeResult {
   detectedLanguage: string | null;
 }
 
+/** The language to request from the engine and enhancement, honoring
+ *  `languageMode`. In Auto mode the stored `preferredLanguage` may be a stale
+ *  single-mode choice (the mode toggle does not reset it), so Auto always
+ *  requests "auto" — true auto-detect — regardless of that value; Single and
+ *  Bilingual use the stored primary language. */
+function requestedLanguage(settings: TranscriptionSettings): string | undefined {
+  return settings.languageMode === "auto" ? "auto" : (settings.language ?? undefined);
+}
+
 /** Run transcription (local or cloud). Returns text plus the language the backend
  *  detected (when in auto mode). Throws on missing API key. */
 export async function transcribe(
@@ -149,7 +158,7 @@ export async function transcribe(
     const result = await transcribeLocal(
       audioData,
       settings.whisperModel ?? "base",
-      settings.language ?? undefined,
+      requestedLanguage(settings),
       secondaryLanguage,
       transcriptionDict,
       agentTerms,
@@ -171,7 +180,7 @@ export async function transcribe(
     provider,
     apiKey,
     model,
-    settings.language ?? undefined,
+    requestedLanguage(settings),
     secondaryLanguage,
     transcriptionDict,
     agentTerms,
@@ -238,7 +247,7 @@ export async function enhance(
   const resolvedLanguage =
     settings.languageMode === "bilingual"
       ? (detectedLanguage ?? settings.language ?? undefined)
-      : effectiveLanguage(settings.language, detectedLanguage);
+      : effectiveLanguage(requestedLanguage(settings), detectedLanguage);
   const systemPrompt = isChatMode
     ? getChatSystemPrompt(settings.agentName, dictionary, resolvedLanguage)
     : getSystemPrompt(
