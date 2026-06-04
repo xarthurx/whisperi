@@ -543,7 +543,9 @@ export function useLiveDictation({ onToast }: Options = {}) {
           ]);
           const dictionary = buildTranscriptionDictionary(dict, agentName, aliases);
           const settings: TranscriptionSettings = {
-            useLocal, whisperModel, cloudProvider, cloudModel, language, dictionary,
+            useLocal, whisperModel, cloudProvider, cloudModel, language,
+            languageMode: null, secondaryLanguage: null,
+            dictionary,
             useReasoning: useR, reasoningModel: rModel, reasoningProvider: rProvider,
             enhancementIntensity: intensity, autoPaste, useCustomPrompt: useCustom,
             customSystemPrompt: customPrompt, agentName, agentAliases: aliases,

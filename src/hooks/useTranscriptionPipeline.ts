@@ -24,6 +24,8 @@ export interface TranscriptionSettings {
   cloudProvider: string | null;
   cloudModel: string | null;
   language: string | null;
+  languageMode: "auto" | "single" | "bilingual" | null;
+  secondaryLanguage: string | null;
   dictionary: string[];
   useReasoning: boolean | null;
   reasoningModel: string | null;
@@ -45,6 +47,8 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
     cloudProvider,
     cloudModel,
     language,
+    languageMode,
+    secondaryLanguage,
     dictionary,
     useReasoning,
     reasoningModel,
@@ -62,6 +66,8 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
     getSetting<string>("cloudTranscriptionProvider"),
     getSetting<string>("cloudTranscriptionModel"),
     getSetting<string>("preferredLanguage"),
+    getSetting<"auto" | "single" | "bilingual">("languageMode"),
+    getSetting<string>("secondaryLanguage"),
     getCustomDictionary(),
     getSetting<boolean>("useReasoningModel"),
     getSetting<string>("reasoningModel"),
@@ -81,6 +87,8 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
     cloudProvider,
     cloudModel,
     language,
+    languageMode,
+    secondaryLanguage,
     dictionary,
     useReasoning,
     reasoningModel,
@@ -130,11 +138,19 @@ export async function transcribe(
     (w): w is string => !!w?.trim(),
   );
 
+  // Only forward a secondary language in bilingual mode — its presence is the
+  // backend's bilingual switch.
+  const secondaryLanguage =
+    settings.languageMode === "bilingual"
+      ? settings.secondaryLanguage ?? undefined
+      : undefined;
+
   if (settings.useLocal) {
     const result = await transcribeLocal(
       audioData,
       settings.whisperModel ?? "base",
       settings.language ?? undefined,
+      secondaryLanguage,
       transcriptionDict,
       agentTerms,
     );
@@ -156,6 +172,7 @@ export async function transcribe(
     apiKey,
     model,
     settings.language ?? undefined,
+    secondaryLanguage,
     transcriptionDict,
     agentTerms,
   );
@@ -216,7 +233,12 @@ export async function enhance(
   // In auto mode, use the language the transcription step actually detected.
   // This makes downstream T→S enforcement deterministic instead of relying on
   // the kana heuristic inside `finalize_chinese_text`.
-  const resolvedLanguage = effectiveLanguage(settings.language, detectedLanguage);
+  // Bilingual: the backend already snapped detected_language to the chosen pair,
+  // so prefer it (fall back to primary). Auto/single keep legacy resolution.
+  const resolvedLanguage =
+    settings.languageMode === "bilingual"
+      ? (detectedLanguage ?? settings.language ?? undefined)
+      : effectiveLanguage(settings.language, detectedLanguage);
   const systemPrompt = isChatMode
     ? getChatSystemPrompt(settings.agentName, dictionary, resolvedLanguage)
     : getSystemPrompt(
