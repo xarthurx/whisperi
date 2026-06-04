@@ -101,6 +101,14 @@ impl ReorderBuffer {
         !self.pending.is_empty() && !self.pending.contains_key(&self.next_emit)
     }
 
+    /// The current head-of-line rank (`next_emit`) — the next rank eligible to
+    /// emit. The client compares this before/after a completion to detect when the
+    /// head advanced, so it can re-arm the head-of-line timeout for the
+    /// newly-exposed rank instead of inheriting the previous head's clock.
+    pub fn head(&self) -> u32 {
+        self.next_emit
+    }
+
     /// Look up `item_id`'s rank, assigning the next capture-order rank on first sight.
     fn rank_of(&mut self, item_id: &str) -> u32 {
         if let Some(&rank) = self.ranks.get(item_id) {

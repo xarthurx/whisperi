@@ -122,7 +122,7 @@ impl RealtimeOpenAiCompatibleClient {
                 Ok(None)
             }
             WireEvent::Completed { item_id, transcript } => {
-                let released = self.reorder.complete(&item_id, transcript);
+                let released = self.ingest_completed(&item_id, transcript);
                 let events = self.wrap_completed(released);
                 self.ready.extend(events);
                 Ok(self.ready.pop_front())
@@ -132,6 +132,24 @@ impl RealtimeOpenAiCompatibleClient {
             }
             WireEvent::Ignored => Ok(None),
         }
+    }
+
+    /// Feed a completed transcript into the reorder buffer and re-arm the
+    /// head-of-line timer when the head advances. Without this, a completion that
+    /// advances the head onto a *new* still-missing rank (e.g. rank 0 lands while
+    /// rank 1 is still absent) leaves `blocked_since` measuring from the previous
+    /// block, so the new head could be skipped well before its full
+    /// `REORDER_HEAD_TIMEOUT`. Keyed on the head moving — not on text being
+    /// released — so advancing past a silent (empty) rank re-arms it too.
+    fn ingest_completed(&mut self, item_id: &str, transcript: String) -> Vec<String> {
+        let head_before = self.reorder.head();
+        let released = self.reorder.complete(item_id, transcript);
+        if self.reorder.head() != head_before {
+            // Head advanced; clear the clock so the next `check_reorder_timeout`
+            // tick re-arms it fresh for the newly-exposed head.
+            self.blocked_since = None;
+        }
+        released
     }
 
     /// Release any completion held past the head-of-line timeout. The pump calls
@@ -424,6 +442,35 @@ impl RealtimeOpenAiCompatibleClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn head_advance_rearms_reorder_timeout() {
+        // Regression: a completion that advances the head onto a NEW still-missing
+        // rank must restart the head-of-line timer, not inherit the previous
+        // block's clock — otherwise the newly-exposed head is skipped early.
+        let mut c = RealtimeOpenAiCompatibleClient::new(
+            &crate::transcription::streaming::providers::OPENAI_REALTIME,
+        );
+        c.reorder.observe("a"); // rank 0
+        c.reorder.observe("b"); // rank 1 — stays missing
+        c.reorder.observe("c"); // rank 2
+        // rank 2 completes first → blocked on missing rank 0.
+        assert!(c.ingest_completed("c", "C".into()).is_empty());
+        let t0 = Instant::now();
+        assert!(c.check_reorder_timeout(t0).is_empty()); // arms the timer at t0
+        // rank 0 lands → head advances 0→1, still blocked on missing rank 1.
+        assert_eq!(c.ingest_completed("a", "A".into()), vec!["A".to_string()]);
+        // A full timeout after the ORIGINAL block must NOT skip rank 1: its clock
+        // restarted when the head advanced.
+        assert!(
+            c.check_reorder_timeout(t0 + REORDER_HEAD_TIMEOUT).is_empty(),
+            "rank 1's timer must restart on head advance, not inherit rank 0's clock",
+        );
+        // It DOES fire a full timeout measured from the head advance (rank 1
+        // abandoned, rank 2's "C" released).
+        let fired = c.check_reorder_timeout(t0 + REORDER_HEAD_TIMEOUT + REORDER_HEAD_TIMEOUT);
+        assert_eq!(fired.len(), 1);
+    }
 
     /// Parse a raw JSON event string the way `poll_event` does (decode → dispatch).
     fn parse(json: &str) -> WireEvent {
