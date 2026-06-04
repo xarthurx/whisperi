@@ -203,7 +203,10 @@ Live mode streams audio over WebSocket to a cloud ASR provider, typing utterance
       longer earlier one is still emitted in spoken order
     → Tauri emits "live-utterance" {{ text, utterance_seq }} payload (in spoken order)
     → Frontend accumulates raw transcript locally and invokes invoke("type_text_chunk", { text })
-    → Rust simulates SendInput keystrokes (with sanitization), returns UTF-16 unit count typed
+    → Rust simulates SendInput keystrokes (with sanitization) into the focused window,
+      returning the UTF-16 unit count AND the focus target (window + focused control via
+      GetGUIThreadInfo) it typed into; the frontend records each chunk under its target so
+      the post-stop swap can scope itself to a single box
     On error: Tauri emits "live-error" {{ message, kind }}; on natural close: "live-session-closed" (session_id)
         ↓
 6.  User releases hotkey / clicks stop
@@ -215,9 +218,17 @@ Live mode streams audio over WebSocket to a cloud ASR provider, typing utterance
 8.  Enhancement (optional):
     Raw transcript → invoke("process_reasoning", ...) → enhanced version
         ↓
-9.  If enhanced text differs from raw AND foreground HWND matches session snapshot:
-    invoke("swap_typed_text_cmd", { backspace_count, new_text })
-    → Backspace + retype the window's content
+9.  If enhanced text differs from raw, replace the live-typed text with the polished
+    version, SCOPED to the box currently focused (Live types "where you look", so the
+    transcript may be spread across boxes/windows):
+    → Group typed chunks by focus target; for the box focused now, invoke
+      "swap_typed_text_cmd" { backspace_count, new_text, expected_hwnd, expected_control }
+      to backspace ONLY that box's characters and retype its polished slice (re-polishing
+      the slice when the session spanned multiple boxes). swap_typed_text refuses to act
+      if the focused window OR control has drifted.
+    → If the box can't be uniquely identified — web/Electron fields where many boxes share
+      one render HWND, or focus on a box never typed into — skip the destructive swap and
+      copy the polished text to the clipboard (set_clipboard_text) with a toast instead
         ↓
 10. invoke("save_transcription", { original: raw, processed: enhanced, method: "live", agent })
 ```

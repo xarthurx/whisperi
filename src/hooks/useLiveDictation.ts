@@ -8,6 +8,8 @@ import {
   cancelLiveSession,
   typeTextChunk,
   swapTypedText,
+  getFocusTarget,
+  setClipboardText,
   getForegroundWindow,
   getForegroundWindowClass,
   onLiveUtterance,
@@ -47,6 +49,18 @@ import {
 } from "@tauri-apps/plugin-notification";
 
 type LivePhase = "idle" | "recording" | "polishing" | "processing";
+
+/** A contiguous run of live-typed text that all landed in the same focus target
+ *  (window + control). The post-stop polish swap groups by target so it only
+ *  ever backspaces the characters that went into the box being replaced — never
+ *  the grand total across windows. */
+interface TypedSegment {
+  window: number;
+  control: number;
+  scopable: boolean;
+  raw: string;
+  chars: number;
+}
 
 /** Resolve the language handed to the Live provider. Auto and Bilingual return
  *  null so the provider auto-detects (Bilingual within the pair); an explicit
@@ -110,6 +124,10 @@ export function useLiveDictation({ onToast }: Options = {}) {
   const recordingStartRef = useRef<number | null>(null);
   const accumulatedRawRef = useRef<string>("");
   const totalCharsTypedRef = useRef<number>(0);
+  /** Per-focus-target record of what was live-typed, in order. Lets the
+   *  post-stop swap scope its backspaces to a single box (and re-polish just
+   *  that box's slice) instead of deleting the grand total from one window. */
+  const typedSegmentsRef = useRef<TypedSegment[]>([]);
   const dictionaryRef = useRef<string[]>([]);
   const sessionErrorRef = useRef<string | null>(null);
   const unlistenRef = useRef<(() => void)[]>([]);
@@ -176,10 +194,27 @@ export function useLiveDictation({ onToast }: Options = {}) {
               accumulatedRawRef.current.length > 0 ? " " : "";
             const toType = prefix + cleaned;
             try {
-              const charsTyped = await typeTextChunk(toType);
-              if (charsTyped <= 0) return; // Rust stripped everything
+              const typed = await typeTextChunk(toType);
+              if (typed.chars <= 0) return; // Rust stripped everything / secure window
               accumulatedRawRef.current += toType;
-              totalCharsTypedRef.current += charsTyped;
+              totalCharsTypedRef.current += typed.chars;
+              // Record which focus target this chunk landed in so the post-stop
+              // swap can scope its backspaces to one box. Merge into the last
+              // segment when the target is unchanged.
+              const segs = typedSegmentsRef.current;
+              const last = segs[segs.length - 1];
+              if (last && last.window === typed.window && last.control === typed.control) {
+                last.raw += toType;
+                last.chars += typed.chars;
+              } else {
+                segs.push({
+                  window: typed.window,
+                  control: typed.control,
+                  scopable: typed.scopable,
+                  raw: toType,
+                  chars: typed.chars,
+                });
+              }
             } catch (e) {
               console.error("[Live] type_text_chunk failed:", e);
             }
@@ -292,6 +327,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
       sessionErrorRef.current = null;
       accumulatedRawRef.current = "";
       totalCharsTypedRef.current = 0;
+      typedSegmentsRef.current = [];
       // Clear any previous error so the readiness banner doesn't show stale info.
       await setSetting("liveLastError", "").catch(() => {});
 
@@ -530,6 +566,10 @@ export function useLiveDictation({ onToast }: Options = {}) {
       let agentName = await getAgentName();
       const liveEnhancement = await getSetting<boolean>("liveEnhancement");
       const skipEnhancement = liveEnhancement === false;
+      // When enhancement is on, `reEnhance` polishes an arbitrary fragment with
+      // the same settings — reused to polish a single box's slice when the
+      // dictation was split across boxes.
+      let reEnhance: ((text: string) => Promise<string>) | null = null;
       if (skipEnhancement) {
         console.log("[Live] enhancement skipped — liveEnhancement=false");
       } else {
@@ -564,36 +604,74 @@ export function useLiveDictation({ onToast }: Options = {}) {
             customSystemPrompt: customPrompt, agentName, agentAliases: aliases,
             debugMode,
           };
-          const enhancePromise = enhance(raw, settings, dictionary, language ?? null);
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("enhance() timed out after 30s")), 30_000),
-          );
-          const result = await Promise.race([enhancePromise, timeoutPromise]);
-          enhanced = result.finalText;
+          reEnhance = async (text: string) => {
+            const enhancePromise = enhance(text, settings, dictionary, language ?? null);
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("enhance() timed out after 30s")), 30_000),
+            );
+            const result = await Promise.race([enhancePromise, timeoutPromise]);
+            return result.finalText;
+          };
+          enhanced = await reEnhance(raw);
         } catch (e) {
           console.error("[Live] enhance failed/timed out:", e);
           // Fall through with enhanced = raw; user's typed text is preserved.
+          enhanced = raw;
         }
       }
 
-      // Swap if enhanced differs
-      if (enhanced !== raw && targetHwndRef.current !== null) {
+      // Replace the live-typed text with the polished version. Live types "where
+      // you look", so the transcript may be spread across multiple boxes/windows.
+      // Scope the destructive backspace to the box focused NOW (and only the
+      // characters that went into it). If that can't be done safely — a
+      // web/Electron field where many boxes share one HWND, or focus on a box we
+      // never typed into — copy the polished text to the clipboard instead of
+      // risking a cross-box deletion.
+      if (enhanced !== raw) {
+        const copyPolishToClipboard = async () => {
+          try {
+            await setClipboardText(enhanced);
+          } catch (e) {
+            console.error("[Live] setClipboardText failed:", e);
+          }
+          onToast?.({
+            title: "Polished text copied to clipboard",
+            description:
+              "It couldn't be safely swapped in place (a web field, or text spread across boxes), so paste it where you want.",
+            variant: "default",
+          });
+        };
         try {
-          const result = await swapTypedText(
-            totalCharsTypedRef.current,
-            enhanced,
-            targetHwndRef.current,
+          const current = await getFocusTarget();
+          const segs = typedSegmentsRef.current;
+          const matching = segs.filter(
+            (s) => s.window === current.window && s.control === current.control,
           );
-          if (result === "SkippedFocusDrift") {
-            onToast?.({
-              title: "Polish skipped",
-              description:
-                "You switched windows mid-dictation. Your dictated text is preserved as-is.",
-              variant: "default",
-            });
+          const scopedChars = matching.reduce((n, s) => n + s.chars, 0);
+          const scopedRaw = matching.map((s) => s.raw).join("");
+          if (!current.scopable || scopedChars <= 0) {
+            // Web/Electron field, or focus moved to a box we never typed into.
+            await copyPolishToClipboard();
+          } else {
+            const scopedRawTrim = scopedRaw.trim();
+            // Reuse the full polish when this box holds the whole transcript;
+            // otherwise re-polish just this box's slice.
+            let scopedEnhanced = enhanced;
+            if (scopedRawTrim !== raw) {
+              scopedEnhanced = reEnhance ? await reEnhance(scopedRawTrim) : scopedRawTrim;
+            }
+            if (scopedEnhanced.trim() !== scopedRawTrim) {
+              const result = await swapTypedText(
+                scopedChars,
+                scopedEnhanced,
+                current.window,
+                current.control,
+              );
+              if (result === "SkippedFocusDrift") await copyPolishToClipboard();
+            }
           }
         } catch (e) {
-          console.error("[Live] swap_typed_text failed:", e);
+          console.error("[Live] polish swap failed:", e);
         }
       }
 

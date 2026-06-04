@@ -6,8 +6,8 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::audio::recorder::RecordingState;
 use crate::clipboard::{
-    SwapResult, current_foreground_hwnd, current_foreground_window_class, send_text_keystrokes,
-    swap_typed_text,
+    FocusTarget, SwapResult, current_focus_target, current_foreground_hwnd,
+    current_foreground_window_class, send_text_keystrokes, swap_typed_text,
 };
 use crate::transcription::streaming::{
     LiveSessionHandle, LiveSessionState, SessionConfig, StreamingEvent, StreamingTranscriber,
@@ -16,9 +16,29 @@ use crate::transcription::streaming::{
     realtime_openai_compatible::RealtimeOpenAiCompatibleClient,
 };
 
+/// Result of typing one Live utterance chunk: how many UTF-16 units were
+/// actually sent, plus the focus target they landed in (so the frontend can
+/// group chunks per box and scope the post-stop swap to a single box).
+#[derive(serde::Serialize)]
+pub struct TypedChunk {
+    pub chars: usize,
+    pub window: isize,
+    pub control: isize,
+    pub scopable: bool,
+}
+
 #[tauri::command]
-pub async fn type_text_chunk(text: String) -> Result<usize, String> {
-    Ok(send_text_keystrokes(&text))
+pub async fn type_text_chunk(text: String) -> Result<TypedChunk, String> {
+    // Read where focus is right before typing so the chunk is attributed to the
+    // box it actually lands in.
+    let target = current_focus_target();
+    let chars = send_text_keystrokes(&text);
+    Ok(TypedChunk {
+        chars,
+        window: target.window,
+        control: target.control,
+        scopable: target.scopable,
+    })
 }
 
 #[tauri::command]
@@ -26,8 +46,19 @@ pub async fn swap_typed_text_cmd(
     backspace_count: usize,
     new_text: String,
     expected_hwnd: Option<isize>,
+    expected_control: Option<isize>,
 ) -> Result<SwapResult, String> {
-    Ok(swap_typed_text(backspace_count, &new_text, expected_hwnd))
+    Ok(swap_typed_text(
+        backspace_count,
+        &new_text,
+        expected_hwnd,
+        expected_control,
+    ))
+}
+
+#[tauri::command]
+pub fn get_focus_target() -> Result<FocusTarget, String> {
+    Ok(current_focus_target())
 }
 
 #[tauri::command]

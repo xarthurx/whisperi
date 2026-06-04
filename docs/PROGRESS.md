@@ -46,8 +46,18 @@ Every version entry in `docs/CHANGELOG.md` must start with a `### Highlights` st
 
 Landed on branch `feat/bilingual-language-mode`. Primary/secondary language selection with a bilingual conditioning prompt and `resolve_language` snap-to-primary policy. Buffered transcription (local whisper.cpp + all cloud providers) fully covered. Live mode auto-detects within the pair instead of forcing the primary.
 
+**Update (2026-06-04, post-0.8.0):** the Settings UI dropped the "Primary"/"Secondary" labels — the two languages now render as equal peers on one line (neutral "+" separator), since users who code-switch don't rank one over the other. The backend is deliberately unchanged: the first slot (`preferredLanguage`) remains the *silent, unlabeled* fallback in `resolve_language` for out-of-pair / too-short clips, and the bilingual prompt still places it last. Considered re-decode-based refinement (force a language and retry) but it was dropped — a script check can't pick a winner (forcing a language coerces the output script) and cloud providers expose no comparable per-decode confidence, while Whisperi is cloud-first. Removed `general.language.primary`/`secondary`; reworded `bilingualHint` across all 9 locales.
+
 ### Open items to verify in real use (from spec §14)
 
 - [ ] Whether Live realtime providers (OpenAI Realtime, Azure, etc.) surface a per-utterance detected language in their event stream — needed to implement snap-to-pair logic in Live mode without forcing the primary.
 - [ ] Empirically best bilingual prompt ordering for zh+en: current implementation places the primary language last (nearest the audio); validate this assumption with short Mandarin clips in a zh+en pair.
 - [ ] Which cloud providers (Azure Cognitive Services, Google Speech-to-Text, AssemblyAI) return a usable detected-language field in their bilingual / multi-language response, and whether that field is reliable enough to feed `resolve_language`.
+
+## Live polish-swap scoping (post-0.8.0)
+
+Live types each utterance into whatever window has focus ("type where you look"), so a long dictation can spread across several boxes/windows. The post-stop "Polish text on stop" swap previously backspaced the **grand-total** character count from whichever box was focused at stop — over-deleting there and orphaning fragments elsewhere (reported bug). Now each typed chunk is tagged with its focus target (window + focused control via `GetGUIThreadInfo`), and on stop the swap scopes to the box focused then: it backspaces only that box's characters and retypes its (re-polished) slice, leaving the other boxes as dictated.
+
+Web/Electron fields share one render HWND across many boxes, so they can't be told apart by HWND — they're flagged non-`scopable` via a render-class denylist (`is_web_render_class`) and take a non-destructive clipboard fallback (`set_clipboard_text` + toast). Consequence: single web fields now copy-to-clipboard instead of auto-replacing in place. New commands `get_focus_target` / `set_clipboard_text`; `type_text_chunk` returns a `TypedChunk { chars, window, control, scopable }`; `swap_typed_text` gained an `expected_control` check.
+
+**Known gaps (see TODO → Live mode stabilization):** (1) per-box scoping inside web/Electron needs UI Automation; (2) a caret move *within* the same box before stop still backspaces from the wrong spot (needs selection tracking or a non-destructive replace).

@@ -235,6 +235,7 @@ pub fn run() {
             commands::models::get_model_registry,
             commands::clipboard::paste_text,
             commands::clipboard::read_clipboard,
+            commands::clipboard::set_clipboard_text,
             commands::database::save_transcription,
             commands::database::get_transcriptions,
             commands::database::delete_transcription,
@@ -250,6 +251,7 @@ pub fn run() {
             commands::live::swap_typed_text_cmd,
             commands::live::get_foreground_window,
             commands::live::get_foreground_window_class,
+            commands::live::get_focus_target,
         ])
         .build(tauri::generate_context!())
         .expect("error while building whisperi")

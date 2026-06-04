@@ -236,6 +236,12 @@ export async function readClipboard(): Promise<string> {
   return invoke("read_clipboard");
 }
 
+/** Set the clipboard without pasting (Live polish fallback when an in-place
+ *  swap isn't safe). */
+export async function setClipboardText(text: string): Promise<void> {
+  return invoke("set_clipboard_text", { text });
+}
+
 // Settings
 export async function getSetting<T = unknown>(key: string): Promise<T | null> {
   return invoke("get_setting", { key });
@@ -359,19 +365,31 @@ export async function cancelLiveSession(sessionId: number): Promise<void> {
   await invoke("cancel_live_session", { sessionId });
 }
 
-export async function typeTextChunk(text: string): Promise<number> {
-  return invoke<number>("type_text_chunk", { text });
+/** Result of typing one Live chunk: UTF-16 units sent, and the focus target
+ *  (top-level window + focused control) they landed in. `scopable` is false for
+ *  web/Electron render surfaces where many boxes share one control HWND. */
+export interface TypedChunk {
+  chars: number;
+  window: number;
+  control: number;
+  scopable: boolean;
+}
+
+export async function typeTextChunk(text: string): Promise<TypedChunk> {
+  return invoke<TypedChunk>("type_text_chunk", { text });
 }
 
 export async function swapTypedText(
   backspaceCount: number,
   newText: string,
   expectedHwnd: number | null,
+  expectedControl: number | null,
 ): Promise<SwapResult> {
   return invoke<SwapResult>("swap_typed_text_cmd", {
     backspaceCount,
     newText,
     expectedHwnd,
+    expectedControl,
   });
 }
 
@@ -381,6 +399,19 @@ export async function getForegroundWindow(): Promise<number> {
 
 export async function getForegroundWindowClass(): Promise<string | null> {
   return invoke<string | null>("get_foreground_window_class");
+}
+
+/** Where the next keystrokes would land: the foreground window and the focused
+ *  control within it. `scopable` is false for web/Electron render surfaces
+ *  (many text boxes behind one control HWND). */
+export interface FocusTarget {
+  window: number;
+  control: number;
+  scopable: boolean;
+}
+
+export async function getFocusTarget(): Promise<FocusTarget> {
+  return invoke<FocusTarget>("get_focus_target");
 }
 
 export async function onLiveUtterance(
