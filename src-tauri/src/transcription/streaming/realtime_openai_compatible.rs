@@ -20,10 +20,18 @@ use super::providers::{AuthScheme, ProviderConfig, VadMode};
 use super::reorder::ReorderBuffer;
 use super::{SessionConfig, StreamingEvent, StreamingTranscriber, ErrorKind};
 use std::collections::VecDeque;
+use std::time::Duration;
+use tokio::time::Instant;
 
 type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 type WsSink = SplitSink<WsStream, Message>;
 type WsSource = SplitStream<WsStream>;
+
+/// Head-of-line bound for the reorder buffer: a completion held waiting for an
+/// earlier utterance that never finishes is released after this. Comfortably
+/// longer than realistic transcription latency, since a merely-slow utterance
+/// fills the gap (via `poll_event`) and disarms the timer before it fires.
+const REORDER_HEAD_TIMEOUT: Duration = Duration::from_millis(2500);
 
 pub struct RealtimeOpenAiCompatibleClient {
     cfg: &'static ProviderConfig,
@@ -37,6 +45,9 @@ pub struct RealtimeOpenAiCompatibleClient {
     /// Completions the reorder buffer has released, handed back one per
     /// `poll_event` call.
     ready: VecDeque<StreamingEvent>,
+    /// When the reorder buffer first became head-of-line blocked, for the
+    /// [`Self::check_reorder_timeout`] deadline. `None` while not blocked.
+    blocked_since: Option<Instant>,
 }
 
 impl RealtimeOpenAiCompatibleClient {
@@ -48,6 +59,7 @@ impl RealtimeOpenAiCompatibleClient {
             emit_seq: 0,
             reorder: ReorderBuffer::new(),
             ready: VecDeque::new(),
+            blocked_since: None,
         }
     }
 
@@ -85,20 +97,25 @@ impl RealtimeOpenAiCompatibleClient {
             }
             _ => return Ok(None),
         };
+        // Parse once and reuse for both logging and dispatch.
         // INFO: type + size only (no transcript content — that's user speech and
         // shouldn't land in production logs). DEBUG: full payload (truncated at
         // 600 bytes on a char boundary).
-        let evt_type = serde_json::from_str::<Value>(&text)
+        let parsed = serde_json::from_str::<Value>(&text);
+        let evt_type = parsed
+            .as_ref()
             .ok()
-            .and_then(|v| v.get("type").and_then(|t| t.as_str()).map(str::to_string))
-            .unwrap_or_else(|| "<unparseable>".into());
+            .and_then(|v| v.get("type").and_then(|t| t.as_str()))
+            .unwrap_or("<unparseable>")
+            .to_string();
         log::info!("[Live] WS recv type={} ({} bytes)", evt_type, text.len());
         log::debug!(
             "[Live] WS recv payload: {}",
             truncate_at_char_boundary(&text, 600)
         );
+        let value = parsed.context("parse event json")?;
 
-        match parse_event(&text)? {
+        match parse_event(&value)? {
             WireEvent::Committed { item_id } => {
                 // Capture-order ranking signal — assign the rank now, emit nothing.
                 self.reorder.observe(&item_id);
@@ -117,17 +134,24 @@ impl RealtimeOpenAiCompatibleClient {
         }
     }
 
-    /// True while a completion is held behind an earlier utterance that hasn't
-    /// finished transcribing — the caller arms its skip-head timeout on this.
-    pub fn reorder_blocked(&self) -> bool {
-        self.reorder.is_blocked()
-    }
-
-    /// Abandon a missing head after the caller's timeout and release whatever the
-    /// reorder buffer can now surface, in spoken order.
-    pub fn skip_reorder_head(&mut self) -> Vec<StreamingEvent> {
-        let released = self.reorder.skip_head();
-        self.wrap_completed(released)
+    /// Release any completion held past the head-of-line timeout. The pump calls
+    /// this once per tick with the current instant; the client owns the timer so
+    /// the timeout policy stays with the buffer it guards rather than leaking into
+    /// the audio pump. A merely-slow utterance fills the gap via `poll_event` and
+    /// disarms the timer before it fires; only a dropped/never-arriving earlier
+    /// utterance trips it.
+    pub fn check_reorder_timeout(&mut self, now: Instant) -> Vec<StreamingEvent> {
+        if !self.reorder.is_blocked() {
+            self.blocked_since = None;
+            return Vec::new();
+        }
+        let since = *self.blocked_since.get_or_insert(now);
+        if now.duration_since(since) >= REORDER_HEAD_TIMEOUT {
+            self.blocked_since = None;
+            let released = self.reorder.skip_head();
+            return self.wrap_completed(released);
+        }
+        Vec::new()
     }
 
     /// Release every still-buffered completion in spoken order. Called during the
@@ -169,10 +193,9 @@ fn item_id_of(v: &Value) -> Option<String> {
     v.get("item_id").and_then(|i| i.as_str()).map(str::to_string)
 }
 
-/// Decode a single provider message into a [`WireEvent`]. Pure — all ordering
-/// and sequence-number state lives in the client, not here.
-fn parse_event(text: &str) -> Result<WireEvent> {
-    let v: Value = serde_json::from_str(text).context("parse event json")?;
+/// Decode a single (already-parsed) provider message into a [`WireEvent`]. Pure
+/// — all ordering and sequence-number state lives in the client, not here.
+fn parse_event(v: &Value) -> Result<WireEvent> {
     let evt_type = v.get("type").and_then(|t| t.as_str()).unwrap_or("");
     match evt_type {
         // Capture-order signals: the provider emits these sequentially as the
@@ -180,7 +203,7 @@ fn parse_event(text: &str) -> Result<WireEvent> {
         // spoken order. Both are observed because providers differ in which they
         // send; whichever names an item_id first sets its rank (idempotent).
         "input_audio_buffer.committed" | "input_audio_buffer.speech_started" => {
-            match item_id_of(&v) {
+            match item_id_of(v) {
                 Some(item_id) => Ok(WireEvent::Committed { item_id }),
                 None => Ok(WireEvent::Ignored),
             }
@@ -195,7 +218,7 @@ fn parse_event(text: &str) -> Result<WireEvent> {
             // Correlate by item_id; fall back to the unique event_id so a provider
             // that omits item_id still gets a distinct (unobserved) rank and emits
             // in arrival order rather than mis-correlating across utterances.
-            let item_id = item_id_of(&v)
+            let item_id = item_id_of(v)
                 .or_else(|| v.get("event_id").and_then(|e| e.as_str()).map(str::to_string))
                 .unwrap_or_default();
             Ok(WireEvent::Completed { item_id, transcript })
@@ -402,10 +425,15 @@ impl RealtimeOpenAiCompatibleClient {
 mod tests {
     use super::*;
 
+    /// Parse a raw JSON event string the way `poll_event` does (decode → dispatch).
+    fn parse(json: &str) -> WireEvent {
+        parse_event(&serde_json::from_str(json).unwrap()).unwrap()
+    }
+
     #[test]
     fn parse_event_completed_carries_item_id_and_transcript() {
         let json = r#"{"type":"conversation.item.input_audio_transcription.completed","item_id":"itm_1","transcript":"hello world"}"#;
-        match parse_event(json).unwrap() {
+        match parse(json) {
             WireEvent::Completed { item_id, transcript } => {
                 assert_eq!(item_id, "itm_1");
                 assert_eq!(transcript, "hello world");
@@ -420,7 +448,7 @@ mod tests {
         // can advance its head past a silent segment; the buffer (not the parser)
         // decides to emit nothing.
         let json = r#"{"type":"conversation.item.input_audio_transcription.completed","item_id":"itm_1","transcript":""}"#;
-        match parse_event(json).unwrap() {
+        match parse(json) {
             WireEvent::Completed { transcript, .. } => assert_eq!(transcript, ""),
             e => panic!("wrong variant: {:?}", e),
         }
@@ -429,7 +457,7 @@ mod tests {
     #[test]
     fn parse_event_committed_is_ranking_signal() {
         let json = r#"{"type":"input_audio_buffer.committed","item_id":"itm_7","previous_item_id":"itm_6"}"#;
-        match parse_event(json).unwrap() {
+        match parse(json) {
             WireEvent::Committed { item_id } => assert_eq!(item_id, "itm_7"),
             e => panic!("wrong variant: {:?}", e),
         }
@@ -438,7 +466,7 @@ mod tests {
     #[test]
     fn parse_event_speech_started_is_ranking_signal() {
         let json = r#"{"type":"input_audio_buffer.speech_started","item_id":"itm_8","audio_start_ms":120}"#;
-        match parse_event(json).unwrap() {
+        match parse(json) {
             WireEvent::Committed { item_id } => assert_eq!(item_id, "itm_8"),
             e => panic!("wrong variant: {:?}", e),
         }
@@ -447,7 +475,7 @@ mod tests {
     #[test]
     fn parse_event_classifies_auth_error() {
         let json = r#"{"type":"error","error":{"message":"invalid key","code":"invalid_api_key"}}"#;
-        match parse_event(json).unwrap() {
+        match parse(json) {
             WireEvent::Error { kind: ErrorKind::AuthFailed, .. } => {}
             e => panic!("wrong variant: {:?}", e),
         }
@@ -456,7 +484,7 @@ mod tests {
     #[test]
     fn parse_event_ignores_unknown_types() {
         let json = r#"{"type":"session.created","session":{"id":"x"}}"#;
-        assert!(matches!(parse_event(json).unwrap(), WireEvent::Ignored));
+        assert!(matches!(parse(json), WireEvent::Ignored));
     }
 
     #[test]
