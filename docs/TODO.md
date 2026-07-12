@@ -29,6 +29,5 @@
 
 ## Bilingual language mode follow-ups
 
-- [ ] **Confidence-gated re-decode** (local-only): capture whisper's per-segment `p` confidence and re-decode forcing the first language when a *within-pair* bilingual clip is low-confidence (spec §10). Only pursue if within-pair short-clip confusion persists in real use. _Note (2026-06-04): re-decode for the **out-of-pair** case was evaluated and declined — forcing a language coerces the output script (so a script check can't pick a winner) and cloud providers (Whisperi's primary path) expose no comparable per-decode confidence. Out-of-pair clips now simply fall back to the first language in `resolve_language`._
 - [ ] **Live incremental refinement**: streaming rewrite of recent utterances when Live mode accumulates enough context to refine an earlier detected-language decision (spec §9).
 - [ ] **Learned user edits**: capture user post-dictation corrections into the dictionary / a corrections map so bilingual prompts can be personalized over time (spec §9).

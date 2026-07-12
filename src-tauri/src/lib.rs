@@ -3,7 +3,6 @@ mod clipboard;
 mod commands;
 mod database;
 pub(crate) mod http;
-mod models;
 mod reasoning;
 pub mod transcription;
 
@@ -42,14 +41,20 @@ fn override_min_window_size(window: &tauri::WebviewWindow, logical_w: i32, logic
             let _ = SetWindowPos(
                 hwnd,
                 HWND_TOPMOST,
-                0, 0, 0, 0,
+                0,
+                0,
+                0,
+                0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
             );
         }
     }
 
     unsafe extern "system" fn wnd_proc(
-        hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM,
+        hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
     ) -> LRESULT {
         if msg == WM_GETMINMAXINFO && lparam.0 != 0 {
             let info = unsafe { &mut *(lparam.0 as *mut MINMAXINFO) };
@@ -67,8 +72,7 @@ fn override_min_window_size(window: &tauri::WebviewWindow, logical_w: i32, logic
         }
 
         // Monitor turned back on after power-saving blanked the display.
-        if msg == WM_SYSCOMMAND && (wparam.0 & 0xFFF0) == SC_MONITORPOWER as usize
-            && lparam.0 == -1
+        if msg == WM_SYSCOMMAND && (wparam.0 & 0xFFF0) == SC_MONITORPOWER as usize && lparam.0 == -1
         {
             unsafe { refresh_transparent_overlay(hwnd) };
         }
@@ -109,7 +113,6 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
@@ -186,32 +189,30 @@ pub fn run() {
                 .icon(app.default_window_icon().unwrap().clone())
                 .tooltip("Whisperi")
                 .menu(&menu)
-                .on_menu_event(move |app, event| {
-                    match event.id().as_ref() {
-                        "show" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let visible = window.is_visible().unwrap_or(false);
-                                if visible {
-                                    let _ = window.hide();
-                                    let _ = show.set_checked(false);
-                                } else {
-                                    let _ = window.show();
-                                    let _ = window.set_focus();
-                                    let _ = show.set_checked(true);
-                                }
-                            }
-                        }
-                        "settings" => {
-                            if let Some(window) = app.get_webview_window("settings") {
+                .on_menu_event(move |app, event| match event.id().as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let visible = window.is_visible().unwrap_or(false);
+                            if visible {
+                                let _ = window.hide();
+                                let _ = show.set_checked(false);
+                            } else {
                                 let _ = window.show();
                                 let _ = window.set_focus();
+                                let _ = show.set_checked(true);
                             }
                         }
-                        "quit" => {
-                            app.exit(0);
-                        }
-                        _ => {}
                     }
+                    "settings" => {
+                        if let Some(window) = app.get_webview_window("settings") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
                 })
                 .build(app)?;
 
@@ -222,17 +223,11 @@ pub fn run() {
             commands::audio::start_recording,
             commands::audio::stop_recording,
             commands::audio::get_audio_level,
-            commands::transcription::transcribe_local,
             commands::transcription::transcribe_cloud,
-            commands::transcription::list_whisper_models,
-            commands::transcription::download_whisper_model,
-            commands::transcription::delete_whisper_model,
-            commands::transcription::get_whisper_status,
             commands::reasoning::process_reasoning,
             commands::settings::get_setting,
             commands::settings::set_setting,
             commands::settings::get_all_settings,
-            commands::models::get_model_registry,
             commands::clipboard::paste_text,
             commands::clipboard::read_clipboard,
             commands::clipboard::set_clipboard_text,

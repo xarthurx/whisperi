@@ -449,21 +449,35 @@ export function useLiveDictation({ onToast }: Options = {}) {
         "language =",
         sessionLanguage,
       );
+      let sid: number;
       try {
-        const sid = await startLiveSession({
+        sid = await startLiveSession({
           providerId: provider,
           model,
           language: sessionLanguage,
           apiKey,
           expectedHwnd: hwnd,
         });
-        sessionIdRef.current = sid;
-        console.log("[Live] WS session opened, session_id =", sid);
+      } catch (e) {
+        await apiStopRecording().catch(() => {});
+        setPhase("idle");
+        await fail("Failed to open Live session", String(e));
+        return;
+      }
 
-        // Sound + notification AFTER WS handshake succeeds
+      sessionIdRef.current = sid;
+      console.log("[Live] WS session opened, session_id =", sid);
+
+      try {
         const soundEnabled = await getSetting<boolean>("soundEnabled");
         if (soundEnabled !== false) playStartSound();
+      } catch (e) {
+        console.warn("[Live] start sound failed:", e);
+      }
 
+      // Notifications are optional. A plugin/permission failure must never tear
+      // down the UI while leaving the already-open WebSocket session alive.
+      try {
         const permitted =
           (await isPermissionGranted()) ||
           (await requestPermission()) === "granted";
@@ -476,9 +490,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
           });
         }
       } catch (e) {
-        await apiStopRecording().catch(() => {});
-        setPhase("idle");
-        await fail("Failed to open Live session", String(e));
+        console.warn("[Live] notification failed:", e);
       }
     },
     [phase, onToast],
@@ -576,13 +588,11 @@ export function useLiveDictation({ onToast }: Options = {}) {
         try {
           const language = await resolveLiveLanguage();
           const [
-            dict, aliases, useLocal, whisperModel, cloudProvider, cloudModel,
+            dict, aliases, cloudProvider, cloudModel,
             useR, rModel, rProvider, intensity, autoPaste, useCustom, customPrompt, debugMode,
           ] = await Promise.all([
             getCustomDictionary(),
             getAgentAliases(),
-            getSetting<boolean>("useLocalWhisper"),
-            getSetting<string>("whisperModel"),
             getSetting<string>("cloudTranscriptionProvider"),
             getSetting<string>("cloudTranscriptionModel"),
             getSetting<boolean>("useReasoningModel"),
@@ -596,7 +606,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
           ]);
           const dictionary = buildTranscriptionDictionary(dict, agentName, aliases);
           const settings: TranscriptionSettings = {
-            useLocal, whisperModel, cloudProvider, cloudModel, language,
+            cloudProvider, cloudModel, language,
             languageMode: null, secondaryLanguage: null,
             dictionary,
             useReasoning: useR, reasoningModel: rModel, reasoningProvider: rProvider,
@@ -672,6 +682,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
           }
         } catch (e) {
           console.error("[Live] polish swap failed:", e);
+          await copyPolishToClipboard();
         }
       }
 

@@ -44,7 +44,7 @@ Every version entry in `docs/CHANGELOG.md` must start with a `### Highlights` st
 
 ## Bilingual Language Mode (v0.8.0)
 
-Landed on branch `feat/bilingual-language-mode`. Primary/secondary language selection with a bilingual conditioning prompt and `resolve_language` snap-to-primary policy. Buffered transcription (local whisper.cpp + all cloud providers) fully covered. Live mode auto-detects within the pair instead of forcing the primary.
+Landed on branch `feat/bilingual-language-mode`. Primary/secondary language selection with a bilingual conditioning prompt and `resolve_language` snap-to-primary policy. Buffered cloud transcription is fully covered. Live mode auto-detects within the pair instead of forcing the primary.
 
 **Update (2026-06-04, post-0.8.0):** the Settings UI dropped the "Primary"/"Secondary" labels — the two languages now render as equal peers on one line (neutral "+" separator), since users who code-switch don't rank one over the other. The backend is deliberately unchanged: the first slot (`preferredLanguage`) remains the *silent, unlabeled* fallback in `resolve_language` for out-of-pair / too-short clips, and the bilingual prompt still places it last. Considered re-decode-based refinement (force a language and retry) but it was dropped — a script check can't pick a winner (forcing a language coerces the output script) and cloud providers expose no comparable per-decode confidence, while Whisperi is cloud-first. Removed `general.language.primary`/`secondary`; reworded `bilingualHint` across all 9 locales.
 

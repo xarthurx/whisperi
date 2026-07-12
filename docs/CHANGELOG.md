@@ -1,19 +1,25 @@
 # Changelog
 
-## [Unreleased]
+## [0.8.1] - 2026-07-12
 
 ### Highlights
 
 - Bilingual mode now treats your two languages as equals — they sit side by side on one line with no "primary"/"secondary" labels, since when you regularly mix two languages neither is really the primary one
 - Live dictation no longer garbles text when you dictate across several fields or windows — it now cleans up only the box you're typing in, and when it can't safely do that (e.g. inside web pages) it copies the polished text to your clipboard for you to paste
+- Whisperi is now cloud-only, with all dormant on-device model and sidecar support removed
+- Dictation now fails safely when Windows rejects simulated typing, and stalled cloud requests time out instead of disabling the overlay forever
 
 ### Changes
 
 - Reworked the Bilingual language picker (Settings → General → Output Language): the two languages now sit on a single line separated by a neutral "+", with the Primary/Secondary labels removed, reflecting that people who code-switch treat both languages as equal peers. Transcription behavior is unchanged — internally the first slot stays the silent fallback in `resolve_language` for clips too short to identify (the prior "snap to primary" rule, now just unlabeled), and the bilingual conditioning prompt still places it last. Removed the now-unused `general.language.primary` / `general.language.secondary` strings and reworded `general.language.bilingualHint` ("…falls back to the first language in the list") across all 9 locales. No backend changes. Verified with `bun run typecheck` and locale JSON validation.
+- Removed all on-device model support. This deletes the whisper.cpp sidecar and downloader, local transcription commands and settings, local model registries, executable permissions, build/release download steps, and associated dependencies. Cloud transcription and cloud reasoning providers are unchanged.
 
 ### Fixes
 
 - Fixed Live mode's "Polish text on stop" corrupting text when a dictation spanned multiple fields or windows. Live types into whatever window has focus ("type where you look"), but the polish step backspaced the **grand-total** character count from whichever box was focused at stop — over-deleting there and leaving stale fragments in the other boxes. The frontend now tags each typed chunk with its focus target (top-level window + focused control, via `GetGUIThreadInfo`), and on stop scopes the delete+retype to just the box focused then: it backspaces only that box's characters and retypes its slice, re-polishing the slice when the session spanned boxes. When the box can't be uniquely identified — web/Electron fields where many boxes share one render HWND, or focus on a box never typed into — it skips the destructive swap and copies the polished text to the clipboard with a toast instead. New `get_focus_target` / `set_clipboard_text` commands; `type_text_chunk` now returns the focus target it typed into; `swap_typed_text` verifies the focused control as well as the window. Note: single web/Electron text fields consequently take the clipboard path now rather than auto-replacing in place. Verified with `cargo test` (197 pass), `cargo clippy` (no new warnings), and `bun run typecheck`.
+- Fixed Live mode counting text as typed even when Windows blocked or only partially accepted `SendInput`. Native typing and polish swaps now verify the exact event count and return an error on mismatch; failed chunks are not added to the destructive swap ledger, and a failed polish swap falls back to the clipboard.
+- Added 15-second connect and 120-second total HTTP request limits so stalled transcription or reasoning providers cannot leave Standard mode permanently disabled in the processing state.
+- Isolated optional Live notifications from WebSocket startup. Notification permission or delivery failures are now logged without stopping audio or orphaning the already-open Live session.
 
 ## [0.8.0] - 2026-06-04
 

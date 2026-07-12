@@ -34,9 +34,6 @@ jobs:
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
 
-      - name: Download whisper.cpp sidecar
-        run: pwsh scripts/download-whisper-cpp.ps1
-
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
         env:

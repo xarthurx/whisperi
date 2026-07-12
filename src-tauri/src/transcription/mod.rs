@@ -2,7 +2,6 @@ pub mod cloud;
 pub mod normalize;
 pub mod streaming;
 mod t2s_table;
-pub mod whisper;
 pub use normalize::finalize_chinese_text;
 
 /// Default (English) punctuation-conditioning initial prompt.
@@ -23,21 +22,31 @@ pub(crate) const PUNCTUATION_PROMPT: &str =
 pub fn punctuation_prompt(language: Option<&str>) -> Option<&'static str> {
     match language {
         Some("zh") => Some("你好，欢迎。今天过得怎么样？我很好，谢谢！让我们开始吧。"),
-        Some("ja") => Some("こんにちは、ようこそ。今日はいかがですか？元気です、ありがとう！始めましょう。"),
-        Some("ko") => Some("안녕하세요, 환영합니다. 오늘 어떠세요? 잘 지내고 있어요, 감사합니다! 시작하겠습니다."),
-        Some("fr") => Some("Bonjour, bienvenue. Comment allez-vous aujourd'hui ? Je vais bien, merci ! Commençons."),
-        Some("de") => Some("Hallo, willkommen. Wie geht es Ihnen heute? Mir geht es gut, danke! Fangen wir an."),
+        Some("ja") => {
+            Some("こんにちは、ようこそ。今日はいかがですか？元気です、ありがとう！始めましょう。")
+        }
+        Some("ko") => Some(
+            "안녕하세요, 환영합니다. 오늘 어떠세요? 잘 지내고 있어요, 감사합니다! 시작하겠습니다.",
+        ),
+        Some("fr") => Some(
+            "Bonjour, bienvenue. Comment allez-vous aujourd'hui ? Je vais bien, merci ! Commençons.",
+        ),
+        Some("de") => Some(
+            "Hallo, willkommen. Wie geht es Ihnen heute? Mir geht es gut, danke! Fangen wir an.",
+        ),
         Some("es") => Some("Hola, bienvenidos. ¿Cómo están hoy? Estoy bien, ¡gracias! Empecemos."),
         Some("pt") => Some("Olá, bem-vindos. Como estão hoje? Estou bem, obrigado! Vamos começar."),
-        Some("ru") => Some("Здравствуйте, добро пожаловать. Как у вас дела сегодня? У меня всё хорошо, спасибо! Давайте начнём."),
+        Some("ru") => Some(
+            "Здравствуйте, добро пожаловать. Как у вас дела сегодня? У меня всё хорошо, спасибо! Давайте начнём.",
+        ),
         Some("en") => Some(PUNCTUATION_PROMPT),
         _ => None,
     }
 }
 
 /// Build the combined prompt: language-appropriate conditioning text (only when
-/// the language is explicitly known) + optional dictionary words. Used by both
-/// the local whisper.cpp and cloud transcription paths.
+/// the language is explicitly known) + optional dictionary words. Used by cloud
+/// transcription paths.
 ///
 /// In auto-detect mode there is no conditioning sentence (see
 /// [`punctuation_prompt`]), so the result is just the dictionary words, or an

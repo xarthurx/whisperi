@@ -41,47 +41,17 @@ export async function onRecordingError(
 }
 
 // Transcription
-export interface WhisperModelStatus {
-  id: string;
-  name: string;
-  description: string;
-  size: string;
-  size_mb: number;
-  downloaded: boolean;
-  recommended: boolean;
-}
-
 /**
  * Result of a transcription call. `text` is the cleaned-up output.
  * `detected_language` is what the model reported during language ID
  * (present only when the user requested auto-detect AND the provider
- * supports detection — local whisper.cpp and OpenAI/Groq's verbose_json).
+ * supports detection, such as OpenAI/Groq's verbose_json response).
  * Forward it into `processReasoning` so AI enhancement runs with the
  * resolved language instead of "auto".
  */
 export interface TranscriptionResult {
   text: string;
   detected_language: string | null;
-}
-
-export async function transcribeLocal(
-  audioData: number[],
-  model: string,
-  language?: string,
-  secondaryLanguage?: string,
-  dictionary?: string[],
-  /** Agent name + aliases — kept in the dictionary for biasing but never
-   *  stripped as an echo, so chat-mode detection still sees the agent name. */
-  agentTerms?: string[],
-): Promise<TranscriptionResult> {
-  return invoke("transcribe_local", {
-    audioData,
-    model,
-    language,
-    secondaryLanguage,
-    dictionary: dictionary ?? [],
-    agentTerms: agentTerms ?? [],
-  });
 }
 
 export async function transcribeCloud(
@@ -105,37 +75,6 @@ export async function transcribeCloud(
     secondaryLanguage,
     dictionary: dictionary ?? [],
     agentTerms: agentTerms ?? [],
-  });
-}
-
-export async function listWhisperModels(): Promise<WhisperModelStatus[]> {
-  return invoke("list_whisper_models");
-}
-
-export async function downloadWhisperModel(modelId: string): Promise<void> {
-  return invoke("download_whisper_model", { modelId });
-}
-
-export async function deleteWhisperModel(modelId: string): Promise<void> {
-  return invoke("delete_whisper_model", { modelId });
-}
-
-export async function getWhisperStatus(): Promise<boolean> {
-  return invoke("get_whisper_status");
-}
-
-export interface ModelDownloadProgress {
-  model_id: string;
-  downloaded: number;
-  total: number;
-  percentage: number;
-}
-
-export async function onModelDownloadProgress(
-  callback: (progress: ModelDownloadProgress) => void,
-): Promise<UnlistenFn> {
-  return listen<ModelDownloadProgress>("model-download-progress", (event) => {
-    callback(event.payload);
   });
 }
 
@@ -253,11 +192,6 @@ export async function setSetting(key: string, value: unknown): Promise<void> {
 
 export async function getAllSettings(): Promise<Record<string, unknown>> {
   return invoke("get_all_settings");
-}
-
-// Models
-export async function getModelRegistry(): Promise<unknown> {
-  return invoke("get_model_registry");
 }
 
 // App

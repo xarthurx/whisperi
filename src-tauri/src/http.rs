@@ -6,6 +6,8 @@ use std::sync::LazyLock;
 pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
         .user_agent("Whisperi")
+        .connect_timeout(std::time::Duration::from_secs(15))
+        .timeout(std::time::Duration::from_secs(120))
         .build()
         .expect("Failed to build HTTP client")
 });

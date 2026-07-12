@@ -103,7 +103,11 @@ pub fn current_focus_target() -> FocusTarget {
         };
         let fg = unsafe { GetForegroundWindow() };
         if fg.is_invalid() {
-            return FocusTarget { window: 0, control: 0, scopable: false };
+            return FocusTarget {
+                window: 0,
+                control: 0,
+                scopable: false,
+            };
         }
         let window = fg.0 as isize;
         // hwndFocus is the control with keyboard focus in the foreground thread.
@@ -124,12 +128,20 @@ pub fn current_focus_target() -> FocusTarget {
         // Classify by the control's class first (most specific), then the window's.
         let class = window_class(control_hwnd).or_else(|| window_class(fg));
         let scopable = control != 0 && !class.as_deref().is_some_and(is_web_render_class);
-        FocusTarget { window, control, scopable }
+        FocusTarget {
+            window,
+            control,
+            scopable,
+        }
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        FocusTarget { window: 0, control: 0, scopable: false }
+        FocusTarget {
+            window: 0,
+            control: 0,
+            scopable: false,
+        }
     }
 }
 
@@ -227,7 +239,7 @@ mod windows_clipboard {
         CloseClipboard, EmptyClipboard, GetClipboardData, OpenClipboard, SetClipboardData,
     };
     use windows::Win32::System::Memory::{
-        GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock, GMEM_MOVEABLE,
+        GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock,
     };
 
     const CF_UNICODETEXT: u32 = 13;
@@ -297,15 +309,15 @@ mod windows_terminal {
 
     /// Known terminal window class names on Windows.
     const TERMINAL_CLASSES: &[&str] = &[
-        "ConsoleWindowClass",             // cmd.exe, legacy console
-        "CASCADIA_HOSTING_WINDOW_CLASS",  // Windows Terminal
-        "mintty",                         // Git Bash, MSYS2, Cygwin
-        "VirtualConsoleClass",            // ConEmu
-        "PuTTY",                          // PuTTY
-        "Alacritty",                      // Alacritty
-        "org.wezfurlong.wezterm",         // WezTerm
-        "Hyper",                          // Hyper terminal
-        "TMobaXterm",                     // MobaXterm
+        "ConsoleWindowClass",            // cmd.exe, legacy console
+        "CASCADIA_HOSTING_WINDOW_CLASS", // Windows Terminal
+        "mintty",                        // Git Bash, MSYS2, Cygwin
+        "VirtualConsoleClass",           // ConEmu
+        "PuTTY",                         // PuTTY
+        "Alacritty",                     // Alacritty
+        "org.wezfurlong.wezterm",        // WezTerm
+        "Hyper",                         // Hyper terminal
+        "TMobaXterm",                    // MobaXterm
     ];
 
     pub fn is_foreground_terminal() -> bool {
@@ -316,10 +328,7 @@ mod windows_terminal {
             }
 
             let mut class_name = [0u8; 256];
-            let len = windows::Win32::UI::WindowsAndMessaging::GetClassNameA(
-                hwnd,
-                &mut class_name,
-            );
+            let len = windows::Win32::UI::WindowsAndMessaging::GetClassNameA(hwnd, &mut class_name);
             if len == 0 {
                 return false;
             }
@@ -331,14 +340,13 @@ mod windows_terminal {
                 .any(|tc| class_str.eq_ignore_ascii_case(tc))
         }
     }
-
 }
 
 #[cfg(target_os = "windows")]
 mod windows_paste {
     use anyhow::Result;
     use windows::Win32::UI::Input::KeyboardAndMouse::{
-        SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP,
+        INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_KEYUP, SendInput,
         VIRTUAL_KEY,
     };
 
@@ -403,22 +411,37 @@ mod windows_paste {
 #[cfg(target_os = "windows")]
 mod windows_keystrokes {
     use windows::Win32::UI::Input::KeyboardAndMouse::{
-        SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP,
-        KEYEVENTF_UNICODE, VIRTUAL_KEY,
+        INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_KEYUP,
+        KEYEVENTF_UNICODE, SendInput, VIRTUAL_KEY,
     };
 
-    pub fn send_text_keystrokes_inner(text: &str) -> usize {
-        let inputs = build_unicode_input_events(text);
-        unsafe {
-            SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
+    pub(super) fn ensure_all_inputs_sent(
+        sent: u32,
+        expected: usize,
+        operation: &str,
+    ) -> anyhow::Result<()> {
+        if sent != expected as u32 {
+            anyhow::bail!(
+                "SendInput {} failed, sent {} of {} events",
+                operation,
+                sent,
+                expected
+            );
         }
+        Ok(())
+    }
+
+    pub fn send_text_keystrokes_inner(text: &str) -> anyhow::Result<usize> {
+        let inputs = build_unicode_input_events(text);
+        let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
+        ensure_all_inputs_sent(sent, inputs.len(), "typing")?;
         // Return UTF-16 code-unit count, NOT codepoint count: each KEYEVENTF_UNICODE
         // event we sent corresponds to one UTF-16 code unit (surrogate pairs are
         // two events). swap_typed_text issues one VK_BACK per backspace, matching
         // the per-code-unit grain. For non-BMP chars (emoji, rare CJK extension)
         // returning chars().count() would under-count and leave half-deleted
         // surrogates after the post-stop swap.
-        text.encode_utf16().count()
+        Ok(text.encode_utf16().count())
     }
 
     /// Build a vector of INPUT events (KEYDOWN+KEYUP pair per character) for a
@@ -482,7 +505,7 @@ mod windows_keystrokes {
 /// `\n`/`\r`/`\t` to space — so a malicious transcript cannot inject a newline
 /// that would auto-execute a shell command. Even in a terminal, the user must
 /// press Enter themselves to run anything typed.
-pub fn send_text_keystrokes(text: &str) -> usize {
+pub fn send_text_keystrokes(text: &str) -> Result<usize> {
     #[cfg(target_os = "windows")]
     {
         // Refuse to type if focus drifted onto a credential prompt or the lock
@@ -493,11 +516,11 @@ pub fn send_text_keystrokes(text: &str) -> usize {
             log::warn!(
                 "[Live] suppressing keystrokes: foreground window is a secure/credential dialog"
             );
-            return 0;
+            return Ok(0);
         }
         let sanitized = sanitize_for_send_input(text);
         if sanitized.is_empty() {
-            return 0;
+            return Ok(0);
         }
         windows_keystrokes::send_text_keystrokes_inner(&sanitized)
     }
@@ -505,7 +528,7 @@ pub fn send_text_keystrokes(text: &str) -> usize {
     #[cfg(not(target_os = "windows"))]
     {
         let _ = text;
-        0
+        Ok(0)
     }
 }
 
@@ -519,47 +542,47 @@ pub fn swap_typed_text(
     new_text: &str,
     expected_hwnd: Option<isize>,
     expected_control: Option<isize>,
-) -> SwapResult {
+) -> Result<SwapResult> {
     #[cfg(target_os = "windows")]
     {
         let target = current_focus_target();
         if let Some(want) = expected_hwnd
             && target.window != want
         {
-            return SwapResult::SkippedFocusDrift;
+            return Ok(SwapResult::SkippedFocusDrift);
         }
         if let Some(want) = expected_control
             && target.control != want
         {
-            return SwapResult::SkippedFocusDrift;
+            return Ok(SwapResult::SkippedFocusDrift);
         }
 
         let sanitized = sanitize_for_send_input(new_text);
         if backspaces == 0 && sanitized.is_empty() {
-            return SwapResult::SkippedNoChange;
+            return Ok(SwapResult::SkippedNoChange);
         }
 
-        let mut inputs =
-            Vec::with_capacity(backspaces * 2 + sanitized.encode_utf16().count() * 2);
+        let mut inputs = Vec::with_capacity(backspaces * 2 + sanitized.encode_utf16().count() * 2);
         for _ in 0..backspaces {
             inputs.push(windows_keystrokes::make_vk_event(0x08, false));
             inputs.push(windows_keystrokes::make_vk_event(0x08, true));
         }
         inputs.extend(windows_keystrokes::build_unicode_input_events(&sanitized));
 
-        unsafe {
+        let sent = unsafe {
             windows::Win32::UI::Input::KeyboardAndMouse::SendInput(
                 &inputs,
                 std::mem::size_of::<windows::Win32::UI::Input::KeyboardAndMouse::INPUT>() as i32,
-            );
-        }
-        SwapResult::Swapped
+            )
+        };
+        windows_keystrokes::ensure_all_inputs_sent(sent, inputs.len(), "swap")?;
+        Ok(SwapResult::Swapped)
     }
 
     #[cfg(not(target_os = "windows"))]
     {
         let _ = (backspaces, new_text, expected_hwnd, expected_control);
-        SwapResult::SkippedNoChange
+        Ok(SwapResult::SkippedNoChange)
     }
 }
 
@@ -620,6 +643,14 @@ mod tests {
         assert_eq!(events.len(), 4); // 2 code units × 2 events
     }
 
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn send_input_count_must_match_exactly() {
+        assert!(windows_keystrokes::ensure_all_inputs_sent(4, 4, "test").is_ok());
+        assert!(windows_keystrokes::ensure_all_inputs_sent(0, 4, "test").is_err());
+        assert!(windows_keystrokes::ensure_all_inputs_sent(3, 4, "test").is_err());
+    }
+
     #[test]
     fn sanitize_strips_c0_control_chars() {
         let input = "hello\x00\x01\x02world\x08";
@@ -666,7 +697,7 @@ mod tests {
     #[test]
     fn swap_returns_no_change_for_empty_inputs() {
         // No HWND/control to match against — pass None for both
-        let result = swap_typed_text(0, "", None, None);
+        let result = swap_typed_text(0, "", None, None).unwrap();
         assert!(matches!(result, SwapResult::SkippedNoChange));
     }
 

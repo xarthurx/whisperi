@@ -16,8 +16,6 @@ import type { EnhancementIntensity } from "@/config/prompts";
 
 export interface Settings {
   // Transcription
-  useLocalWhisper: boolean;
-  whisperModel: string;
   preferredLanguage: string;
   /** Transcription language mode. "auto" = detect from all languages;
    *  "single" = force preferredLanguage; "bilingual" = constrain to
@@ -81,8 +79,6 @@ export interface Settings {
 }
 
 const DEFAULTS: Settings = {
-  useLocalWhisper: false,
-  whisperModel: "base",
   preferredLanguage: "auto",
   languageMode: "auto",
   secondaryLanguage: "",
@@ -120,7 +116,7 @@ const DEFAULTS: Settings = {
 
 /** Keys stored via setSetting() (not special handlers like agent name / API keys). */
 const STORE_KEYS = [
-  "useLocalWhisper", "whisperModel", "preferredLanguage", "languageMode", "secondaryLanguage",
+  "preferredLanguage", "languageMode", "secondaryLanguage",
   "cloudTranscriptionProvider", "cloudTranscriptionModel",
   "dictationMode", "liveTranscriptionProvider", "liveTranscriptionModel", "liveEnhancement", "liveLastError",
   "useReasoningModel", "reasoningModel", "reasoningProvider", "enhancementIntensity",

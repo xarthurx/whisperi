@@ -1,6 +1,6 @@
 # Whisperi — Architecture
 
-> Tauri 2.x desktop dictation app. Local STT via whisper.cpp, multi-cloud transcription, AI-powered text enhancement, and native clipboard paste — including terminal support.
+> Tauri 2.x desktop dictation app. Multi-cloud transcription, AI-powered text enhancement, and native clipboard paste — including terminal support.
 
 ## High-Level Overview
 
@@ -26,14 +26,14 @@
 │                                                             │
 │   ┌──────────┐ ┌──────────────┐ ┌───────────┐ ┌─────────┐  │
 │   │  Audio   │ │ Transcription│ │ Reasoning │ │Clipboard│  │
-│   │ (cpal)   │ │ local/cloud  │ │ (AI post) │ │ (Win32) │  │
+│   │ (cpal)   │ │    cloud     │ │ (AI post) │ │ (Win32) │  │
 │   └──────────┘ └──────────────┘ └───────────┘ └─────────┘  │
-│   ┌──────────┐ ┌──────────────┐ ┌───────────┐              │
-│   │ Database │ │   Settings   │ │  Models   │              │
-│   │ (SQLite) │ │ (plugin-store│ │ (download)│              │
-│   └──────────┘ └──────────────┘ └───────────┘              │
+│   ┌──────────┐ ┌──────────────┐                            │
+│   │ Database │ │   Settings   │                            │
+│   │ (SQLite) │ │ (plugin-store│                            │
+│   └──────────┘ └──────────────┘                            │
 │                                                             │
-│               System Tray  ·  Plugins  ·  Sidecar           │
+│                    System Tray  ·  Plugins                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -62,7 +62,7 @@ Every dictation flows through a linear pipeline:
 Hotkey → Record → WAV Encode → Transcribe → [Enhance] → Save → Paste
 ```
 
-Each stage is independently configurable: transcription can be local (whisper.cpp sidecar) or cloud (OpenAI / Groq / Mistral / Qwen / OpenRouter); AI enhancement is optional (OpenAI / Anthropic / Gemini / Groq / Qwen / OpenRouter); paste can be toggled off. The pipeline lives in the `useAudioRecording` hook on the frontend side, calling into Rust commands for each stage.
+Each stage is independently configurable: transcription uses OpenAI / Groq / Mistral / Qwen / OpenRouter; AI enhancement is optional (OpenAI / Anthropic / Gemini / Groq / Qwen / OpenRouter); paste can be toggled off. The pipeline lives in the `useAudioRecording` hook on the frontend side, calling into Rust commands for each stage. On-device models and executable sidecars are intentionally unsupported.
 
 ### 4. Dual-Window, Single App
 
@@ -87,16 +87,6 @@ There is no global state manager (no Redux, Zustand, etc.). Each concern owns it
 
 Whisperi is Windows-first. Clipboard read/write, terminal detection, and keystroke simulation all use the Win32 API directly (via the `windows` crate). This trades cross-platform portability for reliable, low-level control over system interactions that abstraction layers tend to get wrong.
 
-### 7. Sidecar Over Bindings
-
-Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rather than linking whisper.cpp as a Rust library. Benefits:
-- No C/C++ build toolchain required in the Rust compile.
-- Sidecar can be updated independently.
-- Process isolation — a crash in whisper.cpp doesn't bring down the app.
-- Tauri's sidecar scope provides sandboxed execution.
-
----
-
 ## Module Reference
 
 ### Rust Backend (`src-tauri/src/`)
@@ -104,7 +94,7 @@ Local transcription delegates to a standalone `whisper-cpp` binary (sidecar) rat
 | Module | File(s) | Responsibility |
 |--------|---------|----------------|
 | **audio** | `audio/recorder.rs` | Device enumeration, recording lifecycle, sample-rate negotiation (16k → 44.1k → 48k → default), WAV encoding (16-bit PCM mono), audio-level events |
-| **transcription** | `transcription/whisper.rs`, `cloud.rs` | Local whisper.cpp sidecar invocation; cloud providers (OpenAI, Groq, Mistral, Qwen, OpenRouter) — multipart HTTP or multimodal chat completions |
+| **transcription** | `transcription/cloud.rs` | Cloud providers (OpenAI, Groq, Mistral, Qwen, OpenRouter) — multipart HTTP or multimodal chat completions |
 | **transcription/streaming** | `transcription/streaming/{mod.rs, audio_pump.rs, providers.rs, realtime_openai_compatible.rs}` | Live mode: WebSocket streaming ASR over the OpenAI Realtime API wire protocol. Online resampler + PCM16 encoder feeds 100ms audio chunks; `.completed` utterance events emit Tauri events for the frontend to type into the focused window. |
 | **reasoning** | `reasoning/openai.rs`, `anthropic.rs`, `gemini.rs` | AI text enhancement. OpenAI-compatible (OpenAI, Groq, Qwen, OpenRouter) via Chat Completions; Anthropic via Messages API; Gemini via Generative API |
 | **clipboard** | `clipboard/mod.rs` | Win32 clipboard get/set, foreground-window terminal detection, paste via `SendInput` with terminal-aware key combos |
@@ -167,9 +157,8 @@ Language codes from `languageRegistry.json` use locale format (`en-US`, `en-GB`)
 5.  useAudioRecording.stop()
     invoke("stop_recording") → Rust joins thread, returns WAV bytes
         ↓
-6.  Transcription:
-    ├─ Local:  invoke("transcribe_local", { audio, model, language, dictionary })
-    └─ Cloud:  invoke("transcribe_cloud", { audio, provider, api_key, model, ... })
+6.  Cloud transcription:
+    invoke("transcribe_cloud", { audio, provider, api_key, model, ... })
         ↓
 7.  Enhancement (optional):
     invoke("process_reasoning", { text, provider, model, system_prompt, api_key })
@@ -247,22 +236,6 @@ User changes a setting → update() writes to store immediately
                        → emits "settings-changed" event (cross-window sync)
 ```
 
-### Model Download Flow
-
-```
-User clicks "Download" in SettingsPanel
-    ↓
-invoke("download_whisper_model", { model_id })
-    ↓
-Rust: stream HTTP → .part file, emit "model-download-progress" events
-    ↓
-Frontend: SettingsPanel subscribes, shows progress bar
-    ↓
-Rust: atomic rename .part → .bin, emit 100% event
-```
-
----
-
 ## Database Schema
 
 Single table in `{app_data}/whisperi.db`:
@@ -292,7 +265,6 @@ Main Thread (Tauri runtime)
  ├── Tauri command handlers (async Tokio)
  │    ├── HTTP requests (reqwest)
  │    ├── Database ops (rusqlite behind Mutex)
- │    └── Sidecar exec (whisper-cpp)
  │
  └── Recording Thread (spawned per session)
       ├── Owns cpal Stream (!Send)
@@ -321,7 +293,7 @@ cd src-tauri && cargo clippy
 
 ### CI Pipeline (`.github/workflows/ci.yml`)
 
-Single `check-and-build` job: TypeScript check → Vite build → `cargo test` → `cargo clippy` → download whisper-cpp sidecar → `tauri build` → upload NSIS installer artifact
+Single `check-and-build` job: TypeScript check → Vite build → `cargo test` → `cargo clippy` → `tauri build` → upload NSIS installer artifact
 
 ### Release Pipeline (`.github/workflows/release.yml`)
 
@@ -405,7 +377,6 @@ whisperi/
 │   │   ├── lib.rs                     # App setup, tray, plugins
 │   │   ├── audio/recorder.rs          # cpal recording + WAV
 │   │   ├── transcription/
-│   │   │   ├── whisper.rs             # Local sidecar
 │   │   │   └── cloud.rs              # Cloud providers
 │   │   ├── reasoning/
 │   │   │   ├── mod.rs                 # Dispatch
@@ -423,19 +394,14 @@ whisperi/
 │   │   │   ├── changelog.rs         # Read bundled CHANGELOG.md
 │   │   │   ├── clipboard.rs          # Paste/read clipboard
 │   │   │   ├── database.rs           # Transcription CRUD
-│   │   │   ├── models.rs             # Model registry
 │   │   │   ├── reasoning.rs          # AI reasoning dispatch
 │   │   │   ├── settings.rs           # Store get/set
-│   │   │   └── transcription.rs      # Local/cloud transcription
-│   │   └── models/mod.rs             # Download manager
-│   ├── binaries/                      # whisper-cpp sidecar
+│   │   │   └── transcription.rs      # Cloud transcription
 │   ├── capabilities/default.json      # Permission scopes
 │   ├── tauri.conf.json               # Window + plugin config
-│   ├── build.rs                       # Target triple passthrough
+│   ├── build.rs                       # Tauri build setup
 │   └── Cargo.toml                     # Rust dependencies
 │
-├── scripts/
-│   └── download-whisper-cpp.ps1       # Sidecar fetch script
 ├── docs/
 │   ├── ARCHITECTURE.md                # This file
 │   ├── CHANGELOG.md                   # Version history

@@ -1,8 +1,8 @@
 [package]
 name = "whisperi"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2024"
-description = "Fast desktop dictation powered by whisper.cpp"
+description = "Fast cloud-powered desktop dictation"
 
 [lib]
 name = "whisperi_lib"
@@ -14,7 +14,6 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-global-shortcut = "2"
-tauri-plugin-shell = "2"
 tauri-plugin-store = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-opener = "2"
@@ -40,7 +39,6 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 cpal = "0.15"
 hound = "3.5"
 log = "0.4"
-dirs = "6"
 anyhow = "1"
 base64 = "0.22"
 thiserror = "2"

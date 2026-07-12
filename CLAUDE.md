@@ -1,6 +1,6 @@
 # Whisperi
 
-Tauri 2.x desktop dictation app. Whisper.cpp for local STT, multi-cloud transcription + AI reasoning.
+Tauri 2.x desktop dictation app with multi-cloud transcription and AI reasoning.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full architecture, [docs/CHANGELOG.md](docs/CHANGELOG.md) for version history.
 
@@ -17,7 +17,7 @@ cd src-tauri && cargo clippy # lint
 
 ## Architecture
 
-**Backend** (Rust, `src-tauri/src/`): `audio/` `transcription/` `reasoning/` `clipboard/` `database/` `models/` `commands/`
+**Backend** (Rust, `src-tauri/src/`): `audio/` `transcription/` `reasoning/` `clipboard/` `database/` `commands/`
 
 **Frontend** (React+TS, `src/`): `App.tsx` (dual-view router) | `components/` | `components/settings/` | `hooks/` | `services/tauriApi.ts` | `config/` | `models/` | `i18n/`
 
@@ -26,7 +26,7 @@ cd src-tauri && cargo clippy # lint
 - **cpal Stream is !Send** — recording runs on dedicated thread, state shared via `Arc<Mutex<>>` + `AtomicBool`
 - **Dual window** — 100x100 transparent overlay (always-on-top) + 760x800 settings (hidden by default)
 - **Dark mode only** — Nord color palette, Geist font
-- **Tauri 2.x sidecar scope** — goes in `capabilities/default.json`, NOT in `plugins.shell`
+- **Cloud-only models** — on-device transcription/reasoning models and executable sidecars are not allowed
 - **System tray** — built programmatically in `lib.rs` (no `trayIcon` in tauri.conf.json)
 - **i18n** — all UI strings in `src/i18n/locales/*.json`, typed via `i18next.d.ts`; add new keys to `en.json` first, then all 8 other locales; cross-window sync via `settings-changed` event
 - **Package manager** — bun (not npm/yarn)
@@ -38,7 +38,6 @@ Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, i18next 
 
 ## Data
 
-- Whisper models: `~/.cache/whisperi/whisper-models/`
 - Settings: tauri-plugin-store (`settings.json`)
 - Database: SQLite at `{app_data}/whisperi.db`
 

@@ -32,7 +32,7 @@ pub async fn type_text_chunk(text: String) -> Result<TypedChunk, String> {
     // Read where focus is right before typing so the chunk is attributed to the
     // box it actually lands in.
     let target = current_focus_target();
-    let chars = send_text_keystrokes(&text);
+    let chars = send_text_keystrokes(&text).map_err(|e| e.to_string())?;
     Ok(TypedChunk {
         chars,
         window: target.window,
@@ -48,12 +48,8 @@ pub async fn swap_typed_text_cmd(
     expected_hwnd: Option<isize>,
     expected_control: Option<isize>,
 ) -> Result<SwapResult, String> {
-    Ok(swap_typed_text(
-        backspace_count,
-        &new_text,
-        expected_hwnd,
-        expected_control,
-    ))
+    swap_typed_text(backspace_count, &new_text, expected_hwnd, expected_control)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -214,7 +210,9 @@ pub async fn start_live_session(
         let flush_deadline = tokio::time::Instant::now() + Duration::from_millis(800);
         loop {
             let remaining = flush_deadline.saturating_duration_since(tokio::time::Instant::now());
-            if remaining.is_zero() { break; }
+            if remaining.is_zero() {
+                break;
+            }
             tokio::select! {
                 _ = tokio::time::sleep(remaining) => break,
                 evt = client.poll_event() => {
@@ -244,11 +242,14 @@ pub async fn start_live_session(
         let _ = app_for_task.emit("live-session-closed", session_id);
     });
 
-    sessions.insert(session_id, LiveSessionHandle {
-        task,
-        cancel_tx,
-        expected_hwnd,
-    });
+    sessions.insert(
+        session_id,
+        LiveSessionHandle {
+            task,
+            cancel_tx,
+            expected_hwnd,
+        },
+    );
 
     Ok(session_id)
 }
@@ -321,12 +322,19 @@ pub async fn cancel_live_session(
 /// A no-op for any other event variant, so callers can hand it whatever the
 /// reorder helpers return without matching first.
 fn emit_utterance(app: &AppHandle, session_id: u64, evt: StreamingEvent) {
-    if let StreamingEvent::UtteranceCompleted { text, utterance_seq } = evt {
-        let _ = app.emit("live-utterance", serde_json::json!({
-            "session_id": session_id,
-            "text": text,
-            "utterance_seq": utterance_seq,
-        }));
+    if let StreamingEvent::UtteranceCompleted {
+        text,
+        utterance_seq,
+    } = evt
+    {
+        let _ = app.emit(
+            "live-utterance",
+            serde_json::json!({
+                "session_id": session_id,
+                "text": text,
+                "utterance_seq": utterance_seq,
+            }),
+        );
     }
 }
 
@@ -336,9 +344,12 @@ fn emit_error(
     message: String,
     kind: crate::transcription::streaming::ErrorKind,
 ) {
-    let _ = app.emit("live-error", serde_json::json!({
-        "session_id": session_id,
-        "message": message,
-        "kind": kind,
-    }));
+    let _ = app.emit(
+        "live-error",
+        serde_json::json!({
+            "session_id": session_id,
+            "message": message,
+            "kind": kind,
+        }),
+    );
 }

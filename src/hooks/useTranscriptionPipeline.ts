@@ -1,5 +1,4 @@
 import {
-  transcribeLocal,
   transcribeCloud,
   processReasoning,
   getApiKey,
@@ -19,8 +18,6 @@ import {
 } from "@/config/prompts";
 
 export interface TranscriptionSettings {
-  useLocal: boolean | null;
-  whisperModel: string | null;
   cloudProvider: string | null;
   cloudModel: string | null;
   language: string | null;
@@ -42,8 +39,6 @@ export interface TranscriptionSettings {
 /** Load all settings needed for the transcription pipeline. */
 export async function loadTranscriptionSettings(): Promise<TranscriptionSettings> {
   const [
-    useLocal,
-    whisperModel,
     cloudProvider,
     cloudModel,
     language,
@@ -61,8 +56,6 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
     agentAliases,
     debugMode,
   ] = await Promise.all([
-    getSetting<boolean>("useLocalWhisper"),
-    getSetting<string>("whisperModel"),
     getSetting<string>("cloudTranscriptionProvider"),
     getSetting<string>("cloudTranscriptionModel"),
     getSetting<string>("preferredLanguage"),
@@ -82,8 +75,6 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
   ]);
 
   return {
-    useLocal,
-    whisperModel,
     cloudProvider,
     cloudModel,
     language,
@@ -132,7 +123,7 @@ function requestedLanguage(settings: TranscriptionSettings): string | undefined 
   return settings.languageMode === "auto" ? "auto" : (settings.language ?? undefined);
 }
 
-/** Run transcription (local or cloud). Returns text plus the language the backend
+/** Run cloud transcription. Returns text plus the language the backend
  *  detected (when in auto mode). Throws on missing API key. */
 export async function transcribe(
   audioData: number[],
@@ -153,18 +144,6 @@ export async function transcribe(
     settings.languageMode === "bilingual"
       ? settings.secondaryLanguage ?? undefined
       : undefined;
-
-  if (settings.useLocal) {
-    const result = await transcribeLocal(
-      audioData,
-      settings.whisperModel ?? "base",
-      requestedLanguage(settings),
-      secondaryLanguage,
-      transcriptionDict,
-      agentTerms,
-    );
-    return { text: result.text, detectedLanguage: result.detected_language };
-  }
 
   const provider = settings.cloudProvider ?? "openai";
   const apiKey = await getApiKey(provider);
