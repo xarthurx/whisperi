@@ -37,6 +37,9 @@ jobs:
       - name: TypeScript typecheck
         run: bun run typecheck
 
+      - name: Frontend tests
+        run: bun test
+
       - name: Build frontend
         run: bun run build
 

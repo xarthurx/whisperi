@@ -3,15 +3,32 @@ import { getLanguageInstruction } from "../utils/languageSupport";
 
 export type EnhancementIntensity = "light" | "standard" | "full";
 
-export const PROMPT_VARIANTS: Record<EnhancementIntensity, string> = {
+const PROMPT_VARIANTS: Record<EnhancementIntensity, string> = {
   light: promptData.USER_VISIBLE_PROMPT_LIGHT,
   standard: promptData.USER_VISIBLE_PROMPT_STANDARD,
   full: promptData.USER_VISIBLE_PROMPT_FULL,
 };
 
-const INTERNAL_SYSTEM_PROMPT = promptData.INTERNAL_SYSTEM_PROMPT;
 const CHAT_SYSTEM_PROMPT = promptData.CHAT_SYSTEM_PROMPT;
-const DICTIONARY_SUFFIX = promptData.DICTIONARY_SUFFIX;
+
+interface CleanupProfile {
+  internalPrompt: string;
+  dictionarySuffix: string;
+  languageInstruction?: string;
+}
+
+const DEFAULT_CLEANUP_PROFILE: CleanupProfile = {
+  internalPrompt: promptData.INTERNAL_SYSTEM_PROMPT,
+  dictionarySuffix: promptData.DICTIONARY_SUFFIX,
+};
+
+/** Keep all preserve-first instructions together so Light cannot accidentally
+ * inherit a Standard/Full language or dictionary rule. */
+const LIGHT_CLEANUP_PROFILE: CleanupProfile = {
+  internalPrompt: promptData.LIGHT_INTERNAL_SYSTEM_PROMPT,
+  languageInstruction: promptData.LIGHT_LANGUAGE_INSTRUCTION,
+  dictionarySuffix: promptData.LIGHT_DICTIONARY_SUFFIX,
+};
 
 export const TEMPERATURE_MAP: Record<EnhancementIntensity, number> = {
   light: 0.1,
@@ -27,21 +44,55 @@ export const LENGTH_GUARD_MAP: Record<EnhancementIntensity, number> = {
   full: 3,
 };
 
-/**
- * Check if the transcribed text contains the agent name or any alias
- * (case-insensitive), indicating the user is addressing the agent directly.
- */
-export function detectChatMode(text: string, agentName: string | null, aliases?: string[]): boolean {
-  const lower = text.toLowerCase();
-  const name = agentName?.trim();
-  if (name && lower.includes(name.toLowerCase())) return true;
-  if (aliases) {
-    for (const alias of aliases) {
-      const a = alias.trim();
-      if (a && lower.includes(a.toLowerCase())) return true;
-    }
-  }
-  return false;
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const AGENT_GREETINGS = [
+  "hey", "hi", "hello", "ok", "okay", "hallo", "bonjour", "salut",
+  "hola", "olá", "oi", "привет", "здравствуйте", "你好", "您好", "嗨",
+  "こんにちは", "안녕", "안녕하세요",
+].map(escapeRegExp).join("|");
+
+const AGENT_REQUEST_CUES = [
+  "answer", "change", "convert", "create", "draft", "explain", "find",
+  "fix", "format", "give", "help", "make", "please", "polish", "rewrite",
+  "show", "summarize", "summarise", "tell", "translate", "write",
+].join("|");
+
+const ASCII_ADDRESS_PUNCTUATION = "[,!:;?.—]";
+const CJK_ADDRESS_PUNCTUATION = "[，！：；？。、]";
+
+/** Conservative address detection: a bare mention must stay dictated content. */
+function isAgentAddress(text: string, term: string): boolean {
+  const escaped = escapeRegExp(term.trim()).replace(/\s+/g, "\\s+");
+  if (!escaped) return false;
+
+  const leadingVocative = new RegExp(
+    `^\\s*${escaped}\\s*(?:${ASCII_ADDRESS_PUNCTUATION}+(?=\\s|$)|${CJK_ADDRESS_PUNCTUATION}+)`,
+    "iu",
+  );
+  const greetedAddress = new RegExp(
+    `^\\s*(?:${AGENT_GREETINGS})(?:\\s+|${ASCII_ADDRESS_PUNCTUATION}+\\s+|${CJK_ADDRESS_PUNCTUATION}+\\s*)${escaped}(?=$|\\s|${ASCII_ADDRESS_PUNCTUATION}+(?=\\s|$)|${CJK_ADDRESS_PUNCTUATION}+)`,
+    "iu",
+  );
+  const leadingRequest = new RegExp(
+    `^\\s*${escaped}\\s+(?:${AGENT_REQUEST_CUES})\\b`,
+    "iu",
+  );
+  return leadingVocative.test(text)
+    || greetedAddress.test(text)
+    || leadingRequest.test(text);
+}
+
+/** Detect an explicit address to the configured agent, not a substring or mention. */
+export function detectChatMode(
+  text: string,
+  agentName: string | null,
+  aliases?: string[],
+): boolean {
+  return [agentName ?? "", ...(aliases ?? [])]
+    .some((term) => isAgentAddress(text, term));
 }
 
 /** Append optional language instruction and dictionary to a base prompt. */
@@ -49,14 +100,16 @@ function appendPromptExtras(
   prompt: string,
   customDictionary?: string[],
   language?: string,
+  profile: CleanupProfile = DEFAULT_CLEANUP_PROFILE,
 ): string {
   let result = prompt;
-  const langInstruction = getLanguageInstruction(language);
+  const langInstruction =
+    profile.languageInstruction ?? getLanguageInstruction(language);
   if (langInstruction) {
     result += "\n\n" + langInstruction;
   }
   if (customDictionary && customDictionary.length > 0) {
-    result += DICTIONARY_SUFFIX + customDictionary.join(", ");
+    result += profile.dictionarySuffix + customDictionary.join(", ");
   }
   return result;
 }
@@ -73,11 +126,17 @@ export function getSystemPrompt(
   customPrompt?: string,
   intensity?: EnhancementIntensity,
 ): string {
+  const mode = intensity ?? "standard";
+  const hasCustomPrompt = Boolean(customPrompt?.trim());
+  const profile =
+    mode === "light" && !hasCustomPrompt
+      ? LIGHT_CLEANUP_PROFILE
+      : DEFAULT_CLEANUP_PROFILE;
   const name = agentName?.trim() || "Assistant";
-  const userPart = customPrompt || PROMPT_VARIANTS[intensity ?? "standard"];
-  const prompt = INTERNAL_SYSTEM_PROMPT.replace(/\{\{agentName\}\}/g, name)
+  const userPart = hasCustomPrompt ? customPrompt! : PROMPT_VARIANTS[mode];
+  const prompt = profile.internalPrompt.replace(/\{\{agentName\}\}/g, name)
     + "\n\n" + userPart.replace(/\{\{agentName\}\}/g, name);
-  return appendPromptExtras(prompt, customDictionary, language);
+  return appendPromptExtras(prompt, customDictionary, language, profile);
 }
 
 /** Get the visible prompt text for a given intensity level. */

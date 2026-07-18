@@ -172,7 +172,6 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         const result = await enhance(
           rawText,
           settings,
-          transcriptionDict,
           detectedLanguage,
         );
         finalText = result.finalText;

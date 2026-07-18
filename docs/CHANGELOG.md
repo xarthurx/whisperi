@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.8.2] - 2026-07-18
+
+### Highlights
+
+- Light enhancement now stays closer to your original wording and treats custom dictionary entries more cautiously
+- Mentioning your assistant by name inside ordinary dictation no longer turns the text into an assistant request
+
+### Fixes
+
+- Isolated the default Light enhancement prompt from the shared Standard/Full cleanup examples, which encouraged self-correction and professional rewriting despite Light explicitly forbidding both. Light now selects one coherent preserve-first profile containing its internal envelope, language guidance, and conservative dictionary policy; it no longer inherits language instructions that authorize grammar/spelling repair or translation. Standard, Full, and non-empty custom-prompt behavior are unchanged.
+- Removed Light's unconditional `cloud` → `CLAUDE` dictionary example and clarified that correction-introducing “I mean” must be preserved. Agent names and aliases are now used only for speech-recognition biasing, not as AI dictionary replacements; the enhancement step receives only the user's actual custom dictionary.
+- Tightened agent-chat routing from a case-insensitive substring search to conservative leading address forms. Ordinary mentions such as “I told Jasper,” possessives such as “Jasper’s report,” and collisions such as “whispering” no longer bypass cleanup mode, while “Jasper, rewrite this” still activates chat behavior.
+
+### Internal
+
+- Centralized prompt prose in `promptData.json`, replaced independently-selected Light prompt fragments with a single cleanup-profile abstraction, made the prompt-variant map private, removed unused legacy prompt data and a duplicate dead auto-language instruction, and added seven Bun regression tests for profile routing and agent-address detection (now run in CI).
+
 ## [0.8.1] - 2026-07-12
 
 ### Highlights

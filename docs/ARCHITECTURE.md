@@ -116,7 +116,7 @@ Whisperi is Windows-first. Clipboard read/write, terminal detection, and keystro
 | | `hooks/useSettings.ts` | Load/save all settings from plugin-store with defaults |
 | | `hooks/useHotkey.ts` | Global shortcut registration, tap vs push-to-talk modes |
 | **Services** | `services/tauriApi.ts` | Typed `invoke()` wrappers for every Rust command, event listeners |
-| **Config** | `config/constants.ts`, `prompts.ts`, `promptData.json`, `languageRegistry.json` | Default values, prompt templates with agent-name and language interpolation, language-specific instructions, enhancement intensity levels (Light/Standard/Full) with temperature mapping |
+| **Config** | `config/constants.ts`, `prompts.ts`, `promptData.json`, `languageRegistry.json` | Default values, centralized prompt templates, coherent cleanup profiles (internal/language/dictionary policy), agent-name interpolation, and enhancement intensity levels (Light/Standard/Full) with temperature mapping |
 | **Models** | `models/modelRegistryData.json` | Static registry of all supported transcription and reasoning models per provider |
 | **Utils** | `utils/sounds.ts`, `languageSupport.ts` | Web Audio API tone generation (no static assets); language support validation, auto-detect and per-language instruction assembly |
 | **i18n** | `i18n/index.ts`, `i18n/i18next.d.ts`, `i18n/locales/*.json` | i18next initialization, typed translation keys, 9 locale files (en, zh, ja, ko, de, fr, es, pt, ru) |

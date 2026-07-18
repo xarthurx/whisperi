@@ -190,7 +190,6 @@ function effectiveLanguage(
 export async function enhance(
   rawText: string,
   settings: TranscriptionSettings,
-  dictionary: string[],
   detectedLanguage: string | null = null,
 ): Promise<EnhancementResult> {
   if (
@@ -228,10 +227,10 @@ export async function enhance(
       ? (detectedLanguage ?? settings.language ?? undefined)
       : effectiveLanguage(requestedLanguage(settings), detectedLanguage);
   const systemPrompt = isChatMode
-    ? getChatSystemPrompt(settings.agentName, dictionary, resolvedLanguage)
+    ? getChatSystemPrompt(settings.agentName, settings.dictionary, resolvedLanguage)
     : getSystemPrompt(
         settings.agentName,
-        dictionary,
+        settings.dictionary,
         resolvedLanguage,
         settings.useCustomPrompt && settings.customSystemPrompt
           ? settings.customSystemPrompt

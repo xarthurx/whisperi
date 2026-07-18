@@ -7,8 +7,7 @@
       "flag": "\uD83C\uDF10",
       "whisper": false,
       "parakeet": false,
-      "assemblyai": false,
-      "instruction": "LANGUAGE CONTEXT: The language preference is set to auto-detect. Detect the language of the transcribed text and respond entirely in that same language. Use the punctuation conventions native to the detected language — NEVER use English half-width punctuation for non-English text. For Chinese: use ONLY full-width punctuation (\u3002\uff0c\uff1f\uff01\u3001\uff1a\uff1b), NEVER half-width (.,?!:;). For Japanese: use \u3002\u3001\u300c\u300d\uff1f\uff01. Every sentence must end with appropriate punctuation. When the detected language is Chinese, you MUST use Simplified Chinese characters (简体中文), NEVER Traditional Chinese (繁體中文). Maintain consistent language and punctuation style throughout your response."
+      "assemblyai": false
     },
     {
       "code": "af",

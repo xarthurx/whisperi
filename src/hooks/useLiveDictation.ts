@@ -604,18 +604,17 @@ export function useLiveDictation({ onToast }: Options = {}) {
             getSetting<string>("customSystemPrompt"),
             getSetting<boolean>("debugMode"),
           ]);
-          const dictionary = buildTranscriptionDictionary(dict, agentName, aliases);
           const settings: TranscriptionSettings = {
             cloudProvider, cloudModel, language,
             languageMode: null, secondaryLanguage: null,
-            dictionary,
+            dictionary: dict,
             useReasoning: useR, reasoningModel: rModel, reasoningProvider: rProvider,
             enhancementIntensity: intensity, autoPaste, useCustomPrompt: useCustom,
             customSystemPrompt: customPrompt, agentName, agentAliases: aliases,
             debugMode,
           };
           reEnhance = async (text: string) => {
-            const enhancePromise = enhance(text, settings, dictionary, language ?? null);
+            const enhancePromise = enhance(text, settings, language ?? null);
             const timeoutPromise = new Promise<never>((_, reject) =>
               setTimeout(() => reject(new Error("enhance() timed out after 30s")), 30_000),
             );
