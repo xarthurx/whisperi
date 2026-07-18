@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Internal
+
+- Moved WinGet publication out of GitHub Actions and into a local, cached-OAuth release script. The script resolves the published installer, generates manifests in temporary storage, validates their inherited metadata and asset hash, and submits without placing a personal access token on the command line. This avoids Microsoft's eight-day classic-PAT lifetime limit and prevents WinGet authentication from marking an otherwise successful app release as failed.
+- Documented the complete new-machine and per-release WinGet procedure for future maintainers and coding agents: install WinGetCreate, authorize its local OAuth cache once, preview every generated manifest, submit once, and pause for the user whenever GitHub requires interactive authorization.
+
 ## [0.8.2] - 2026-07-18
 
 ### Highlights

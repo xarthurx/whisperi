@@ -2,19 +2,22 @@
 
 ## Winget Submission
 
-### Token
+### Authentication
 
-- `WINGET_CREATE_GITHUB_TOKEN` must be a **classic PAT** with `public_repo` scope and **≤ 90-day** lifetime (enforced by the `Microsoft Open Source` GitHub enterprise policy — applies to both classic and fine-grained PATs).
+- WinGetCreate is installed locally through `winget install --id Microsoft.WingetCreate --exact`.
+- Authenticate once on the release workstation with `wingetcreate token -s`. WinGetCreate keeps the OAuth credential in its local cache; no token is passed on the command line or stored in the Whisperi repository.
+- Microsoft's open-source GitHub enterprise rejects classic PATs whose lifetime exceeds eight days. Fine-grained PATs are not a replacement because WinGetCreate and cross-owner public-repository contributions do not support them. The former `WINGET_CREATE_GITHUB_TOKEN` workflows were removed after this policy caused the v0.8.2 follow-up job to fail.
 
 ### Workflow
 
-- Winget submission runs as the `update-winget` job in `release.yml`, triggered automatically after the build job on tag push (`v*`).
-- `update-winget.yml` is kept as a manual-only (`workflow_dispatch`) backup for retries/backfills.
-- The release is created by `tauri-action` using `GITHUB_TOKEN`, which does not trigger other workflows (GitHub security policy). That's why the Winget step is in the same workflow instead of a separate one.
+- `.github/workflows/release.yml` only builds, signs, and publishes the GitHub release. A WinGet credential failure can no longer mark the application release as failed.
+- After the release assets are public, preview the generated manifests with `powershell -ExecutionPolicy Bypass -File scripts/submit-winget.ps1 vX.Y.Z -Preview`.
+- Submit with `powershell -ExecutionPolicy Bypass -File scripts/submit-winget.ps1 vX.Y.Z`. The script resolves the exact published release, requires one x64 NSIS asset, generates manifests in a temporary directory, verifies the package/version/URL/hash/release date/license metadata, and submits them using the cached OAuth credential.
+- The script cleans its temporary output, so running it from the repository does not create untracked manifest files.
 
 ### wingetcreate Notes
 
-`wingetcreate` (v1.12.8.0, framework-dependent, requires .NET 6) output is used as-is with `--submit`. Its `ReleaseDate` placement at the top level (outside `Installers`) looks wrong per the schema docs but is the convention winget-pkgs validation expects — do not move it inside the installer entry.
+`wingetcreate` v1.12.8.0 generates the manifests locally, then its `submit` command publishes the validated directory. Its `ReleaseDate` placement at the top level (outside `Installers`) looks wrong per the schema docs but is the convention winget-pkgs validation expects — do not move it inside the installer entry.
 
 **Do NOT use the self-contained wingetcreate** (`aka.ms/wingetcreate/latest/self-contained`) — it bundles v1.0.4.0, which generates schema 1.1.0 manifests instead of 1.10.0.
 
@@ -22,7 +25,7 @@
 
 `wingetcreate update` inherits metadata from the previous version's manifest in winget-pkgs. Fix these once and they carry forward to all future versions:
 
-- **License** — Use SPDX identifier `MIT` (not `MIT License`). Add `LicenseUrl: https://github.com/xarthurx/whisperi/blob/master/LICENSE`.
+- **License** — Use SPDX identifier `MIT` (not `MIT License`). Add `LicenseUrl: https://github.com/xarthurx/whisperi/blob/main/LICENSE`.
 - **ShortDescription** — Keep to a single concise phrase (e.g. `Lightweight Windows speech-to-text app.`). Move longer text to a separate `Description` field.
 - **Locale metadata** — Include `PublisherUrl`, `PublisherSupportUrl`, and `PackageUrl` for storefront quality.
 - **`ReleaseDate` in installer manifest** — Copilot flagged this as invalid, but it IS a valid field in the installer schema (added in 1.2.0+). `wingetcreate` generates it correctly. The PR was approved by a human reviewer — ignore this Copilot suggestion.

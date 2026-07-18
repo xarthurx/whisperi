@@ -43,11 +43,35 @@ Tauri 2.10+, React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui, i18next 
 
 ## Winget Manifests
 
-- `wingetcreate update --submit` in CI handles manifest generation; metadata is **inherited verbatim from the previous version's manifest in `microsoft/winget-pkgs`**. Once a bad field lands, every future submission propagates it — the rules below must be enforced by patching the PR, not by hoping `wingetcreate` will fix it.
+WinGet submission is local because Microsoft's open-source enterprise limits classic PATs to eight days and WinGetCreate does not support fine-grained PATs. Never add a WinGet PAT back to GitHub Actions or pass a token with WinGetCreate's `--token` argument.
+
+### New Windows Machine Setup
+
+Run these commands once from the Whisperi repository:
+
+```powershell
+winget install --id Microsoft.WingetCreate --exact --source winget --accept-source-agreements --accept-package-agreements
+wingetcreate token -s
+```
+
+- `wingetcreate token -s` starts GitHub's OAuth flow and stores the resulting credential in WinGetCreate's local cache for the current Windows user. If a browser, device code, or authorization prompt appears, the agent must pause and ask the user to approve it; never attempt to extract, print, or copy the cached credential.
+- A successful setup prints `Token stored in cache successfully.` Repeat it only on a new machine/user profile, after the cache is cleared, or when GitHub revokes the authorization.
+
+### Per-Release Submission
+
+Only submit after the non-draft GitHub release and its signed x64 NSIS asset are public. Run preview first, then submit exactly once:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/submit-winget.ps1 vX.Y.Z -Preview
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/submit-winget.ps1 vX.Y.Z
+```
+
+- If submission reports an authentication problem, refresh the cache with `wingetcreate token -s` and retry. Do not create a classic or fine-grained PAT.
+- `scripts/submit-winget.ps1` handles manifest generation and submission with WinGetCreate's cached OAuth credential; metadata is **inherited verbatim from the previous version's manifest in `microsoft/winget-pkgs`**. Once a bad field lands, every future submission propagates it — the rules below must be enforced by patching the PR, not by hoping `wingetcreate` will fix it.
 - **License**: SPDX identifier `MIT` (not `MIT License`), and include `LicenseUrl: https://github.com/xarthurx/whisperi/blob/main/LICENSE`. Copilot review flags `MIT License` as non-SPDX (precedent: [PR #376335](https://github.com/microsoft/winget-pkgs/pull/376335))
 - **ShortDescription**: single concise phrase only (~one line); longer text goes in `Description`
 - **`ReleaseDate`** in installer manifest is **valid** (schema 1.2.0+, see [installer schema 1.12.0](https://github.com/microsoft/winget-pkgs/blob/master/doc/manifest/schema/1.12.0/manifest.installer.1.12.0.json)) — Copilot has incorrectly flagged this as needing to move to the version manifest; don't move it
-- **After every release tag**, when the CI-submitted winget PR appears under `microsoft/winget-pkgs`: open the generated `*.locale.en-US.yaml` and verify all four rules above before letting it merge. Push fixes onto the PR branch (`xarthurx.Whisperi-<version>-<uuid>` on `xarthurx/winget-pkgs`) — do not wait for the next version, since the next `wingetcreate` run will re-inherit whatever is in the latest accepted manifest.
+- **After every local WinGet submission**, open the generated PR under `microsoft/winget-pkgs` and verify all four rules above before letting it merge. Push fixes onto the PR branch (`xarthurx.Whisperi-<version>-<uuid>` on `xarthurx/winget-pkgs`) — do not wait for the next version, since the next `wingetcreate` run will re-inherit whatever is in the latest accepted manifest.
 - See [docs/PROGRESS.md](docs/PROGRESS.md) for full winget notes
 
 ## Workflow Rules

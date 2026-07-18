@@ -297,15 +297,19 @@ Single `check-and-build` job: TypeScript check → Vite build → `cargo test` �
 
 ### Release Pipeline (`.github/workflows/release.yml`)
 
-Triggered on version tags (`v*`). Two jobs:
-1. **`release`** — Builds the NSIS installer via `tauri-apps/tauri-action@v0` and publishes it as a GitHub Release asset. Windows-only.
-2. **`update-winget`** — Runs after `release`. Downloads `wingetcreate`, resolves the released x64 NSIS installer asset, and submits a manifest update PR for `xarthurx.Whisperi` to `microsoft/winget-pkgs`. Requires a `WINGET_CREATE_GITHUB_TOKEN` classic PAT with `public_repo` scope (≤ 90-day lifetime).
+Triggered on version tags (`v*`). Its Windows `release` job builds and signs the NSIS/MSI installers via `tauri-apps/tauri-action@v0`, then publishes them with updater metadata as a GitHub Release.
 
-The Winget step is in the same workflow (not a separate one) because `tauri-action` creates the release using `GITHUB_TOKEN`, and events from `GITHUB_TOKEN` do not trigger other workflows.
+### WinGet Update (Local OAuth)
 
-### Winget Update (Manual) (`.github/workflows/update-winget.yml`)
+WinGet submission is deliberately separate from GitHub Actions. Microsoft's open-source enterprise limits classic PATs to eight days, while WinGetCreate does not support fine-grained PATs for cross-owner public-repository contributions. The release workstation uses WinGetCreate's cached OAuth login instead:
 
-Manual-only (`workflow_dispatch`) backup for retries and backfills against an existing release tag.
+```powershell
+wingetcreate token -s
+powershell -ExecutionPolicy Bypass -File scripts/submit-winget.ps1 vX.Y.Z -Preview
+powershell -ExecutionPolicy Bypass -File scripts/submit-winget.ps1 vX.Y.Z
+```
+
+The submission script resolves the published release through GitHub's public API, verifies there is exactly one x64 NSIS installer, generates the three manifests in a temporary directory, checks the inherited metadata and GitHub asset digest, then invokes `wingetcreate submit` without putting a token on the command line. The temporary directory is removed on success or failure.
 
 ### Key Dependencies
 
@@ -405,13 +409,15 @@ whisperi/
 ├── docs/
 │   ├── ARCHITECTURE.md                # This file
 │   ├── CHANGELOG.md                   # Version history
-│   └── CONTINUE.md                    # Short follow-up notes
+│   ├── PROGRESS.md                    # Operational/release notes
+│   └── TODO.md                        # Follow-up work
+├── scripts/
+│   └── submit-winget.ps1              # Local OAuth WinGet submission
 ├── .github/
 │   ├── README.md                      # GitHub repo readme
 │   └── workflows/
 │       ├── ci.yml                    # CI pipeline (push/PR)
-│       ├── release.yml               # Release pipeline (version tags)
-│       └── update-winget.yml         # Winget submission on published releases
+│       └── release.yml               # Release pipeline (version tags)
 ├── package.json                       # Frontend deps + scripts
 └── CLAUDE.md                         # Claude Code project instructions
 ```
