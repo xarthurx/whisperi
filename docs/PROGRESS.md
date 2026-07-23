@@ -29,6 +29,7 @@
 - **ShortDescription** — Keep to a single concise phrase (e.g. `Lightweight Windows speech-to-text app.`). Move longer text to a separate `Description` field.
 - **Locale metadata** — Include `PublisherUrl`, `PublisherSupportUrl`, and `PackageUrl` for storefront quality.
 - **`ReleaseDate` in installer manifest** — Copilot flagged this as invalid, but it IS a valid field in the installer schema (added in 1.2.0+). `wingetcreate` generates it correctly. The PR was approved by a human reviewer — ignore this Copilot suggestion.
+- **ShortDescription accuracy** — v0.8.3 ([PR #406474](https://github.com/microsoft/winget-pkgs/pull/406474)) patched the inherited `Fast local & cloud speech-to-text dictation for Windows` to `Fast cloud speech-to-text dictation for Windows` because the app went cloud-only in v0.8.1. Inherited metadata must be re-checked against reality each release, not just against the format rules — patch on the PR branch via the GitHub contents API (no clone of winget-pkgs needed).
 
 ## NSIS Updater Behavior on Windows
 
