@@ -225,7 +225,15 @@ impl AudioRecorder {
     }
 
     pub fn stop(state: &RecordingState) -> Result<Vec<u8>, AudioError> {
-        if !state.is_recording.load(Ordering::SeqCst) {
+        // Atomically claim the stop (and thereby signal the recording thread):
+        // exactly one caller wins. Two overlapping stops previously both read
+        // `is_recording == true`, both returned the same buffer, and the same
+        // sentence was transcribed and pasted twice.
+        if state
+            .is_recording
+            .compare_exchange(true, false, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
             // Check if the thread panicked
             let mut handle = state.thread_handle.lock().unwrap();
             if let Some(h) = handle.take() {
@@ -239,9 +247,6 @@ impl AudioRecorder {
             }
             return Err(AudioError::NotRecording);
         }
-
-        // Signal the recording thread to stop
-        state.is_recording.store(false, Ordering::SeqCst);
 
         // Wait for the thread to finish (with timeout)
         {
@@ -261,7 +266,9 @@ impl AudioRecorder {
             log::warn!("Device error during recording: {}", err_msg);
         }
 
-        let samples = state.samples.lock().unwrap().clone();
+        // Drain rather than clone: even if a caller slips past the claim in a
+        // future refactor, the same audio can never be returned twice.
+        let samples = std::mem::take(&mut *state.samples.lock().unwrap());
 
         if samples.is_empty() {
             if state.get_error().is_some() {
@@ -632,5 +639,26 @@ mod tests {
     #[test]
     fn speech_level_audio_is_not_speechless() {
         assert!(!is_speechless(&sine(0.1, 1.0), 16000));
+    }
+
+    #[test]
+    fn double_stop_returns_audio_exactly_once() {
+        // Simulate an active recording without a live thread: two stops racing
+        // in from a bounced push-to-talk key must yield one WAV and one error.
+        let state = RecordingState::new();
+        state.is_recording.store(true, Ordering::SeqCst);
+        state
+            .samples
+            .lock()
+            .unwrap()
+            .extend_from_slice(&sine(0.1, 1.0));
+
+        let first = AudioRecorder::stop(&state);
+        assert!(first.is_ok());
+        // Buffer drained — the audio is gone with the first winner.
+        assert!(state.samples.lock().unwrap().is_empty());
+
+        let second = AudioRecorder::stop(&state);
+        assert!(matches!(second, Err(AudioError::NotRecording)));
     }
 }

@@ -58,6 +58,10 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   const [transcript, setTranscript] = useState("");
   const unlistenRef = useRef<(() => void)[]>([]);
   const recordingStartRef = useRef<number | null>(null);
+  // Synchronous re-entrancy guard for stop(): the `phase` check alone is
+  // stale under two rapid hotkey-release events (React commits state async),
+  // which let one recording transcribe and paste twice.
+  const stopInFlightRef = useRef(false);
 
   // Subscribe to audio-level and recording-error events
   useEffect(() => {
@@ -125,7 +129,8 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
   );
 
   const stop = useCallback(async () => {
-    if (phase !== "recording") return;
+    if (phase !== "recording" || stopInFlightRef.current) return;
+    stopInFlightRef.current = true;
     setPhase("processing");
     // Capture duration as soon as we know the user released the hotkey,
     // before any awaits that would inflate the recorded length.
@@ -134,10 +139,11 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         ? Math.round(performance.now() - recordingStartRef.current)
         : null;
     recordingStartRef.current = null;
-    const soundEnabled = await getSetting<boolean>("soundEnabled");
-    if (soundEnabled !== false) playStopSound();
 
     try {
+      const soundEnabled = await getSetting<boolean>("soundEnabled");
+      if (soundEnabled !== false) playStopSound();
+
       const audioData = await apiStopRecording();
       setAudioLevel(0);
 
@@ -221,6 +227,8 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         variant: "destructive",
       });
       setPhase("idle");
+    } finally {
+      stopInFlightRef.current = false;
     }
   }, [phase, onToast]);
 
