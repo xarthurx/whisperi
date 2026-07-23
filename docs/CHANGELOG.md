@@ -1,6 +1,12 @@
 # Changelog
 
-## [Unreleased]
+## [0.8.3] - 2026-07-23
+
+### Highlights
+
+- Bilingual dictation no longer comes back translated into your other language — what you speak is what you get
+- Silence, breathing, or an accidental tap of the dictation key no longer turns into strange made-up text; silent clips are discarded instantly instead of being sent to the cloud
+- Fixed the same sentence occasionally being pasted twice
 
 ### Fixes
 
