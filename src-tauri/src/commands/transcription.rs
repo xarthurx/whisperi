@@ -270,6 +270,14 @@ pub async fn transcribe_cloud(
     let stripped = transcription::cloud::strip_prompt_echo(&output.text, Some(prompt.as_str()));
     let stripped =
         transcription::cloud::strip_dictionary_edge_echo(&stripped, &dictionary, &agent_terms);
+    // Whole-output hallucination phrases (silence artifacts) are blanked; the
+    // frontend's empty-transcription check then skips the result silently.
+    let stripped = if transcription::hallucination::is_known_hallucination(&stripped) {
+        log::info!("[Whisperi] Dropped known hallucination phrase output");
+        String::new()
+    } else {
+        stripped
+    };
     let resolved = resolve_language(
         primary.as_deref(),
         secondary.as_deref(),
