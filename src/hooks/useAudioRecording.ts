@@ -206,6 +206,14 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
 
       setPhase("idle");
     } catch (e) {
+      // Backend gate for silent/too-short clips (AudioError::NoSpeech) — an
+      // accidental tap or silence hold must reset quietly, not raise a toast.
+      if (String(e).includes("No speech detected")) {
+        console.log("[Whisperi] No speech detected, skipping.");
+        setAudioLevel(0);
+        setPhase("idle");
+        return;
+      }
       console.error("[Whisperi] Transcription failed:", e);
       onToast?.({
         title: "Transcription Failed",

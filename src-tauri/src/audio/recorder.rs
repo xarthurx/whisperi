@@ -39,6 +39,8 @@ pub enum AudioError {
     ThreadPanic,
     #[error("Device disconnected during recording")]
     DeviceDisconnected,
+    #[error("No speech detected")]
+    NoSpeech,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -277,8 +279,34 @@ impl AudioRecorder {
             samples
         };
 
+        if is_speechless(&mono_16k, TARGET_SAMPLE_RATE) {
+            return Err(AudioError::NoSpeech);
+        }
+
         encode_wav(&mono_16k, TARGET_SAMPLE_RATE)
     }
+}
+
+/// Reject clips that cannot contain speech before they reach the network —
+/// Whisper-family models hallucinate fixed phrases on silent/noise-only audio.
+/// Thresholds are deliberately conservative: quiet speech sits well above them
+/// (typical speech RMS ≥ 0.01), and a sub-250 ms clip is almost always an
+/// accidental hotkey tap.
+const MIN_SPEECH_MS: usize = 250;
+const SILENCE_PEAK_FLOOR: f32 = 0.02;
+const SILENCE_RMS_FLOOR: f32 = 0.0015;
+
+pub(crate) fn is_speechless(samples: &[f32], sample_rate: u32) -> bool {
+    if samples.len() < sample_rate as usize * MIN_SPEECH_MS / 1000 {
+        return true;
+    }
+    let peak = samples.iter().fold(0.0_f32, |m, s| m.max(s.abs()));
+    if peak < SILENCE_PEAK_FLOOR {
+        return true;
+    }
+    let rms =
+        (samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32).sqrt();
+    rms < SILENCE_RMS_FLOOR
 }
 
 /// Negotiate the best stream config for the device.
@@ -568,5 +596,41 @@ mod tests {
         let state = RecordingState::new();
         let result = AudioRecorder::stop(&state);
         assert!(matches!(result, Err(AudioError::NotRecording)));
+    }
+
+    fn sine(amplitude: f32, seconds: f32) -> Vec<f32> {
+        let n = (16000.0 * seconds) as usize;
+        (0..n)
+            .map(|i| amplitude * (i as f32 * 0.1).sin())
+            .collect()
+    }
+
+    #[test]
+    fn speechless_all_zero_buffer() {
+        assert!(is_speechless(&vec![0.0; 16000], 16000));
+    }
+
+    #[test]
+    fn speechless_too_short_even_at_speech_level() {
+        // 100ms of loud audio — an accidental tap, not an utterance.
+        assert!(is_speechless(&sine(0.3, 0.1), 16000));
+    }
+
+    #[test]
+    fn speechless_below_peak_floor() {
+        assert!(is_speechless(&sine(0.005, 1.0), 16000));
+    }
+
+    #[test]
+    fn speechless_single_click_in_dead_audio() {
+        // One 0.1 transient in a second of silence: peak passes, RMS doesn't.
+        let mut samples = vec![0.0f32; 16000];
+        samples[8000] = 0.1;
+        assert!(is_speechless(&samples, 16000));
+    }
+
+    #[test]
+    fn speech_level_audio_is_not_speechless() {
+        assert!(!is_speechless(&sine(0.1, 1.0), 16000));
     }
 }
