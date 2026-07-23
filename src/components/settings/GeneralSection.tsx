@@ -36,12 +36,12 @@ export default function GeneralSection({ settings, update }: SectionProps) {
     // Compute the concrete first language up front so the second seed below
     // decides against the value we are actually setting, not the stale closure.
     const nextFirst =
-      settings.preferredLanguage === "auto" ? "en" : settings.preferredLanguage;
+      settings.preferredLanguage === "auto" ? "en-US" : settings.preferredLanguage;
     if (mode !== "auto" && settings.preferredLanguage === "auto") {
       update("preferredLanguage", nextFirst);
     }
     if (mode === "bilingual" && !settings.secondaryLanguage) {
-      update("secondaryLanguage", nextFirst === "zh" ? "en" : "zh");
+      update("secondaryLanguage", nextFirst === "zh" ? "en-US" : "zh");
     }
   };
 
@@ -79,7 +79,7 @@ export default function GeneralSection({ settings, update }: SectionProps) {
 
           {settings.languageMode === "single" && (
             <LanguageSelector
-              value={settings.preferredLanguage === "auto" ? "en" : settings.preferredLanguage}
+              value={settings.preferredLanguage === "auto" ? "en-US" : settings.preferredLanguage}
               onChange={(v) => update("preferredLanguage", v)}
               excludeCodes={["auto"]}
               className="w-48"
@@ -90,14 +90,14 @@ export default function GeneralSection({ settings, update }: SectionProps) {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <LanguageSelector
-                  value={settings.preferredLanguage === "auto" ? "en" : settings.preferredLanguage}
+                  value={settings.preferredLanguage === "auto" ? "en-US" : settings.preferredLanguage}
                   onChange={(v) => update("preferredLanguage", v)}
                   excludeCodes={["auto", settings.secondaryLanguage]}
                   className="w-44"
                 />
                 <span className="text-muted-foreground text-sm select-none" aria-hidden="true">+</span>
                 <LanguageSelector
-                  value={settings.secondaryLanguage || "en"}
+                  value={settings.secondaryLanguage || "en-US"}
                   onChange={(v) => update("secondaryLanguage", v)}
                   excludeCodes={["auto", settings.preferredLanguage]}
                   className="w-44"

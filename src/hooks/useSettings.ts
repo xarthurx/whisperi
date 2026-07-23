@@ -165,6 +165,18 @@ export function useSettings() {
       if (storeResults[languageModeIdx] == null) {
         resolved.languageMode = resolved.preferredLanguage === "auto" ? "auto" : "single";
       }
+      // Migration: older builds seeded bare "en", which has no entry in
+      // languageRegistry.json (only "en-US"/"en-GB"), so the selector showed
+      // no selection and getLanguageInstruction fell back to the generic
+      // template. Normalize and persist so the pipeline sees the fixed value.
+      if (resolved.preferredLanguage === "en") {
+        resolved.preferredLanguage = "en-US";
+        setSetting("preferredLanguage", "en-US");
+      }
+      if (resolved.secondaryLanguage === "en") {
+        resolved.secondaryLanguage = "en-US";
+        setSetting("secondaryLanguage", "en-US");
+      }
 
       resolved.agentName = agentNameVal;
       resolved.agentAliases = agentAliases;

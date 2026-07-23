@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Highlights
+
+- Switching out of automatic language detection now correctly preselects English (US) instead of leaving the language picker blank
+
+### Fixes
+
+- Fixed `GeneralSection` seeding the bare code `en` when leaving Auto mode (and as the `LanguageSelector` value fallback), which matches no entry in `languageRegistry.json` — the registry only has `en-US`/`en-GB`. Consequences were a selector with no checked option and `getLanguageInstruction("en")` falling through to the generic `_genericTemplate` instead of the tailored English instruction. All seeds/fallbacks now use `en-US` (the Rust `normalize_language` already strips the region for transcription APIs), and `useSettings` migrates a previously persisted bare `en` in `preferredLanguage`/`secondaryLanguage` to `en-US` on load, persisting it back to the store. The bare `en` in the UI-language selector is untouched — that is i18next's own locale code, which `LanguageSelector` resolves via prefix matching.
+
 ## [0.8.3] - 2026-07-23
 
 ### Highlights
