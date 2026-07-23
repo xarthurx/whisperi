@@ -29,3 +29,9 @@
 
 - [ ] **Live incremental refinement**: streaming rewrite of recent utterances when Live mode accumulates enough context to refine an earlier detected-language decision (spec §9).
 - [ ] **Learned user edits**: capture user post-dictation corrections into the dictionary / a corrections map so bilingual prompts can be personalized over time (spec §9).
+
+## Dictation stability follow-ups (deferred from 2026-07-23 fixes)
+
+- [ ] Apply the hallucination blocklist (`transcription/hallucination.rs`) to Live-mode utterances too — server VAD already gates silence, so deferred; wire into the utterance path if hallucinated utterances are ever reported in Live.
+- [ ] Parse `no_speech_prob`/`avg_logprob` from `verbose_json` responses (whisper-1/Groq/Mistral only) as an additional no-speech signal; the recorder gate + blocklist cover the default gpt-4o path, which returns no such metadata.
+- [ ] Consider dropping the conditioning sentence in Single/Bilingual prompts (auto mode already sends none) — it is the main text Whisper echoes on silence; the dictionary-only prompt is lower-risk.
