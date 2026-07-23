@@ -220,11 +220,13 @@ export async function enhance(
   // In auto mode, use the language the transcription step actually detected.
   // This makes downstream T→S enforcement deterministic instead of relying on
   // the kana heuristic inside `finalize_chinese_text`.
-  // Bilingual: the backend already snapped detected_language to the chosen pair,
-  // so prefer it (fall back to primary). Auto/single keep legacy resolution.
+  // Bilingual: the backend resolves from the transcript's script plus in-pair
+  // detection; null means inconclusive. Never fall back to the pair's first
+  // slot here — a forced, unspoken language makes the LLM translate the
+  // dictation. undefined routes to the language-preserving auto instruction.
   const resolvedLanguage =
     settings.languageMode === "bilingual"
-      ? (detectedLanguage ?? settings.language ?? undefined)
+      ? (detectedLanguage ?? undefined)
       : effectiveLanguage(requestedLanguage(settings), detectedLanguage);
   const systemPrompt = isChatMode
     ? getChatSystemPrompt(settings.agentName, settings.dictionary, resolvedLanguage)

@@ -23,6 +23,15 @@ describe("cleanup prompt profiles", () => {
     expect(prompt).not.toContain("Maintain proper grammar, spelling");
   });
 
+  test("no resolved language yields the language-preserving auto instruction", () => {
+    // Bilingual mode passes undefined when the transcript's language is
+    // inconclusive — the prompt must then preserve the spoken language, never
+    // force one (forcing the pair's first slot translated Chinese to English).
+    const prompt = getSystemPrompt("Jasper", dictionary, undefined, undefined, "standard");
+    expect(prompt).toContain("must match the language of the transcribed speech input");
+    expect(prompt).not.toContain("regardless of what language the user spoke");
+  });
+
   test("Standard and Full retain the shared cleanup behavior", () => {
     for (const intensity of ["standard", "full"] as const) {
       const prompt = getSystemPrompt("Jasper", dictionary, "en", undefined, intensity);
