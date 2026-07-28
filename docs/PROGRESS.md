@@ -49,6 +49,7 @@
 - **`ReleaseDate` in installer manifest** — Copilot flagged this as invalid, but it IS a valid field in the installer schema (added in 1.2.0+). `wingetcreate` generates it correctly. The PR was approved by a human reviewer — ignore this Copilot suggestion.
 - **ShortDescription accuracy** — v0.8.3 ([PR #406474](https://github.com/microsoft/winget-pkgs/pull/406474)) patched the inherited `Fast local & cloud speech-to-text dictation for Windows` to `Fast cloud speech-to-text dictation for Windows` because the app went cloud-only in v0.8.1. Inherited metadata must be re-checked against reality each release, not just against the format rules — patch on the PR branch via the GitHub contents API (no clone of winget-pkgs needed).
 - **v0.8.4** ([PR #406528](https://github.com/microsoft/winget-pkgs/pull/406528)) — first release to inherit the corrected v0.8.3 metadata; all four rules verified clean on the PR diff, no patch needed.
+- **v0.8.5** ([PR #409130](https://github.com/microsoft/winget-pkgs/pull/409130)) — inherited metadata verified clean: SPDX `MIT` and `LicenseUrl`, concise cloud-only `ShortDescription`, publisher/support/package URLs, correct x64 NSIS URL and SHA-256, and `ReleaseDate` in the installer manifest.
 
 ## NSIS Updater Behavior on Windows
 
