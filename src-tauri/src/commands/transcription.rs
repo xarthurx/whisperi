@@ -204,7 +204,7 @@ pub async fn transcribe_cloud(
     language: Option<String>,
     secondary_language: Option<String>,
     dictionary: Vec<String>,
-    agent_terms: Vec<String>,
+    protected_terms: Vec<String>,
 ) -> Result<TranscriptionResult, String> {
     // Never log any part of the API key — even a 4-char prefix/suffix can leak
     // into shipped logs or bug reports. Log only whether a key is present.
@@ -267,9 +267,16 @@ pub async fn transcribe_cloud(
         other => return Err(format!("Unknown transcription provider: {}", other)),
     };
 
-    let stripped = transcription::cloud::strip_prompt_echo(&output.text, Some(prompt.as_str()));
-    let stripped =
-        transcription::cloud::strip_dictionary_edge_echo(&stripped, &dictionary, &agent_terms);
+    let stripped = transcription::cloud::strip_prompt_echo(
+        &output.text,
+        Some(prompt.as_str()),
+        &protected_terms,
+    );
+    let stripped = transcription::cloud::strip_dictionary_edge_echo(
+        &stripped,
+        &dictionary,
+        &protected_terms,
+    );
     // Whole-output hallucination phrases (silence artifacts) are blanked; the
     // frontend's empty-transcription check then skips the result silently.
     let stripped = if transcription::hallucination::is_known_hallucination(&stripped) {

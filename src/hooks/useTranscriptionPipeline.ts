@@ -16,6 +16,12 @@ import {
   LENGTH_GUARD_MAP,
   type EnhancementIntensity,
 } from "@/config/prompts";
+import {
+  dictionaryPromptHints,
+  dictionaryTerms,
+  protectedDictionaryTerms,
+  type DictionaryEntry,
+} from "@/models/dictionary";
 
 export interface TranscriptionSettings {
   cloudProvider: string | null;
@@ -23,7 +29,7 @@ export interface TranscriptionSettings {
   language: string | null;
   languageMode: "auto" | "single" | "bilingual" | null;
   secondaryLanguage: string | null;
-  dictionary: string[];
+  dictionary: DictionaryEntry[];
   useReasoning: boolean | null;
   reasoningModel: string | null;
   reasoningProvider: string | null;
@@ -96,14 +102,20 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
 
 /** Merge agent name + aliases into the transcription dictionary. */
 export function buildTranscriptionDictionary(
-  dictionary: string[],
+  dictionary: DictionaryEntry[],
   agentName: string,
   agentAliases: string[],
 ): string[] {
+  const terms = dictionaryTerms(dictionary);
   const extraWords = [agentName, ...agentAliases]
     .filter((w): w is string => !!w?.trim())
-    .filter((w) => !dictionary.includes(w));
-  return extraWords.length > 0 ? [...dictionary, ...extraWords] : dictionary;
+    .filter(
+      (word) =>
+        !terms.some(
+          (term) => term.toLocaleLowerCase() === word.toLocaleLowerCase(),
+        ),
+    );
+  return extraWords.length > 0 ? [...terms, ...extraWords] : terms;
 }
 
 export interface TranscribeResult {
@@ -130,13 +142,13 @@ export async function transcribe(
   settings: TranscriptionSettings,
   transcriptionDict: string[],
 ): Promise<TranscribeResult> {
-  // Agent name + aliases are part of the dictionary (for recognition biasing)
-  // but must never be stripped as an echo — chat-mode detection needs them to
-  // survive in the transcript. Pass them separately so the backend can exclude
-  // them from edge-echo stripping.
-  const agentTerms = [settings.agentName, ...settings.agentAliases].filter(
-    (w): w is string => !!w?.trim(),
-  );
+  // Agent names and canonical dictionary targets must survive prompt-echo
+  // suppression because they may be exactly what was said.
+  const protectedTerms = [
+    settings.agentName,
+    ...settings.agentAliases,
+    ...protectedDictionaryTerms(settings.dictionary),
+  ].filter((w): w is string => !!w?.trim());
 
   // Only forward a secondary language in bilingual mode — its presence is the
   // backend's bilingual switch.
@@ -162,7 +174,7 @@ export async function transcribe(
     requestedLanguage(settings),
     secondaryLanguage,
     transcriptionDict,
-    agentTerms,
+    protectedTerms,
   );
   return { text: result.text, detectedLanguage: result.detected_language };
 }
@@ -228,11 +240,12 @@ export async function enhance(
     settings.languageMode === "bilingual"
       ? (detectedLanguage ?? undefined)
       : effectiveLanguage(requestedLanguage(settings), detectedLanguage);
+  const dictionaryHints = dictionaryPromptHints(settings.dictionary);
   const systemPrompt = isChatMode
-    ? getChatSystemPrompt(settings.agentName, settings.dictionary, resolvedLanguage)
+    ? getChatSystemPrompt(settings.agentName, dictionaryHints, resolvedLanguage)
     : getSystemPrompt(
         settings.agentName,
-        settings.dictionary,
+        dictionaryHints,
         resolvedLanguage,
         settings.useCustomPrompt && settings.customSystemPrompt
           ? settings.customSystemPrompt

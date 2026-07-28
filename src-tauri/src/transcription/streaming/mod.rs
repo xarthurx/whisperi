@@ -24,6 +24,9 @@ pub struct SessionConfig {
     /// behaviour). `start_live_session` normalizes "auto"/empty to `None`
     /// before constructing this struct.
     pub language: Option<String>,
+    /// Canonical names and specialized terms used to bias providers that
+    /// support transcription context. Unsupported providers omit the field.
+    pub dictionary: Vec<String>,
     pub api_key: String,
 }
 

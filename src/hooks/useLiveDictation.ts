@@ -29,6 +29,11 @@ import {
 import { playStartSound, playStopSound } from "@/utils/sounds";
 import { classifyStartFailure, surfaceMicWarning, clearMicWarning } from "@/utils/micWarning";
 import modelRegistry from "@/models/modelRegistryData.json";
+import {
+  applyAlwaysDictionaryCorrections,
+  protectedDictionaryTerms,
+  type DictionaryEntry,
+} from "@/models/dictionary";
 import { providerDisplayName } from "@/components/settings/providerHelpers";
 
 interface RegistryProvider {
@@ -97,9 +102,14 @@ function sanitizeUtterance(text: string): string {
     .trim();
 }
 
-/** Detect whether the transcribed text is just an echoed dictionary word
- *  (or all-empty). Mirrors useAudioRecording.ts's isEmptyTranscription. */
-function isDictionaryEcho(text: string, dictionary: string[]): boolean {
+/** Detect whether the transcribed text is just an echoed unprotected prompt
+ *  (or all-empty). Canonical user vocabulary is protected because a spoken
+ *  one-word term is indistinguishable from a provider echo. */
+function isDictionaryEcho(
+  text: string,
+  dictionary: string[],
+  protectedTerms: string[],
+): boolean {
   const trimmed = text.trim();
   if (!trimmed) return true;
   if (dictionary.length === 0) return false;
@@ -112,6 +122,11 @@ function isDictionaryEcho(text: string, dictionary: string[]): boolean {
   const textWords = normalize(trimmed);
   if (textWords.length === 0) return true;
   const dictWords = new Set(dictionary.flatMap(normalize));
+  const normalizedText = textWords.join(" ");
+  const protectedPhrases = new Set(
+    protectedTerms.map((term) => normalize(term).join(" ")).filter(Boolean),
+  );
+  if (protectedPhrases.has(normalizedText)) return false;
   return textWords.every((w) => dictWords.has(w));
 }
 
@@ -129,6 +144,8 @@ export function useLiveDictation({ onToast }: Options = {}) {
    *  that box's slice) instead of deleting the grand total from one window. */
   const typedSegmentsRef = useRef<TypedSegment[]>([]);
   const dictionaryRef = useRef<string[]>([]);
+  const dictionaryEntriesRef = useRef<DictionaryEntry[]>([]);
+  const protectedTermsRef = useRef<string[]>([]);
   const sessionErrorRef = useRef<string | null>(null);
   const unlistenRef = useRef<(() => void)[]>([]);
   /** Serialises async utterance handlers. Tauri's listen() does not await the
@@ -180,9 +197,20 @@ export function useLiveDictation({ onToast }: Options = {}) {
               payload.session_id !== sessionIdRef.current
             )
               return;
-            const cleaned = sanitizeUtterance(payload.text);
-            if (!cleaned) return;
-            if (isDictionaryEcho(cleaned, dictionaryRef.current)) return;
+            const providerText = sanitizeUtterance(payload.text);
+            if (!providerText) return;
+            if (
+              isDictionaryEcho(
+                providerText,
+                dictionaryRef.current,
+                protectedTermsRef.current,
+              )
+            )
+              return;
+            const cleaned = applyAlwaysDictionaryCorrections(
+              providerText,
+              dictionaryEntriesRef.current,
+            );
             // Prefix + cleaned must be typed AND recorded as one unit —
             // typing only `cleaned` while recording `prefix + cleaned` would
             // (a) drop inter-utterance spaces from the focused window, and
@@ -383,6 +411,12 @@ export function useLiveDictation({ onToast }: Options = {}) {
         agentAliases,
       );
       dictionaryRef.current = transcriptionDict;
+      dictionaryEntriesRef.current = dict;
+      protectedTermsRef.current = [
+        agentName,
+        ...agentAliases,
+        ...protectedDictionaryTerms(dict),
+      ];
 
       // Snapshot foreground HWND BEFORE starting cpal (so overlay focus doesn't poison the snapshot)
       const hwnd = await getForegroundWindow();
@@ -455,6 +489,7 @@ export function useLiveDictation({ onToast }: Options = {}) {
           providerId: provider,
           model,
           language: sessionLanguage,
+          dictionary: transcriptionDict,
           apiKey,
           expectedHwnd: hwnd,
         });

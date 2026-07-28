@@ -1,5 +1,23 @@
 # Progress
 
+## Custom Dictionary Corrections (v0.8.5)
+
+- The dictionary now stores a canonical spelling, optional likely mishearings,
+  and a context-aware or always-replace policy. Legacy string arrays normalize
+  automatically.
+- Always-replace rules run locally in both Standard and Live modes; contextual
+  rules are sent to AI enhancement. OpenAI Live also receives canonical
+  vocabulary in its transcription prompt, while Qwen omits the unsupported
+  field.
+- Exact canonical terms are protected from prompt-echo removal, covering
+  single-word speech such as `CLAUDE` without broadly disabling silence-echo
+  cleanup.
+- Verification: TypeScript check, production Vite build, dictionary helper
+  assertions, all 9 locale JSON files, 205 Rust unit tests, and 6 Rust
+  integration tests pass. `cargo clippy` passes with the repository's existing
+  warnings; the repository-wide formatter check remains noisy because the
+  current formatter would rewrite unrelated baseline files.
+
 ## Winget Submission
 
 ### Authentication

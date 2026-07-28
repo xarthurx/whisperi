@@ -53,6 +53,7 @@ async fn happy_path_completed_event_propagates() {
             provider_id: "test",
             model: "test-model".to_string(),
             language: Some("en".to_string()),
+            dictionary: Vec::new(),
             api_key: "sk-fake".to_string(),
         })
         .await
@@ -96,6 +97,7 @@ async fn out_of_order_completions_surface_in_spoken_order() {
             provider_id: "test",
             model: "test-model".to_string(),
             language: Some("en".to_string()),
+            dictionary: Vec::new(),
             api_key: "sk-fake".to_string(),
         })
         .await
@@ -128,6 +130,7 @@ fn test_provider_for(addr: SocketAddr) -> &'static ProviderConfig {
         auth_scheme: AuthScheme::Bearer,
         extra_headers: &[],
         vad_mode: VadMode::ManualCommit,
+        supports_transcription_prompt: true,
         session_template: OPENAI_REALTIME.session_template,
     }))
 }
@@ -150,6 +153,7 @@ async fn auth_failure_emits_auth_failed_error() {
             provider_id: "test",
             model: "test-model".to_string(),
             language: Some("en".to_string()),
+            dictionary: Vec::new(),
             api_key: "sk-bad".to_string(),
         })
         .await
@@ -179,6 +183,7 @@ async fn server_close_propagates_error() {
             provider_id: "test",
             model: "test-model".to_string(),
             language: Some("en".to_string()),
+            dictionary: Vec::new(),
             api_key: "sk-x".to_string(),
         })
         .await
@@ -205,6 +210,7 @@ async fn max_message_size_enforced() {
             provider_id: "test",
             model: "test-model".to_string(),
             language: Some("en".to_string()),
+            dictionary: Vec::new(),
             api_key: "sk-x".to_string(),
         })
         .await
@@ -258,6 +264,7 @@ async fn commit_then_delayed_completed_is_drained() {
             provider_id: "test",
             model: "test-model".to_string(),
             language: Some("en".to_string()),
+            dictionary: Vec::new(),
             api_key: "sk-fake".to_string(),
         })
         .await

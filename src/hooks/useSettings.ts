@@ -13,6 +13,7 @@ import {
   setAgentAliases as setAgentAliasesApi,
 } from "@/services/tauriApi";
 import type { EnhancementIntensity } from "@/config/prompts";
+import type { DictionaryEntry } from "@/models/dictionary";
 
 export interface Settings {
   // Transcription
@@ -25,7 +26,7 @@ export interface Settings {
   secondaryLanguage: string;
   cloudTranscriptionProvider: string;
   cloudTranscriptionModel: string;
-  customDictionary: string[];
+  customDictionary: DictionaryEntry[];
 
   // Reasoning
   useReasoningModel: boolean;
@@ -231,7 +232,7 @@ export function useSettings() {
       } else if (key === "agentAliases") {
         setAgentAliasesApi(value as string[]);
       } else if (key === "customDictionary") {
-        setCustomDictionaryApi(value as string[]);
+        setCustomDictionaryApi(value as DictionaryEntry[]);
       } else if (key.endsWith("ApiKey")) {
         const provider = key.replace("ApiKey", "");
         setApiKey(provider, value as string);

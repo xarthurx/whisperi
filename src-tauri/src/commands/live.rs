@@ -75,6 +75,7 @@ pub async fn start_live_session(
     provider_id: String,
     model: String,
     language: Option<String>,
+    dictionary: Vec<String>,
     api_key: String,
     expected_hwnd: Option<isize>,
 ) -> Result<u64, String> {
@@ -136,6 +137,7 @@ pub async fn start_live_session(
             provider_id: provider.id,
             model: effective_model.clone(),
             language: language_for_session.clone(),
+            dictionary,
             api_key: api_key.clone(),
         })
         .await

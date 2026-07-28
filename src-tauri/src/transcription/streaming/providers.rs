@@ -27,6 +27,9 @@ pub struct ProviderConfig {
     pub auth_scheme: AuthScheme,
     pub extra_headers: &'static [(&'static str, &'static str)],
     pub vad_mode: VadMode,
+    /// Whether this provider accepts a transcription `prompt` in its
+    /// `session.update` payload for vocabulary/context biasing.
+    pub supports_transcription_prompt: bool,
     /// Raw JSON template for the initial `session.update` event.
     /// `{model}` and `{language}` are substituted by the adapter.
     pub session_template: &'static str,
@@ -50,6 +53,7 @@ pub static OPENAI_REALTIME: ProviderConfig = ProviderConfig {
     auth_scheme: AuthScheme::Bearer,
     extra_headers: &[],
     vad_mode: VadMode::ServerVad { silence_ms: 500 },
+    supports_transcription_prompt: true,
     session_template: include_str!("session_templates/openai.json"),
 };
 
@@ -62,6 +66,7 @@ pub static QWEN_REALTIME: ProviderConfig = ProviderConfig {
     auth_scheme: AuthScheme::Bearer,
     extra_headers: &[("OpenAI-Beta", "realtime=v1")],
     vad_mode: VadMode::ServerVad { silence_ms: 400 },
+    supports_transcription_prompt: false,
     session_template: include_str!("session_templates/qwen.json"),
 };
 
@@ -83,6 +88,7 @@ mod tests {
         assert_eq!(cfg.audio_sample_rate, 24_000);
         assert_eq!(cfg.default_model, "gpt-4o-mini-transcribe");
         assert!(matches!(cfg.vad_mode, VadMode::ServerVad { silence_ms: 500 }));
+        assert!(cfg.supports_transcription_prompt);
         // Transcription-only mode requires `?intent=transcription`
         assert!(cfg.ws_url_template.contains("intent=transcription"));
     }
@@ -93,6 +99,7 @@ mod tests {
         assert_eq!(cfg.audio_sample_rate, 16_000);
         assert!(matches!(cfg.vad_mode, VadMode::ServerVad { silence_ms: 400 }));
         assert_eq!(cfg.extra_headers, &[("OpenAI-Beta", "realtime=v1")]);
+        assert!(!cfg.supports_transcription_prompt);
     }
 
     #[test]

@@ -117,7 +117,7 @@ Whisperi is Windows-first. Clipboard read/write, terminal detection, and keystro
 | | `hooks/useHotkey.ts` | Global shortcut registration, tap vs push-to-talk modes |
 | **Services** | `services/tauriApi.ts` | Typed `invoke()` wrappers for every Rust command, event listeners |
 | **Config** | `config/constants.ts`, `prompts.ts`, `promptData.json`, `languageRegistry.json` | Default values, centralized prompt templates, coherent cleanup profiles (internal/language/dictionary policy), agent-name interpolation, and enhancement intensity levels (Light/Standard/Full) with temperature mapping |
-| **Models** | `models/modelRegistryData.json` | Static registry of all supported transcription and reasoning models per provider |
+| **Models** | `models/modelRegistryData.json`, `models/dictionary.ts` | Static provider/model registry; custom-dictionary normalization, prompt hints, and deterministic alias correction |
 | **Utils** | `utils/sounds.ts`, `languageSupport.ts` | Web Audio API tone generation (no static assets); language support validation, auto-detect and per-language instruction assembly |
 | **i18n** | `i18n/index.ts`, `i18n/i18next.d.ts`, `i18n/locales/*.json` | i18next initialization, typed translation keys, 9 locale files (en, zh, ja, ko, de, fr, es, pt, ru) |
 | **UI Kit** | `components/ui/*` | shadcn/ui primitives + custom components: StyledSelect, LanguageSelector, ProviderTabs, HotkeyInput, ApiKeyInput, ProviderIcon, Toast, SettingsSection, WhatsNewModal |
@@ -159,14 +159,19 @@ Language codes from `languageRegistry.json` use locale format (`en-US`, `en-GB`)
         ↓
 6.  Cloud transcription:
     invoke("transcribe_cloud", { audio, provider, api_key, model, ... })
+    → Provider receives canonical vocabulary as recognition context where supported
+    → Prompt-echo cleanup preserves an exact canonical term the user may have spoken
         ↓
-7.  Enhancement (optional):
+7.  Apply local "Always replace" dictionary aliases using whole-word boundaries
+        ↓
+8.  Enhancement (optional):
     invoke("process_reasoning", { text, provider, model, system_prompt, api_key })
+    → Context-aware dictionary aliases are supplied as explicit correction mappings
     → Strip <think>...</think> tags from output (reasoning model artifacts)
         ↓
-8.  invoke("save_transcription", { original, processed, method, agent })
+9.  invoke("save_transcription", { original, processed, method, agent })
         ↓
-9.  invoke("paste_text", { text })
+10. invoke("paste_text", { text })
     → Rust: clipboard write + terminal detection + SendInput
 ```
 
@@ -179,8 +184,10 @@ Live mode streams audio over WebSocket to a cloud ASR provider, typing utterance
         ↓
 2.  useLiveDictation.start() snapshots foreground HWND
         ↓
-3.  invoke("start_live_session", { provider, api_key, model, language })
+3.  invoke("start_live_session", { provider, api_key, model, language, dictionary })
     → Rust opens WebSocket to provider
+    → OpenAI receives canonical vocabulary in its transcription prompt
+    → Providers without prompt support (currently Qwen) omit the field
     → Spawns audio pump tokio task; returns the new `session_id` (u64)
         ↓
 4.  cpal feeds samples at 100ms ticks → pump online-resamples to provider rate, encodes PCM16, sends base64 over WS
@@ -191,7 +198,9 @@ Live mode streams audio over WebSocket to a cloud ASR provider, typing utterance
       completions so a short utterance whose transcription finishes before a
       longer earlier one is still emitted in spoken order
     → Tauri emits "live-utterance" {{ text, utterance_seq }} payload (in spoken order)
-    → Frontend accumulates raw transcript locally and invokes invoke("type_text_chunk", { text })
+    → Frontend preserves exact canonical terms, applies local "Always replace"
+      dictionary aliases, accumulates the corrected transcript, and invokes
+      invoke("type_text_chunk", { text })
     → Rust simulates SendInput keystrokes (with sanitization) into the focused window,
       returning the UTF-16 unit count AND the focus target (window + focused control via
       GetGUIThreadInfo) it typed into; the frontend records each chunk under its target so
@@ -235,6 +244,22 @@ User changes a setting → update() writes to store immediately
                        → React state updated, component re-renders
                        → emits "settings-changed" event (cross-window sync)
 ```
+
+### Custom Dictionary
+
+`customDictionary` is stored as `DictionaryEntry[]`, where every entry has a
+canonical `term`, zero or more likely ASR `aliases`, and a `policy` of
+`contextual` or `always`. The loader also accepts the legacy `string[]` format
+and normalizes it in memory, so existing settings remain valid.
+
+- Canonical terms bias buffered providers and OpenAI Live transcription.
+- `always` aliases are replaced locally before optional enhancement in both
+  Standard and Live modes.
+- `contextual` aliases are expressed as explicit mappings in the AI enhancement
+  prompt and are changed only when surrounding text supports the correction.
+- Exact canonical terms are protected from echo removal. This protection is
+  exact-phrase based, rather than any-token based, so multi-term silence echoes
+  can still be discarded.
 
 ## Database Schema
 

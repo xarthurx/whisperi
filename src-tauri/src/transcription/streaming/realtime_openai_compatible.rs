@@ -286,8 +286,9 @@ fn classify_error(code: &str) -> ErrorKind {
 
 /// Build the `session.update` JSON for a session. The template carries a
 /// placeholder `{model}` and a literal `"language": "{language}"` field; this
-/// function substitutes the model and either substitutes a real language code
-/// or removes the language field entirely (for auto-detect).
+/// function substitutes the model, either substitutes a real language code or
+/// removes the language field entirely (for auto-detect), and supplies
+/// provider-supported vocabulary hints.
 ///
 /// Both OpenAI Realtime and Qwen3-ASR-Flash-Realtime treat an absent
 /// `language` as "auto-detect from audio" — same semantics as Standard mode's
@@ -296,6 +297,8 @@ fn build_session_update(
     template: &str,
     model: &str,
     language: Option<&str>,
+    dictionary: &[String],
+    supports_transcription_prompt: bool,
 ) -> Result<String> {
     let with_model = template.replace("{model}", model);
     let mut value: serde_json::Value =
@@ -326,6 +329,26 @@ fn build_session_update(
         _ => {
             transcription.remove("language");
         }
+    }
+    if supports_transcription_prompt {
+        let mut seen = std::collections::HashSet::new();
+        let terms: Vec<&str> = dictionary
+            .iter()
+            .map(|term| term.trim())
+            .filter(|term| !term.is_empty())
+            .filter(|term| seen.insert(term.to_lowercase()))
+            .collect();
+        if !terms.is_empty() {
+            transcription.insert(
+                "prompt".to_string(),
+                serde_json::json!(format!(
+                    "Expected names and specialized vocabulary: {}.",
+                    terms.join(", ")
+                )),
+            );
+        }
+    } else {
+        transcription.remove("prompt");
     }
     Ok(serde_json::to_string(&value).context("serialize session.update")?)
 }
@@ -398,9 +421,18 @@ impl StreamingTranscriber for RealtimeOpenAiCompatibleClient {
         // field when caller passes None — both OpenAI Realtime and Qwen3-ASR
         // auto-detect from audio in that case (parity with Standard mode's
         // whisper.cpp behaviour, which the user explicitly asked for).
-        let session_update =
-            build_session_update(self.cfg.session_template, &cfg.model, cfg.language.as_deref())?;
-        log::info!("[Live] session.update payload: {}", session_update);
+        let session_update = build_session_update(
+            self.cfg.session_template,
+            &cfg.model,
+            cfg.language.as_deref(),
+            &cfg.dictionary,
+            self.cfg.supports_transcription_prompt,
+        )?;
+        log::info!(
+            "[Live] sending session.update ({} bytes)",
+            session_update.len()
+        );
+        log::debug!("[Live] session.update payload: {}", session_update);
         self.send_text(&session_update).await?;
         Ok(())
     }
@@ -442,6 +474,51 @@ impl RealtimeOpenAiCompatibleClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn session_update_adds_openai_vocabulary_prompt() {
+        let dictionary = vec![
+            "CLAUDE".to_string(),
+            "Tauri".to_string(),
+            "claude".to_string(),
+        ];
+        let json = build_session_update(
+            crate::transcription::streaming::providers::OPENAI_REALTIME.session_template,
+            "gpt-4o-mini-transcribe",
+            Some("en"),
+            &dictionary,
+            true,
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let transcription = value
+            .pointer("/session/audio/input/transcription")
+            .unwrap();
+        assert_eq!(transcription["language"], "en");
+        assert_eq!(
+            transcription["prompt"],
+            "Expected names and specialized vocabulary: CLAUDE, Tauri."
+        );
+    }
+
+    #[test]
+    fn session_update_omits_prompt_for_unsupported_provider() {
+        let dictionary = vec!["CLAUDE".to_string()];
+        let json = build_session_update(
+            crate::transcription::streaming::providers::QWEN_REALTIME.session_template,
+            "qwen3-asr-flash-realtime",
+            None,
+            &dictionary,
+            false,
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let transcription = value
+            .pointer("/session/input_audio_transcription")
+            .unwrap();
+        assert!(transcription.get("language").is_none());
+        assert!(transcription.get("prompt").is_none());
+    }
 
     #[tokio::test]
     async fn head_advance_rearms_reorder_timeout() {

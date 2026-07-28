@@ -28,7 +28,7 @@
 ## Bilingual language mode follow-ups
 
 - [ ] **Live incremental refinement**: streaming rewrite of recent utterances when Live mode accumulates enough context to refine an earlier detected-language decision (spec §9).
-- [ ] **Learned user edits**: capture user post-dictation corrections into the dictionary / a corrections map so bilingual prompts can be personalized over time (spec §9).
+- [ ] **Learned user edits**: automatically capture post-dictation corrections as suggested dictionary aliases. Manual canonical/alias rules and contextual/always policies now exist; this follow-up is the learning and confirmation workflow (spec §9).
 
 ## Dictation stability follow-ups (deferred from 2026-07-23 fixes)
 

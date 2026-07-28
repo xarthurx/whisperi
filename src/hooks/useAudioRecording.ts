@@ -21,25 +21,12 @@ import {
   enhance,
   formatOutput,
 } from "./useTranscriptionPipeline";
+import { applyAlwaysDictionaryCorrections } from "@/models/dictionary";
 
-/** Check if transcription is empty or just dictionary words echoed back (Whisper hallucination on silence). */
-function isEmptyTranscription(text: string, dictionary: string[]): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return true;
-  if (dictionary.length === 0) return false;
-
-  // Normalize: lowercase, strip punctuation, split into words
-  const normalize = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]/gu, "")
-      .split(/\s+/)
-      .filter(Boolean);
-  const textWords = normalize(trimmed);
-  if (textWords.length === 0) return true;
-
-  const dictWords = new Set(dictionary.flatMap((entry) => normalize(entry)));
-  return textWords.every((w) => dictWords.has(w));
+/** The backend owns prompt-echo suppression; preserve non-empty dictionary terms
+ * because they may be exactly what the user spoke. */
+function isEmptyTranscription(text: string): boolean {
+  return !text.trim();
 }
 
 type RecordingPhase = "idle" | "recording" | "processing";
@@ -154,29 +141,33 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         settings.agentAliases,
       );
 
-      const { text: rawText, detectedLanguage } = await transcribe(
+      const { text: providerText, detectedLanguage } = await transcribe(
         audioData,
         settings,
         transcriptionDict,
       );
-      console.log("[Whisperi] Transcription:", rawText);
+      console.log("[Whisperi] Transcription:", providerText);
       if (detectedLanguage) {
         console.log("[Whisperi] Detected language:", detectedLanguage);
       }
 
-      if (isEmptyTranscription(rawText, transcriptionDict)) {
+      if (isEmptyTranscription(providerText)) {
         console.log(
-          "[Whisperi] Empty transcription (silence or dictionary echo), skipping.",
+          "[Whisperi] Empty transcription, skipping.",
         );
         setPhase("idle");
         return;
       }
 
-      let finalText = rawText;
+      const correctedText = applyAlwaysDictionaryCorrections(
+        providerText,
+        settings.dictionary,
+      );
+      let finalText = correctedText;
       let rawAiResponse: string | null = null;
       try {
         const result = await enhance(
-          rawText,
+          correctedText,
           settings,
           detectedLanguage,
         );
@@ -185,12 +176,12 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       } catch (e) {
         console.error("[Whisperi] Enhancement error:", e);
         if (settings.debugMode) {
-          finalText = `${rawText}\n\n[Enhancement Error]\n${e}`;
+          finalText = `${correctedText}\n\n[Enhancement Error]\n${e}`;
         }
       }
 
       const outputText = formatOutput(
-        rawText,
+        providerText,
         finalText,
         rawAiResponse,
         !!settings.debugMode,
@@ -202,9 +193,13 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       }
 
       await saveTranscription(
-        rawText,
-        finalText !== rawText ? finalText : null,
-        settings.useReasoning ? "ai" : "none",
+        providerText,
+        finalText !== providerText ? finalText : null,
+        rawAiResponse !== null
+          ? "ai"
+          : finalText !== providerText
+            ? "dictionary"
+            : "none",
         settings.agentName,
         null,
         durationMs,

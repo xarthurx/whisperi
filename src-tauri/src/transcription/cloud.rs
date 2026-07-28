@@ -47,7 +47,11 @@ fn is_dictionary_echo(text: &str, prompt: &str) -> bool {
 ///
 /// - Full echo (all words from prompt): return empty string (silence detected)
 /// - Prefix echo (text starts with prompt word sequence): strip the prefix
-pub fn strip_prompt_echo(text: &str, prompt: Option<&str>) -> String {
+pub fn strip_prompt_echo(
+    text: &str,
+    prompt: Option<&str>,
+    protected_terms: &[String],
+) -> String {
     let trimmed = text.trim();
     if trimmed.is_empty() {
         return String::new();
@@ -57,8 +61,15 @@ pub fn strip_prompt_echo(text: &str, prompt: Option<&str>) -> String {
         return trimmed.to_string();
     };
 
-    // Full echo: every word in text comes from the prompt → silence
-    if is_dictionary_echo(trimmed, p) {
+    // Full echo: every word in text comes from the prompt → probable silence.
+    // Never discard a protected canonical term, though: it may be exactly what
+    // the user spoke, and prompt membership alone cannot distinguish that from
+    // a hallucinated echo.
+    let text_tokens = tokenize(trimmed);
+    let exactly_protected = protected_terms
+        .iter()
+        .any(|term| tokenize(term) == text_tokens);
+    if is_dictionary_echo(trimmed, p) && !exactly_protected {
         log::warn!(
             "[Whisperi] Stripped dictionary echo (silence): \"{}\"",
             trimmed
@@ -548,25 +559,35 @@ mod tests {
 
     #[test]
     fn strip_prompt_echo_no_prompt() {
-        assert_eq!(strip_prompt_echo("Hello world", None), "Hello world");
+        assert_eq!(strip_prompt_echo("Hello world", None, &[]), "Hello world");
     }
 
     #[test]
     fn strip_prompt_echo_empty_prompt() {
-        assert_eq!(strip_prompt_echo("Hello world", Some("")), "Hello world");
+        assert_eq!(
+            strip_prompt_echo("Hello world", Some(""), &[]),
+            "Hello world"
+        );
     }
 
     #[test]
     fn strip_prompt_echo_full_echo_detected() {
         // All words in text come from dictionary → silence
-        assert_eq!(strip_prompt_echo("Whisperi Tauri", Some("Whisperi Tauri")), "");
+        assert_eq!(
+            strip_prompt_echo("Whisperi Tauri", Some("Whisperi Tauri"), &[]),
+            ""
+        );
     }
 
     #[test]
     fn strip_prompt_echo_prefix_stripped() {
         // Text starts with all dictionary words in sequence → strip prefix
         assert_eq!(
-            strip_prompt_echo("Whisperi Tauri this is real speech", Some("Whisperi Tauri")),
+            strip_prompt_echo(
+                "Whisperi Tauri this is real speech",
+                Some("Whisperi Tauri"),
+                &[]
+            ),
             "this is real speech"
         );
     }
@@ -576,7 +597,7 @@ mod tests {
         // Text contains common words that happen to be in conditioning text
         // but dictionary is different — should NOT be stripped
         assert_eq!(
-            strip_prompt_echo("Hello, how are you today?", Some("Whisperi Tauri")),
+            strip_prompt_echo("Hello, how are you today?", Some("Whisperi Tauri"), &[]),
             "Hello, how are you today?"
         );
     }
@@ -585,7 +606,7 @@ mod tests {
     fn strip_prompt_echo_single_word_dict_not_prefix_stripped() {
         // Single-word dictionary: prefix stripping disabled (too ambiguous)
         assert_eq!(
-            strip_prompt_echo("Whisperi is great", Some("Whisperi")),
+            strip_prompt_echo("Whisperi is great", Some("Whisperi"), &[]),
             "Whisperi is great"
         );
     }
@@ -594,20 +615,27 @@ mod tests {
     fn strip_prompt_echo_partial_prefix_not_stripped() {
         // Only some dictionary words match at start — don't strip
         assert_eq!(
-            strip_prompt_echo("Whisperi is great software by Tauri", Some("Whisperi Tauri")),
+            strip_prompt_echo(
+                "Whisperi is great software by Tauri",
+                Some("Whisperi Tauri"),
+                &[]
+            ),
             "Whisperi is great software by Tauri"
         );
     }
 
     #[test]
     fn strip_prompt_echo_trims_whitespace() {
-        assert_eq!(strip_prompt_echo("  Hello world  ", None), "Hello world");
+        assert_eq!(
+            strip_prompt_echo("  Hello world  ", None, &[]),
+            "Hello world"
+        );
     }
 
     #[test]
     fn strip_prompt_echo_empty_text() {
-        assert_eq!(strip_prompt_echo("", Some("Whisperi")), "");
-        assert_eq!(strip_prompt_echo("   ", Some("Whisperi")), "");
+        assert_eq!(strip_prompt_echo("", Some("Whisperi"), &[]), "");
+        assert_eq!(strip_prompt_echo("   ", Some("Whisperi"), &[]), "");
     }
 
     #[test]
@@ -617,7 +645,7 @@ mod tests {
         let cond = crate::transcription::PUNCTUATION_PROMPT;
         let full_prompt = format!("{} Whisperi Tauri", cond);
         // Conditioning echo (all words from conditioning text) → silence
-        assert_eq!(strip_prompt_echo(cond, Some(&full_prompt)), "");
+        assert_eq!(strip_prompt_echo(cond, Some(&full_prompt), &[]), "");
     }
 
     #[test]
@@ -630,8 +658,27 @@ mod tests {
             strip_prompt_echo(
                 "Hello, I wanted to discuss the project timeline today.",
                 Some(&full_prompt),
+                &[],
             ),
             "Hello, I wanted to discuss the project timeline today."
+        );
+    }
+
+    #[test]
+    fn strip_prompt_echo_preserves_protected_dictionary_only_speech() {
+        let protected = vec!["CLAUDE".to_string()];
+
+        assert_eq!(
+            strip_prompt_echo("CLAUDE", Some("Whisperi CLAUDE"), &protected),
+            "CLAUDE"
+        );
+        assert_eq!(
+            strip_prompt_echo(
+                "Whisperi CLAUDE",
+                Some("Whisperi CLAUDE"),
+                &protected
+            ),
+            ""
         );
     }
 

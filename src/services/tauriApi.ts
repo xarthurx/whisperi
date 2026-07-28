@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import {
+  normalizeDictionary,
+  type DictionaryEntry,
+} from "@/models/dictionary";
 
 // Audio
 export interface AudioDevice {
@@ -62,9 +66,9 @@ export async function transcribeCloud(
   language?: string,
   secondaryLanguage?: string,
   dictionary?: string[],
-  /** Agent name + aliases — kept in the dictionary for biasing but never
-   *  stripped as an echo, so chat-mode detection still sees the agent name. */
-  agentTerms?: string[],
+  /** Agent names and explicit correction targets that must never be stripped
+   *  as prompt echoes because they may be exactly what the user spoke. */
+  protectedTerms?: string[],
 ): Promise<TranscriptionResult> {
   return invoke("transcribe_cloud", {
     audioData,
@@ -74,7 +78,7 @@ export async function transcribeCloud(
     language,
     secondaryLanguage,
     dictionary: dictionary ?? [],
-    agentTerms: agentTerms ?? [],
+    protectedTerms: protectedTerms ?? [],
   });
 }
 
@@ -240,13 +244,15 @@ export async function setApiKey(provider: string, apiKey: string): Promise<void>
 }
 
 // Custom dictionary
-export async function getCustomDictionary(): Promise<string[]> {
-  const dict = await getSetting<string[]>("customDictionary");
-  return dict || [];
+export async function getCustomDictionary(): Promise<DictionaryEntry[]> {
+  const dict = await getSetting<unknown>("customDictionary");
+  return normalizeDictionary(dict);
 }
 
-export async function setCustomDictionary(words: string[]): Promise<void> {
-  return setSetting("customDictionary", words);
+export async function setCustomDictionary(
+  entries: DictionaryEntry[],
+): Promise<void> {
+  return setSetting("customDictionary", normalizeDictionary(entries));
 }
 
 // Agent aliases
@@ -279,6 +285,7 @@ export async function startLiveSession(args: {
   providerId: string;
   model: string;
   language: string | null;
+  dictionary: string[];
   apiKey: string;
   expectedHwnd: number | null;
 }): Promise<number> {
@@ -286,6 +293,7 @@ export async function startLiveSession(args: {
     providerId: args.providerId,
     model: args.model,
     language: args.language,
+    dictionary: args.dictionary,
     apiKey: args.apiKey,
     expectedHwnd: args.expectedHwnd,
   });
