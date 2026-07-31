@@ -156,6 +156,25 @@ pub fn normalize_cjk_punctuation(text: &str) -> String {
     out
 }
 
+/// Convert the Chinese full-width punctuation marks that reasoning models most
+/// commonly emit in English text back to their ASCII half-width equivalents.
+/// This is deliberately gated by an explicit English language selection in
+/// [`finalize_chinese_text`], so auto-detected or Chinese text keeps its native
+/// punctuation.
+pub fn normalize_english_punctuation(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            '，' => ',',
+            '。' => '.',
+            '？' => '?',
+            '！' => '!',
+            '：' => ':',
+            '；' => ';',
+            _ => c,
+        })
+        .collect()
+}
+
 /// Look up the Simplified Chinese equivalent of a single Traditional character.
 /// Returns the input unchanged when the character is not Traditional or has no
 /// canonical Simplified mapping (e.g. ASCII, kana, already-Simplified Han).
@@ -231,16 +250,26 @@ fn is_chinese_language(lang: &str) -> bool {
     base.eq_ignore_ascii_case("zh")
 }
 
-/// Apply the full Chinese post-processing pipeline: punctuation normalization
-/// followed by Traditional→Simplified conversion when appropriate for the
-/// configured `language`. This is the single entry point all transcription
-/// and reasoning call sites should use.
+/// Return true for English and its regional variants (`en`, `en-US`, `en_GB`, …).
+fn is_english_language(lang: &str) -> bool {
+    let base = lang.split(['-', '_']).next().unwrap_or(lang);
+    base.eq_ignore_ascii_case("en")
+}
+
+/// Apply the language-aware text post-processing pipeline. Explicit English
+/// output uses ASCII punctuation, while Chinese/auto output retains the CJK
+/// punctuation safety net; Traditional→Simplified conversion then runs when
+/// appropriate for the configured `language`. This is the single entry point
+/// all transcription and reasoning call sites should use.
 ///
-/// - Punctuation conversion is always run (it auto-detects Han adjacency and
-///   is a no-op for non-Chinese text).
+/// - Explicit English converts accidental Chinese full-width marks to ASCII.
+/// - All other modes run Han-adjacent CJK punctuation normalization.
 /// - T→S conversion is gated by `should_convert_to_simplified`.
 pub fn finalize_chinese_text(text: &str, language: Option<&str>) -> String {
-    let punct = normalize_cjk_punctuation(text);
+    let punct = match language {
+        Some(lang) if is_english_language(lang) => normalize_english_punctuation(text),
+        _ => normalize_cjk_punctuation(text),
+    };
     if should_convert_to_simplified(&punct, language) {
         convert_to_simplified(&punct)
     } else {
@@ -353,6 +382,20 @@ mod tests {
             normalize_cjk_punctuation("Hello, world. How are you?"),
             "Hello, world. How are you?"
         );
+    }
+
+    #[test]
+    fn normalize_english_converts_full_width_marks() {
+        assert_eq!(
+            normalize_english_punctuation("Hello， world。 Really？ Yes！ Time：3； place：home。"),
+            "Hello, world. Really? Yes! Time:3; place:home."
+        );
+    }
+
+    #[test]
+    fn normalize_english_keeps_ascii_marks() {
+        let input = "Hello, world. Really? Yes! Time: 3; place: home.";
+        assert_eq!(normalize_english_punctuation(input), input);
     }
 
     #[test]
@@ -749,6 +792,14 @@ mod tests {
     fn finalize_english_is_untouched() {
         let input = "Hello, world. How are you?";
         assert_eq!(finalize_chinese_text(input, Some("en")), input);
+    }
+
+    #[test]
+    fn finalize_english_regional_variant_uses_half_width_punctuation() {
+        assert_eq!(
+            finalize_chinese_text("Hello， world。 How are you？", Some("en-US")),
+            "Hello, world. How are you?"
+        );
     }
 
     #[test]

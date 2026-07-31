@@ -37,8 +37,20 @@ describe("cleanup prompt profiles", () => {
       const prompt = getSystemPrompt("Jasper", dictionary, "en", undefined, intensity);
       expect(prompt).toContain("clean, polished text");
       expect(prompt).toContain("Actively look for and correct");
+      expect(prompt).toContain("PUNCTUATION RESTORATION IS MANDATORY");
+      expect(prompt).toContain("Infer sentence and clause boundaries from the actual meaning");
+      expect(prompt).toContain("English text: use ASCII half-width punctuation only");
+      expect(prompt).toContain("Chinese text: use Chinese full-width punctuation only");
       expect(prompt).not.toContain("literal speech-to-text cleanup tool");
     }
+  });
+
+  test("default Standard restores punctuation even when the transcript has none", () => {
+    const prompt = getSystemPrompt("Jasper", [], "en-US");
+
+    expect(prompt).toContain("The transcript may contain no punctuation at all");
+    expect(prompt).toContain("Every prose sentence must end with appropriate terminal punctuation");
+    expect(prompt).toContain("even when the speaker did not say punctuation commands aloud");
   });
 
   test("custom and blank custom prompts route consistently", () => {

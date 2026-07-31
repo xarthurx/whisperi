@@ -167,6 +167,10 @@ Language codes from `languageRegistry.json` use locale format (`en-US`, `en-GB`)
 8.  Enhancement (optional):
     invoke("process_reasoning", { text, provider, model, system_prompt, api_key })
     → Context-aware dictionary aliases are supplied as explicit correction mappings
+    → Standard/Full restore sentence and clause punctuation from meaning even when
+      the raw transcript contains no punctuation
+    → English punctuation is normalized to half-width ASCII; Chinese punctuation
+      is normalized to full-width marks
     → Strip <think>...</think> tags from output (reasoning model artifacts)
         ↓
 9.  invoke("save_transcription", { original, processed, method, agent })

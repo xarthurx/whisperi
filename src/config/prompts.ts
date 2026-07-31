@@ -5,8 +5,10 @@ export type EnhancementIntensity = "light" | "standard" | "full";
 
 const PROMPT_VARIANTS: Record<EnhancementIntensity, string> = {
   light: promptData.USER_VISIBLE_PROMPT_LIGHT,
-  standard: promptData.USER_VISIBLE_PROMPT_STANDARD,
-  full: promptData.USER_VISIBLE_PROMPT_FULL,
+  standard: promptData.PUNCTUATION_RESTORATION_PROMPT
+    + "\n\n" + promptData.USER_VISIBLE_PROMPT_STANDARD,
+  full: promptData.PUNCTUATION_RESTORATION_PROMPT
+    + "\n\n" + promptData.USER_VISIBLE_PROMPT_FULL,
 };
 
 const CHAT_SYSTEM_PROMPT = promptData.CHAT_SYSTEM_PROMPT;

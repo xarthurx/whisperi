@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.8.6] - 2026-07-31
+
+### Highlights
+
+- Standard and Full enhancement now restore punctuation from the meaning of the dictation, using half-width marks for English and full-width marks for Chinese
+
+### Fixes
+
+- Made punctuation restoration explicit and mandatory for punctuation-free transcripts instead of asking the enhancement model only to fix punctuation already present. The prompt now requires semantic sentence/clause boundary detection, statement/question/exclamation endings, ASCII half-width punctuation for English, and full-width punctuation for Chinese and mixed Chinese-English sentences. Added an English post-processing safety net that converts accidental Chinese full-width marks back to ASCII when English is the resolved language; the existing Chinese safety net continues converting half-width marks to full-width. Added Bun prompt regressions and Rust normalization coverage.
+
 ## [0.8.5] - 2026-07-28
 
 ### Highlights
