@@ -1,5 +1,19 @@
 # Progress
 
+## Semantic Punctuation Restoration (v0.8.6)
+
+- Standard and Full enhancement now treat punctuation-free transcripts as an
+  error to repair, infer sentence and clause boundaries from meaning, and choose
+  statement, question, or exclamation endings even when no punctuation command
+  was spoken.
+- Enhancement prompts require ASCII half-width punctuation for English and
+  Chinese full-width punctuation for Chinese. The Rust post-processor also
+  converts accidental Chinese full-width marks back to ASCII when English is
+  the resolved language; the existing Chinese full-width safety net remains.
+- Verification: production frontend build, 208 Rust unit tests, 6 Rust
+  integration tests, prompt-rule assertions, release metadata checks, and the
+  signed GitHub release workflow all pass.
+
 ## Custom Dictionary Corrections (v0.8.5)
 
 - The dictionary now stores a canonical spelling, optional likely mishearings,
@@ -35,7 +49,7 @@
 
 ### wingetcreate Notes
 
-`wingetcreate` v1.12.8.0 generates the manifests locally, then its `submit` command publishes the validated directory. Its `ReleaseDate` placement at the top level (outside `Installers`) looks wrong per the schema docs but is the convention winget-pkgs validation expects — do not move it inside the installer entry.
+`wingetcreate` v1.12.13.0 generates the manifests locally, then its `submit` command publishes the validated directory. Its `ReleaseDate` placement at the top level (outside `Installers`) looks wrong per the schema docs but is the convention winget-pkgs validation expects — do not move it inside the installer entry.
 
 **Do NOT use the self-contained wingetcreate** (`aka.ms/wingetcreate/latest/self-contained`) — it bundles v1.0.4.0, which generates schema 1.1.0 manifests instead of 1.10.0.
 
@@ -50,6 +64,7 @@
 - **ShortDescription accuracy** — v0.8.3 ([PR #406474](https://github.com/microsoft/winget-pkgs/pull/406474)) patched the inherited `Fast local & cloud speech-to-text dictation for Windows` to `Fast cloud speech-to-text dictation for Windows` because the app went cloud-only in v0.8.1. Inherited metadata must be re-checked against reality each release, not just against the format rules — patch on the PR branch via the GitHub contents API (no clone of winget-pkgs needed).
 - **v0.8.4** ([PR #406528](https://github.com/microsoft/winget-pkgs/pull/406528)) — first release to inherit the corrected v0.8.3 metadata; all four rules verified clean on the PR diff, no patch needed.
 - **v0.8.5** ([PR #409130](https://github.com/microsoft/winget-pkgs/pull/409130)) — inherited metadata verified clean: SPDX `MIT` and `LicenseUrl`, concise cloud-only `ShortDescription`, publisher/support/package URLs, correct x64 NSIS URL and SHA-256, and `ReleaseDate` in the installer manifest.
+- **v0.8.6** ([PR #410464](https://github.com/microsoft/winget-pkgs/pull/410464)) — preview and submission validation passed. The actual PR diff was re-checked and clean: SPDX `MIT` plus `LicenseUrl`, concise cloud-only `ShortDescription`, publisher/support/package URLs, correct v0.8.6 x64 NSIS URL and SHA-256, `ReleaseNotesUrl`, and top-level installer `ReleaseDate`.
 
 ## NSIS Updater Behavior on Windows
 
