@@ -9,6 +9,7 @@ pub mod transcription;
 use tauri::Manager;
 use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
+use tauri_plugin_window_state::{StateFlags, WindowExt};
 
 /// Override the Windows minimum window size constraint for a given window.
 /// Windows enforces a minimum width (~136px at 100% DPI) even for undecorated windows.
@@ -134,7 +135,14 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        .plugin(tauri_plugin_window_state::Builder::new().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                // The overlay is fixed-size. Restoring its persisted physical size can
+                // compound DPI scaling when it moves between monitors, so setup restores
+                // only its position below. Other windows keep the default full restore.
+                .skip_initial_state("main")
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -158,11 +166,17 @@ pub fn run() {
             let app_handle = app.handle().clone();
             database::init(&app_handle)?;
 
-            // Override Windows minimum window size for the overlay
-            #[cfg(windows)]
+            // Restore the overlay location without restoring its fixed size.
             if let Some(main_window) = app.get_webview_window("main") {
-                override_min_window_size(&main_window, 100, 100);
-                let _ = main_window.show();
+                // Keep the user's chosen monitor/location without allowing a stale or
+                // mixed-DPI window-state entry to override the configured 100x100 size.
+                let _ = main_window.restore_state(StateFlags::POSITION);
+                #[cfg(windows)]
+                {
+                    // Override Windows' minimum window size for the overlay.
+                    override_min_window_size(&main_window, 100, 100);
+                    let _ = main_window.show();
+                }
             }
 
             // Settings window starts hidden — opened via tray
