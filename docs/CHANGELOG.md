@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Highlights
+
+- The floating microphone button no longer grows into a large invisible click-blocking area when moved between displays with different scaling
+
+### Fixes
+
+- Stopped restoring persisted size for the fixed-size overlay window, preventing mixed-DPI physical dimensions from compounding across launches. The overlay still restores its saved position, while the resizable settings window continues restoring both position and size.
+
 ## [0.8.6] - 2026-07-31
 
 ### Highlights

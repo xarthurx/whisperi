@@ -73,7 +73,7 @@ Two Tauri windows render the same React bundle but show different views based on
 | `main` | 100×100 | always-on-top, transparent, no taskbar, no decorations, position persisted | Floating mic button |
 | `settings` | 760×800 | hidden by default, resizable, no decorations, position/size persisted | Full settings panel + history |
 
-Both windows persist their position via `tauri-plugin-window-state`. The system tray toggles visibility of the settings window. This keeps the overlay minimal and unobtrusive while still providing a full configuration surface.
+Both windows persist their position via `tauri-plugin-window-state`. The fixed-size overlay skips the plugin's automatic full-state restore and restores only `POSITION` during setup, preventing saved physical dimensions from compounding when the window crosses mixed-DPI monitors. The resizable settings window restores its full state. The system tray toggles visibility of the settings window. This keeps the overlay minimal and unobtrusive while still providing a full configuration surface.
 
 ### 5. Minimal State, Maximum Persistence
 
