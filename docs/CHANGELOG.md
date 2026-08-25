@@ -1,13 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.8.7] - 2026-08-25
 
 ### Highlights
 
-- Fixed dictation silently losing its cleanup step — if your AI model had been shut down by its provider, Whisperi quietly inserted the raw transcription instead. This was most visible in Chinese, where it arrived as a long block of text with no punctuation
-- Whisperi now moves you to a current model automatically when a provider retires the one you were using, and tells you in Settings when a cleanup attempt fails instead of failing quietly
-- Light enhancement now adds punctuation too, instead of leaving dictation as one long run-on — it still leaves your wording exactly as you said it
-- Writing your own custom prompt no longer turns punctuation off by accident
+- Fixed dictation silently losing its cleanup step — if your AI model had been shut down by its provider, Whisperi quietly inserted the raw transcription instead. This was most visible in Chinese, where it arrived as a long block of text with no punctuation. Whisperi now moves you to a current model automatically and tells you in Settings when a cleanup attempt fails
+- Punctuation is now restored in every cleanup mode. Light enhancement and custom prompts previously left dictation as one long run-on; Light still leaves your wording exactly as you said it
 - Refreshed the model list: several models that providers have now shut down were removed, and the newest models from OpenAI, Anthropic, Google, Groq, Mistral and Qwen were added
 - The floating microphone button no longer grows into a large invisible click-blocking area when moved between displays with different scaling
 
