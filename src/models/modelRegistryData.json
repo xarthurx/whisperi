@@ -6,6 +6,19 @@
       "baseUrl": "https://api.openai.com/v1",
       "models": [
         {
+          "id": "gpt-transcribe",
+          "name": "GPT Transcribe",
+          "description": "Latest speech-to-text. Streaming + file transcription, keyword hints.",
+          "streaming": true
+        },
+        {
+          "id": "gpt-live-transcribe",
+          "name": "GPT Live Transcribe",
+          "description": "Lowest-latency streaming transcript deltas. Realtime only.",
+          "streaming": true,
+          "realtimeOnly": true
+        },
+        {
           "id": "gpt-4o-mini-transcribe",
           "name": "GPT-4o Mini Transcribe",
           "description": "Streaming server-VAD transcription. Fastest + cheapest.",
@@ -14,7 +27,7 @@
         {
           "id": "gpt-4o-transcribe",
           "name": "GPT-4o Transcribe",
-          "description": "Streaming server-VAD transcription. Highest accuracy.",
+          "description": "Streaming server-VAD transcription. High accuracy.",
           "streaming": true
         },
         {
@@ -60,9 +73,15 @@
       "models": [
         {
           "id": "voxtral-mini-latest",
-          "name": "Voxtral Mini",
-          "params": "3B",
-          "description": "Fast multilingual transcription, 13 languages",
+          "name": "Voxtral Mini Transcribe 2",
+          "params": "4B",
+          "description": "Fast multilingual transcription, 13 languages, diarization",
+          "streaming": false
+        },
+        {
+          "id": "voxtral-small-latest",
+          "name": "Voxtral Small",
+          "description": "Higher-accuracy offline transcription",
           "streaming": false
         }
       ]
@@ -99,29 +118,29 @@
       "name": "OpenAI",
       "models": [
         {
-          "id": "gpt-5.3-chat-latest",
-          "name": "GPT-5.3",
-          "description": "Latest flagship, best conversational quality"
+          "id": "gpt-5.6-sol",
+          "name": "GPT-5.6 Sol",
+          "description": "Frontier model for complex professional work"
+        },
+        {
+          "id": "gpt-5.6-terra",
+          "name": "GPT-5.6 Terra",
+          "description": "Balances intelligence and cost"
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "name": "GPT-5.6 Luna",
+          "description": "Optimized for cost-sensitive workloads"
         },
         {
           "id": "gpt-5.2",
           "name": "GPT-5.2",
-          "description": "Flagship reasoning model"
+          "description": "Previous-generation reasoning model"
         },
         {
           "id": "gpt-5.2-pro",
           "name": "GPT-5.2 Pro",
           "description": "Harder thinking, best answers"
-        },
-        {
-          "id": "gpt-5-mini",
-          "name": "GPT-5 Mini",
-          "description": "Fast and cost-efficient"
-        },
-        {
-          "id": "gpt-5-nano",
-          "name": "GPT-5 Nano",
-          "description": "Ultra-fast, lowest latency"
         }
       ]
     },
@@ -130,13 +149,13 @@
       "name": "Anthropic",
       "models": [
         {
-          "id": "claude-opus-4-6",
-          "name": "Claude Opus 4.6",
+          "id": "claude-opus-5",
+          "name": "Claude Opus 5",
           "description": "Most intelligent, coding and agents"
         },
         {
-          "id": "claude-sonnet-4-6",
-          "name": "Claude Sonnet 4.6",
+          "id": "claude-sonnet-5",
+          "name": "Claude Sonnet 5",
           "description": "Best speed-intelligence balance"
         },
         {
@@ -151,17 +170,17 @@
       "name": "Google Gemini",
       "models": [
         {
+          "id": "gemini-3.7-flash",
+          "name": "Gemini 3.7 Flash",
+          "description": "Latest stable flagship, fast and capable"
+        },
+        {
           "id": "gemini-3.1-pro-preview",
           "name": "Gemini 3.1 Pro",
-          "description": "Next-gen flagship for complex reasoning"
+          "description": "Deepest reasoning for complex tasks"
         },
         {
-          "id": "gemini-3-flash-preview",
-          "name": "Gemini 3 Flash",
-          "description": "Ultra-fast next-gen model"
-        },
-        {
-          "id": "gemini-3.1-flash-lite-preview",
+          "id": "gemini-3.1-flash-lite",
           "name": "Gemini 3.1 Flash Lite",
           "description": "Fastest and cheapest next-gen model"
         },
@@ -188,19 +207,6 @@
       "name": "Groq",
       "models": [
         {
-          "id": "meta-llama/llama-4-scout-17b-16e-instruct",
-          "name": "LLaMA 4 Scout",
-          "params": "109B MoE",
-          "description": "Latest Meta model, 17B active, 16 experts"
-        },
-        {
-          "id": "qwen/qwen3-32b",
-          "name": "Qwen3 32B",
-          "params": "32B",
-          "description": "Powerful reasoning, 131K context",
-          "disableThinking": true
-        },
-        {
           "id": "openai/gpt-oss-120b",
           "name": "GPT-OSS 120B",
           "params": "117B MoE",
@@ -210,19 +216,13 @@
           "id": "openai/gpt-oss-20b",
           "name": "GPT-OSS 20B",
           "params": "21B MoE",
-          "description": "Fast open-source model, 3.6B active"
+          "description": "Fast open-source model, 1000 T/sec"
         },
         {
-          "id": "llama-3.3-70b-versatile",
-          "name": "LLaMA 3.3 70B",
-          "params": "70B",
-          "description": "Meta's versatile model, 280 T/sec"
-        },
-        {
-          "id": "llama-3.1-8b-instant",
-          "name": "LLaMA 3.1 8B",
-          "params": "8B",
-          "description": "Ultra-fast 560 T/sec, 131K context"
+          "id": "qwen/qwen3.6-27b",
+          "name": "Qwen3.6 27B",
+          "params": "27B",
+          "description": "Preview model, strong reasoning, 131K context"
         }
       ]
     },
@@ -231,26 +231,19 @@
       "name": "Qwen",
       "models": [
         {
-          "id": "qwen3.5-plus",
-          "name": "Qwen3.5 Plus",
-          "description": "Latest flagship, 201 languages"
+          "id": "qwen3.8-max",
+          "name": "Qwen3.8 Max",
+          "description": "Top-tier flagship model"
         },
         {
-          "id": "qwen3.5-flash",
-          "name": "Qwen3.5 Flash",
-          "description": "Fast Qwen3.5 model"
+          "id": "qwen3.7-plus",
+          "name": "Qwen3.7 Plus",
+          "description": "Balanced price-performance flagship"
         },
         {
-          "id": "qwen3-235b-a22b",
-          "name": "Qwen3 235B",
-          "params": "235B MoE",
-          "description": "Flagship MoE, 22B active parameters"
-        },
-        {
-          "id": "qwen3-32b",
-          "name": "Qwen3 32B",
-          "params": "32B",
-          "description": "Dense model with strong reasoning"
+          "id": "qwen3.7-flash",
+          "name": "Qwen3.7 Flash",
+          "description": "Lightweight and fast"
         }
       ]
     },
@@ -259,5 +252,6 @@
       "name": "OpenRouter",
       "models": []
     }
+
   ]
 }

@@ -4,10 +4,27 @@
 
 ### Highlights
 
+- Fixed dictation silently losing its cleanup step — if your AI model had been shut down by its provider, Whisperi quietly inserted the raw transcription instead. This was most visible in Chinese, where it arrived as a long block of text with no punctuation
+- Whisperi now moves you to a current model automatically when a provider retires the one you were using, and tells you in Settings when a cleanup attempt fails instead of failing quietly
+- Light enhancement now adds punctuation too, instead of leaving dictation as one long run-on — it still leaves your wording exactly as you said it
+- Writing your own custom prompt no longer turns punctuation off by accident
+- Refreshed the model list: several models that providers have now shut down were removed, and the newest models from OpenAI, Anthropic, Google, Groq, Mistral and Qwen were added
 - The floating microphone button no longer grows into a large invisible click-blocking area when moved between displays with different scaling
+
+### Features
+
+- Added `src/config/retiredModels.ts` and a settings-load migration that repoints a stored reasoning/transcription model at the provider's recommended replacement when that model has been shut down. A retired model fails on every call; the enhancement path catches the failure and falls back to the raw transcript, so the only symptom is that cleanup silently stops — invisible in English, where raw ASR output is already punctuated, but Chinese ASR output carries none. `tests/retiredModels.test.ts` asserts no id is both retired and offered, and that every replacement is a model the registry still lists.
+- Enhancement failures are now recorded instead of discarded: the reason is written to the `error` column of the transcriptions table (previously hardcoded to `null`) and persisted to a new `reasoningLastError` setting, surfaced as a dismissible banner in the AI Models panel. Added `enhancement.lastError.*` strings to all 9 locales.
+- Added new provider models to the registry: OpenAI `gpt-transcribe` and `gpt-live-transcribe` (transcription), `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` (reasoning); Anthropic `claude-opus-5` and `claude-sonnet-5`; Google `gemini-3.7-flash` and stable `gemini-3.1-flash-lite`; Groq `qwen/qwen3.6-27b`; Mistral `voxtral-small-latest`; Qwen `qwen3.8-max` / `qwen3.7-plus` / `qwen3.7-flash`.
+- Added a `realtimeOnly` model flag so realtime-only transcription models (`gpt-live-transcribe`) appear in the Live dictation picker but not in the batch transcription picker.
 
 ### Fixes
 
+- Removed models the providers have retired: OpenAI `gpt-5.3-chat-latest` (shut down 2026-08-10), `gpt-5-mini` and `gpt-5-nano` (retiring 2026-12-11); Groq `llama-3.3-70b-versatile` and `llama-3.1-8b-instant` (shut down 2026-08-16), `qwen/qwen3-32b` and `meta-llama/llama-4-scout-17b-16e-instruct` (shut down 2026-07-17); Google `gemini-3.1-flash-lite-preview` (shut down); Qwen `qwen3-32b` and `qwen3-235b-a22b` (retiring 2026-10-10).
+- Light enhancement now restores punctuation like Standard and Full do. It previously received no punctuation-restoration instruction at all, and its own rule listed only ASCII terminal marks (`. ? !`), so an unpunctuated Chinese transcript came back unpunctuated. The shared punctuation block is now appended to Light — after the Light rules, because the Light system prompt declares those rules "the complete and exclusive list of permitted edits" and anything above that line reads as outside the permitted set — together with a rider that ties it to allowed fix #2 and exempts punctuation from Light's preserve-first and "when uncertain, leave it as-is" defaults. Word choice, word order, self-corrections, and paragraph formatting stay untouched.
+- Custom system prompts no longer drop punctuation restoration. A custom prompt replaced the whole cleanup variant, taking the punctuation block with it, so a custom-prompt user got unpunctuated Chinese dictation regardless of intensity. The block is now prefixed to the custom prompt — the user's own instructions still come last and win on recency — and the prompt help text in all 9 locales now says punctuation restoration is applied automatically. The Light rider is deliberately not included there: it reconciles with Light's preserve-first body, which a custom prompt has replaced.
+- Changed the default reasoning model from the retiring `gpt-5-mini` to `gpt-5.6-terra`.
+- Stopped sending `temperature` to Claude Opus 5 / Sonnet 5 / Fable 5 / Opus 4.7+, which reject sampling parameters with a 400, and pinned those models to `effort: low` so adaptive thinking does not consume the response token budget on a dictation-cleanup prompt.
 - Stopped restoring persisted size for the fixed-size overlay window, preventing mixed-DPI physical dimensions from compounding across launches. The overlay still restores its saved position, while the resizable settings window continues restoring both position and size.
 
 ### Internal
