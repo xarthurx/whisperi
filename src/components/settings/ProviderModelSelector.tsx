@@ -44,8 +44,11 @@ export default function ProviderModelSelector({
             onModelChange(openRouterDefault);
           } else {
             const provider = registry.find((p) => p.id === id);
-            if (provider?.models[0]) {
-              onModelChange(provider.models[0].id);
+            const first = provider?.models.find(
+              (m) => !("realtimeOnly" in m && m.realtimeOnly),
+            );
+            if (first) {
+              onModelChange(first.id);
             }
           }
         }}
@@ -67,7 +70,8 @@ export default function ProviderModelSelector({
               options={
                 registry
                   .find((p) => p.id === selectedProvider)
-                  ?.models.map((m) => ({
+                  ?.models.filter((m) => !("realtimeOnly" in m && m.realtimeOnly))
+                  .map((m) => ({
                     value: m.id,
                     label: `${m.name}${m.params ? ` (${m.params})` : ""}`,
                   })) ?? []

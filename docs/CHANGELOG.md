@@ -4,10 +4,20 @@
 
 ### Highlights
 
+- Refreshed the model list: several models that providers have now shut down were removed, and the newest models from OpenAI, Anthropic, Google, Groq, Mistral and Qwen were added
+- If your AI cleanup model was one of the retired ones, pick a new one in Settings — the default now points at a current model
 - The floating microphone button no longer grows into a large invisible click-blocking area when moved between displays with different scaling
+
+### Features
+
+- Added new provider models to the registry: OpenAI `gpt-transcribe` and `gpt-live-transcribe` (transcription), `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` (reasoning); Anthropic `claude-opus-5` and `claude-sonnet-5`; Google `gemini-3.7-flash` and stable `gemini-3.1-flash-lite`; Groq `qwen/qwen3.6-27b`; Mistral `voxtral-small-latest`; Qwen `qwen3.8-max` / `qwen3.7-plus` / `qwen3.7-flash`.
+- Added a `realtimeOnly` model flag so realtime-only transcription models (`gpt-live-transcribe`) appear in the Live dictation picker but not in the batch transcription picker.
 
 ### Fixes
 
+- Removed models the providers have retired: OpenAI `gpt-5.3-chat-latest` (shut down 2026-08-10), `gpt-5-mini` and `gpt-5-nano` (retiring 2026-12-11); Groq `llama-3.3-70b-versatile` and `llama-3.1-8b-instant` (shut down 2026-08-16), `qwen/qwen3-32b` and `meta-llama/llama-4-scout-17b-16e-instruct` (shut down 2026-07-17); Google `gemini-3.1-flash-lite-preview` (shut down); Qwen `qwen3-32b` and `qwen3-235b-a22b` (retiring 2026-10-10). The Groq entries were the only two models in the unused `openwhisprCloudModels` "fast" tier, which is now also current.
+- Changed the default reasoning model from the retiring `gpt-5-mini` to `gpt-5.6-terra`.
+- Stopped sending `temperature` to Claude Opus 5 / Sonnet 5 / Fable 5 / Opus 4.7+, which reject sampling parameters with a 400, and pinned those models to `effort: low` so adaptive thinking does not consume the response token budget on a dictation-cleanup prompt.
 - Stopped restoring persisted size for the fixed-size overlay window, preventing mixed-DPI physical dimensions from compounding across launches. The overlay still restores its saved position, while the resizable settings window continues restoring both position and size.
 
 ## [0.8.6] - 2026-07-31

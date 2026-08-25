@@ -87,7 +87,7 @@ const DEFAULTS: Settings = {
   cloudTranscriptionModel: "gpt-4o-mini-transcribe",
   customDictionary: [],
   useReasoningModel: true,
-  reasoningModel: "gpt-5-mini",
+  reasoningModel: "gpt-5.6-terra",
   reasoningProvider: "openai",
   enhancementIntensity: "standard",
   useCustomPrompt: false,
