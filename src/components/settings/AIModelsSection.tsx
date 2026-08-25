@@ -49,12 +49,42 @@ export default function AIModelsSection({ settings, update }: SectionProps) {
             selectedProvider={settings.reasoningProvider}
             selectedModel={settings.reasoningModel}
             registryKey="cloudProviders"
-            openRouterDefault="openai/gpt-4o"
+            openRouterDefault="openai/gpt-5.6-sol"
             onProviderChange={(id) => update("reasoningProvider", id)}
             onModelChange={(model) => update("reasoningModel", model)}
             settings={settings}
             update={update}
           />
+
+          {/* Last enhancement failure (cleared on the next successful run).
+              Without this a retired or misconfigured model silently degrades
+              every dictation to the raw transcript — which reads as "no
+              punctuation" for Chinese and is invisible for English. */}
+          {settings.reasoningLastError ? (
+            <div className="text-xs rounded-control border border-destructive/40 bg-destructive/10 p-3 space-y-1">
+              <div className="text-destructive font-medium">
+                {t("enhancement.lastError.title", {
+                  defaultValue: "Last text cleanup failed",
+                })}
+              </div>
+              <div className="text-text-secondary break-words">
+                {settings.reasoningLastError}
+              </div>
+              <div className="text-text-tertiary">
+                {t("enhancement.lastError.hint", {
+                  defaultValue:
+                    "Your dictation was inserted without cleanup. Check the model and API key above.",
+                })}
+              </div>
+              <button
+                onClick={() => update("reasoningLastError", "")}
+                className="mt-1 text-text-tertiary underline hover:text-text-secondary"
+                type="button"
+              >
+                {t("enhancement.lastError.dismiss", { defaultValue: "Dismiss" })}
+              </button>
+            </div>
+          ) : null}
         </SettingsSection>
       )}
 

@@ -6,6 +6,7 @@ import {
   onAudioLevel,
   onRecordingError,
   getSetting,
+  setSetting,
   saveTranscription,
 } from "@/services/tauriApi";
 import { playStartSound, playStopSound } from "@/utils/sounds";
@@ -165,6 +166,11 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
       );
       let finalText = correctedText;
       let rawAiResponse: string | null = null;
+      // A failed enhancement falls back to the raw transcript, which looks
+      // identical to "cleanup had nothing to do" in English but drops all
+      // punctuation in Chinese. Record the reason so the failure is
+      // recoverable from history instead of console-only.
+      let enhancementError: string | null = null;
       try {
         const result = await enhance(
           correctedText,
@@ -173,8 +179,12 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
         );
         finalText = result.finalText;
         rawAiResponse = result.rawAiResponse;
+        void setSetting("reasoningLastError", "").catch(() => {});
       } catch (e) {
         console.error("[Whisperi] Enhancement error:", e);
+        enhancementError = String(e);
+        // Persisted so the AI Models panel can show it in the other window.
+        void setSetting("reasoningLastError", enhancementError).catch(() => {});
         if (settings.debugMode) {
           finalText = `${correctedText}\n\n[Enhancement Error]\n${e}`;
         }
@@ -201,7 +211,7 @@ export function useAudioRecording({ onToast }: UseAudioRecordingOptions = {}) {
             ? "dictionary"
             : "none",
         settings.agentName,
-        null,
+        enhancementError,
         durationMs,
       );
 

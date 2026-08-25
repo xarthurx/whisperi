@@ -13,6 +13,7 @@ import {
   setAgentAliases as setAgentAliasesApi,
 } from "@/services/tauriApi";
 import type { EnhancementIntensity } from "@/config/prompts";
+import { migrateRetiredModel } from "@/config/retiredModels";
 import type { DictionaryEntry } from "@/models/dictionary";
 
 export interface Settings {
@@ -55,6 +56,7 @@ export interface Settings {
   /** Last Live-mode failure message (cleared on successful start). Shown in
    *  the Live readiness banner so silent failures are visible. */
   liveLastError: string;
+  reasoningLastError: string;
 
   // Microphone
   selectedMicDeviceId: string;
@@ -101,6 +103,7 @@ const DEFAULTS: Settings = {
   liveTranscriptionModel: "gpt-4o-mini-transcribe",
   liveEnhancement: true,
   liveLastError: "",
+  reasoningLastError: "",
   selectedMicDeviceId: "",
   agentName: "Whisperi",
   agentAliases: [],
@@ -120,7 +123,7 @@ const STORE_KEYS = [
   "preferredLanguage", "languageMode", "secondaryLanguage",
   "cloudTranscriptionProvider", "cloudTranscriptionModel",
   "dictationMode", "liveTranscriptionProvider", "liveTranscriptionModel", "liveEnhancement", "liveLastError",
-  "useReasoningModel", "reasoningModel", "reasoningProvider", "enhancementIntensity",
+  "useReasoningModel", "reasoningModel", "reasoningProvider", "reasoningLastError", "enhancementIntensity",
   "useCustomPrompt", "customSystemPrompt",
   "autoPaste", "soundEnabled", "dictationKey", "activationMode",
   "selectedMicDeviceId", "debugMode", "uiLanguage",
@@ -177,6 +180,38 @@ export function useSettings() {
       if (resolved.secondaryLanguage === "en") {
         resolved.secondaryLanguage = "en-US";
         setSetting("secondaryLanguage", "en-US");
+      }
+      // Migration: a model the provider has shut down fails on every call. For
+      // the reasoning model that means enhancement silently falls back to the
+      // raw transcript — invisible in English, but Chinese ASR output carries
+      // no punctuation, so the dictation arrives as an unpunctuated wall of
+      // text. Repoint retired ids at the provider's recommended replacement.
+      const migratedReasoning = migrateRetiredModel(
+        resolved.reasoningProvider,
+        resolved.reasoningModel,
+      );
+      if (migratedReasoning) {
+        console.warn(
+          `[Whisperi] Reasoning model "${resolved.reasoningModel}" was retired by ${resolved.reasoningProvider}; switching to "${migratedReasoning}".`,
+        );
+        resolved.reasoningModel = migratedReasoning;
+        setSetting("reasoningModel", migratedReasoning);
+      }
+      const migratedCloud = migrateRetiredModel(
+        resolved.cloudTranscriptionProvider,
+        resolved.cloudTranscriptionModel,
+      );
+      if (migratedCloud) {
+        resolved.cloudTranscriptionModel = migratedCloud;
+        setSetting("cloudTranscriptionModel", migratedCloud);
+      }
+      const migratedLive = migrateRetiredModel(
+        resolved.liveTranscriptionProvider,
+        resolved.liveTranscriptionModel,
+      );
+      if (migratedLive) {
+        resolved.liveTranscriptionModel = migratedLive;
+        setSetting("liveTranscriptionModel", migratedLive);
       }
 
       resolved.agentName = agentNameVal;

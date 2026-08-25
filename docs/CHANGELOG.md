@@ -4,12 +4,15 @@
 
 ### Highlights
 
+- Fixed dictation silently losing its cleanup step — if your AI model had been shut down by its provider, Whisperi quietly inserted the raw transcription instead. This was most visible in Chinese, where it arrived as a long block of text with no punctuation
+- Whisperi now moves you to a current model automatically when a provider retires the one you were using, and tells you in Settings when a cleanup attempt fails instead of failing quietly
 - Refreshed the model list: several models that providers have now shut down were removed, and the newest models from OpenAI, Anthropic, Google, Groq, Mistral and Qwen were added
-- If your AI cleanup model was one of the retired ones, pick a new one in Settings — the default now points at a current model
 - The floating microphone button no longer grows into a large invisible click-blocking area when moved between displays with different scaling
 
 ### Features
 
+- Added `src/config/retiredModels.ts` and a settings-load migration that repoints a stored reasoning/transcription model at the provider's recommended replacement when that model has been shut down. A retired model fails on every call; the enhancement path catches the failure and falls back to the raw transcript, so the only symptom is that cleanup silently stops — invisible in English, where raw ASR output is already punctuated, but Chinese ASR output carries none. `tests/retiredModels.test.ts` asserts no id is both retired and offered, and that every replacement is a model the registry still lists.
+- Enhancement failures are now recorded instead of discarded: the reason is written to the `error` column of the transcriptions table (previously hardcoded to `null`) and persisted to a new `reasoningLastError` setting, surfaced as a dismissible banner in the AI Models panel. Added `enhancement.lastError.*` strings to all 9 locales.
 - Added new provider models to the registry: OpenAI `gpt-transcribe` and `gpt-live-transcribe` (transcription), `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` (reasoning); Anthropic `claude-opus-5` and `claude-sonnet-5`; Google `gemini-3.7-flash` and stable `gemini-3.1-flash-lite`; Groq `qwen/qwen3.6-27b`; Mistral `voxtral-small-latest`; Qwen `qwen3.8-max` / `qwen3.7-plus` / `qwen3.7-flash`.
 - Added a `realtimeOnly` model flag so realtime-only transcription models (`gpt-live-transcribe`) appear in the Live dictation picker but not in the batch transcription picker.
 
