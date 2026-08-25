@@ -4,7 +4,16 @@ import { getLanguageInstruction } from "../utils/languageSupport";
 export type EnhancementIntensity = "light" | "standard" | "full";
 
 const PROMPT_VARIANTS: Record<EnhancementIntensity, string> = {
-  light: promptData.USER_VISIBLE_PROMPT_LIGHT,
+  // Light appends the punctuation block instead of prefixing it: the Light
+  // internal prompt says "the Light rules below are the complete and exclusive
+  // list of permitted edits", so anything placed above that line reads as
+  // outside the permitted set. The rider ties the block back into allowed fix
+  // #2 and carves punctuation out of Light's preserve-first default — without
+  // it the model resolves "restore punctuation" against "when uncertain, leave
+  // it as-is" by leaving an unpunctuated transcript alone.
+  light: promptData.USER_VISIBLE_PROMPT_LIGHT
+    + "\n\n" + promptData.PUNCTUATION_RESTORATION_PROMPT
+    + "\n\n" + promptData.PUNCTUATION_RESTORATION_LIGHT_RIDER,
   standard: promptData.PUNCTUATION_RESTORATION_PROMPT
     + "\n\n" + promptData.USER_VISIBLE_PROMPT_STANDARD,
   full: promptData.PUNCTUATION_RESTORATION_PROMPT

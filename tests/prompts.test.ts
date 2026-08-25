@@ -45,6 +45,35 @@ describe("cleanup prompt profiles", () => {
     }
   });
 
+  test("Light restores punctuation without gaining rewrite licence", () => {
+    const prompt = getSystemPrompt("Jasper", dictionary, "zh", undefined, "light");
+
+    // Raw ASR output for Chinese arrives with no punctuation at all, so Light
+    // has to insert it rather than merely tidy what is already there.
+    expect(prompt).toContain("PUNCTUATION RESTORATION IS MANDATORY");
+    expect(prompt).toContain("The transcript may contain no punctuation at all");
+    expect(prompt).toContain("Infer sentence and clause boundaries from the actual meaning");
+    expect(prompt).toContain("Chinese text: use Chinese full-width punctuation only");
+    // Preserve-first is Light's default; punctuation must be carved out of it
+    // explicitly or the model resolves the conflict by leaving the text alone.
+    expect(prompt).toContain("Inserting punctuation is REQUIRED, not optional");
+
+    // Light must not inherit Standard/Full rewriting behavior.
+    expect(prompt).toContain("literal speech-to-text cleanup tool");
+    expect(prompt).toContain("complete and exclusive list of permitted edits");
+    expect(prompt).toContain("Do NOT rewrite, rephrase, or restructure sentences");
+    expect(prompt).not.toContain("clean, polished text");
+    expect(prompt).not.toContain("SMART FORMATTING");
+    expect(prompt).not.toContain("ENHANCED POLISH");
+  });
+
+  test("Light no longer lists ASCII-only terminal marks", () => {
+    const prompt = getSystemPrompt("Jasper", dictionary, "zh", undefined, "light");
+    // The old wording ("terminal punctuation (. or ? or !)") told the model to
+    // end Chinese sentences with half-width marks.
+    expect(prompt).not.toContain("terminal punctuation (. or ? or !)");
+  });
+
   test("default Standard restores punctuation even when the transcript has none", () => {
     const prompt = getSystemPrompt("Jasper", [], "en-US");
 
