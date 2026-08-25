@@ -10,6 +10,10 @@
 
 - Stopped restoring persisted size for the fixed-size overlay window, preventing mixed-DPI physical dimensions from compounding across launches. The overlay still restores its saved position, while the resizable settings window continues restoring both position and size.
 
+### Internal
+
+- Removed the unused `openwhisprCloudModels` tier data from `src/models/modelRegistryData.json`, a leftover from the OpenWhispr port that no TypeScript or Rust code read.
+
 ## [0.8.6] - 2026-07-31
 
 ### Highlights
