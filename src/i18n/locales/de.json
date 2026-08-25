@@ -83,7 +83,7 @@
   "enhancement.lastError.hint": "Ihr Diktat wurde ohne Bereinigung eingefügt. Prüfen Sie Modell und API-Schlüssel oben.",
   "enhancement.lastError.dismiss": "Schließen",
   "enhancement.prompt.title": "System-Prompt",
-  "enhancement.prompt.description": "Bereinigungsanweisungen für das KI-Modell. Kernverhaltensregeln werden automatisch angewendet.",
+  "enhancement.prompt.description": "Bereinigungsanweisungen für das KI-Modell. Kernverhaltensregeln und die Wiederherstellung der Zeichensetzung werden automatisch angewendet.",
   "enhancement.prompt.default": "Standard-Prompt",
   "enhancement.prompt.custom": "Benutzerdefinierter Prompt",
   "enhancement.prompt.placeholder": "Geben Sie hier Ihre benutzerdefinierten Bereinigungsanweisungen ein. Kernverhaltensregeln (Agent-Aktivierung, Ausgabeformat) werden immer automatisch angewendet.",

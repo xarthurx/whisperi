@@ -83,7 +83,7 @@
   "enhancement.lastError.hint": "Your dictation was inserted without cleanup. Check the model and API key above.",
   "enhancement.lastError.dismiss": "Dismiss",
   "enhancement.prompt.title": "System Prompt",
-  "enhancement.prompt.description": "Cleanup instructions sent to the AI model. Core behavior rules are applied automatically.",
+  "enhancement.prompt.description": "Cleanup instructions sent to the AI model. Core behavior rules and punctuation restoration are applied automatically.",
   "enhancement.prompt.default": "Default Prompt",
   "enhancement.prompt.custom": "Custom Prompt",
   "enhancement.prompt.placeholder": "Enter your custom cleanup instructions here. Core behavior rules (agent activation, output format) are always applied automatically.",

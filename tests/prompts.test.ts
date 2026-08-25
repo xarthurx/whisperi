@@ -82,6 +82,30 @@ describe("cleanup prompt profiles", () => {
     expect(prompt).toContain("even when the speaker did not say punctuation commands aloud");
   });
 
+  test("custom prompts keep punctuation restoration but stay last", () => {
+    for (const intensity of ["light", "standard", "full"] as const) {
+      const prompt = getSystemPrompt(
+        "Jasper",
+        dictionary,
+        "zh",
+        "Only expand abbreviations.",
+        intensity,
+      );
+      expect(prompt).toContain("Only expand abbreviations.");
+      expect(prompt).toContain("PUNCTUATION RESTORATION IS MANDATORY");
+      expect(prompt).toContain("Chinese text: use Chinese full-width punctuation only");
+      // The user's own instructions come after the block, so a custom prompt
+      // that deliberately suppresses punctuation still wins on recency.
+      expect(prompt.indexOf("PUNCTUATION RESTORATION IS MANDATORY")).toBeLessThan(
+        prompt.indexOf("Only expand abbreviations."),
+      );
+      // The Light rider reconciles with Light's preserve-first body, which a
+      // custom prompt replaces — pulling it in would reference rules that are
+      // no longer in the prompt.
+      expect(prompt).not.toContain("LIGHT MODE PUNCTUATION AMENDMENT");
+    }
+  });
+
   test("custom and blank custom prompts route consistently", () => {
     const custom = getSystemPrompt(
       "Jasper",

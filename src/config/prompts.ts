@@ -144,7 +144,17 @@ export function getSystemPrompt(
       ? LIGHT_CLEANUP_PROFILE
       : DEFAULT_CLEANUP_PROFILE;
   const name = agentName?.trim() || "Assistant";
-  const userPart = hasCustomPrompt ? customPrompt! : PROMPT_VARIANTS[mode];
+  // A custom prompt replaces the cleanup instructions, not the infrastructure.
+  // Punctuation restoration is infrastructure — like the internal system
+  // prompt, it is what makes raw ASR output usable at all, and dropping it
+  // leaves unpunctuated Chinese dictation as a single run-on block. It is
+  // prefixed rather than appended so the user's own instructions still come
+  // last and win on recency if they deliberately suppress punctuation. The
+  // Light rider is deliberately omitted: it reconciles with Light's
+  // preserve-first body, which a custom prompt has replaced.
+  const userPart = hasCustomPrompt
+    ? promptData.PUNCTUATION_RESTORATION_PROMPT + "\n\n" + customPrompt!
+    : PROMPT_VARIANTS[mode];
   const prompt = profile.internalPrompt.replace(/\{\{agentName\}\}/g, name)
     + "\n\n" + userPart.replace(/\{\{agentName\}\}/g, name);
   return appendPromptExtras(prompt, customDictionary, language, profile);

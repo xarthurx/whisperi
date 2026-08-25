@@ -83,7 +83,7 @@
   "enhancement.lastError.hint": "Tu dictado se insertó sin limpiar. Revisa el modelo y la clave de API de arriba.",
   "enhancement.lastError.dismiss": "Descartar",
   "enhancement.prompt.title": "Prompt del sistema",
-  "enhancement.prompt.description": "Instrucciones de limpieza enviadas al modelo de IA. Las reglas de comportamiento básicas se aplican automáticamente.",
+  "enhancement.prompt.description": "Instrucciones de limpieza enviadas al modelo de IA. Las reglas de comportamiento básicas y la restauración de la puntuación se aplican automáticamente.",
   "enhancement.prompt.default": "Prompt predeterminado",
   "enhancement.prompt.custom": "Prompt personalizado",
   "enhancement.prompt.placeholder": "Introduzca sus instrucciones de limpieza personalizadas aquí. Las reglas de comportamiento básicas (activación del agente, formato de salida) siempre se aplican automáticamente.",
