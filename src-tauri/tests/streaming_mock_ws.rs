@@ -9,7 +9,9 @@ use tokio_tungstenite::tungstenite::Message;
 
 use whisperi_lib::transcription::streaming::{SessionConfig, StreamingEvent, StreamingTranscriber, ErrorKind};
 use whisperi_lib::transcription::streaming::realtime_openai_compatible::RealtimeOpenAiCompatibleClient;
-use whisperi_lib::transcription::streaming::providers::{ProviderConfig, AuthScheme, VadMode, OPENAI_REALTIME};
+use whisperi_lib::transcription::streaming::providers::{
+    AuthScheme, OPENAI_REALTIME, ProviderConfig, QWEN_REALTIME, VadMode, VocabularyField,
+};
 
 /// Spin up a one-shot mock WS server. The handler receives the connection
 /// and runs the provided fn; on its first call to listener.accept() the
@@ -120,6 +122,17 @@ async fn out_of_order_completions_surface_in_spoken_order() {
 /// We leak a `Box` here because `ProviderConfig::ws_url_template` is `&'static str`;
 /// in tests this is acceptable.
 fn test_provider_for(addr: SocketAddr) -> &'static ProviderConfig {
+    test_provider_with(addr, OPENAI_REALTIME.session_template, "input_audio_buffer.commit")
+}
+
+/// Like [`test_provider_for`], but with the given session template and
+/// end-of-audio event, so a test can exercise the Qwen-style
+/// `session.finish` / `session.finished` handshake against the mock.
+fn test_provider_with(
+    addr: SocketAddr,
+    session_template: &'static str,
+    end_of_audio_event: &'static str,
+) -> &'static ProviderConfig {
     let url = Box::leak(format!("ws://{}/", addr).into_boxed_str());
     Box::leak(Box::new(ProviderConfig {
         id: "test",
@@ -130,8 +143,9 @@ fn test_provider_for(addr: SocketAddr) -> &'static ProviderConfig {
         auth_scheme: AuthScheme::Bearer,
         extra_headers: &[],
         vad_mode: VadMode::ManualCommit,
-        supports_transcription_prompt: true,
-        session_template: OPENAI_REALTIME.session_template,
+        vocabulary_field: VocabularyField::Prompt,
+        end_of_audio_event,
+        session_template,
     }))
 }
 
@@ -221,13 +235,14 @@ async fn max_message_size_enforced() {
 }
 
 /// Soft-flush boundary (client side). When a Live session stops, the audio-pump
-/// task sends `input_audio_buffer.commit` and then drains trailing utterance
-/// events for up to ~800ms (commands/live.rs). The provider may finalise the
-/// last utterance a little AFTER the commit. This test pins the client-side
-/// behaviour that drain relies on: a delayed `.completed` arriving after the
-/// commit is still received by `poll_event()` and surfaces as the final
-/// utterance. (The 800ms drain / 1.5s join wall-clock timers live in the Tauri
-/// command and are not unit-testable here without a Tauri runtime.)
+/// task sends the provider's end-of-audio event (`input_audio_buffer.commit` for
+/// OpenAI) and then drains trailing utterance events for up to ~800ms
+/// (commands/live.rs). The provider may finalise the last utterance a little
+/// AFTER the commit. This test pins the client-side behaviour that drain relies
+/// on: a delayed `.completed` arriving after the commit is still received by
+/// `poll_event()` and surfaces as the final utterance. (The 800ms drain / 1.5s
+/// join wall-clock timers live in the Tauri command and are not unit-testable
+/// here without a Tauri runtime.)
 #[tokio::test]
 async fn commit_then_delayed_completed_is_drained() {
     let addr = mock_server(|mut ws| async move {
@@ -270,8 +285,9 @@ async fn commit_then_delayed_completed_is_drained() {
         .await
         .unwrap();
 
-    // Soft-flush sequence: commit, then drain the delayed trailing utterance.
-    client.commit_utterance().await.unwrap();
+    // Soft-flush sequence: end-of-audio (commit for OpenAI), then drain the
+    // delayed trailing utterance.
+    client.end_of_audio().await.unwrap();
     let event = client.poll_event().await.unwrap().unwrap();
     match event {
         StreamingEvent::UtteranceCompleted {
@@ -283,4 +299,70 @@ async fn commit_then_delayed_completed_is_drained() {
         }
         e => panic!("expected trailing UtteranceCompleted, got {:?}", e),
     }
+}
+
+/// DashScope soft-flush handshake. In server-VAD mode Qwen3-ASR rejects
+/// `input_audio_buffer.commit`; the client must send `session.finish`, after
+/// which the server delivers the in-progress utterance and then
+/// `session.finished`. The pump's drain loop stops on that terminal event
+/// (surfaced as `SessionClosed`) instead of waiting out its 800ms deadline.
+#[tokio::test]
+async fn session_finish_drains_trailing_utterance_then_closes() {
+    let addr = mock_server(|mut ws| async move {
+        // Expect the Qwen-shaped session.update first.
+        let msg = ws.next().await.unwrap().unwrap();
+        let txt = msg.to_text().unwrap();
+        assert!(txt.contains("\"type\":\"session.update\""), "got: {}", txt);
+        assert!(txt.contains("\"input_audio_format\":\"pcm\""), "got: {}", txt);
+        assert!(txt.contains("\"sample_rate\":16000"), "got: {}", txt);
+        // Expect the end-of-audio event to be session.finish, not a commit.
+        let finish = ws.next().await.unwrap().unwrap();
+        let finish_txt = finish.to_text().unwrap();
+        assert!(
+            finish_txt.contains("\"type\":\"session.finish\""),
+            "expected session.finish, got: {}",
+            finish_txt
+        );
+        ws.send(Message::Text(
+            r#"{"type":"conversation.item.input_audio_transcription.completed","item_id":"A","transcript":"trailing words"}"#
+                .to_string(),
+        ))
+        .await
+        .unwrap();
+        ws.send(Message::Text(
+            r#"{"type":"session.finished","event_id":"event_1"}"#.to_string(),
+        ))
+        .await
+        .unwrap();
+    })
+    .await;
+
+    let mut client = RealtimeOpenAiCompatibleClient::new(test_provider_with(
+        addr,
+        QWEN_REALTIME.session_template,
+        "session.finish",
+    ));
+    client
+        .open(SessionConfig {
+            provider_id: "test",
+            model: "qwen3-asr-flash-realtime".to_string(),
+            language: None,
+            dictionary: Vec::new(),
+            api_key: "sk-fake".to_string(),
+        })
+        .await
+        .unwrap();
+
+    client.end_of_audio().await.unwrap();
+    match client.poll_event().await.unwrap().unwrap() {
+        StreamingEvent::UtteranceCompleted { text, .. } => assert_eq!(text, "trailing words"),
+        e => panic!("expected trailing UtteranceCompleted, got {:?}", e),
+    }
+    assert!(
+        matches!(
+            client.poll_event().await.unwrap(),
+            Some(StreamingEvent::SessionClosed)
+        ),
+        "session.finished must surface as SessionClosed so the drain loop stops"
+    );
 }

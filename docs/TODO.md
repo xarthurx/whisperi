@@ -2,6 +2,10 @@
 
 ## Live mode stabilization
 
+- [ ] **Verify `gpt-live-transcribe` end-to-end** with a valid OpenAI key: server-VAD `.completed` events, the `languages` array in single-language mode, and the vocabulary `prompt`. The 2026-09-05 switch was made from the docs only — the machine's stored OpenAI key was revoked (HTTP 401 `invalid_api_key`), which was also the root cause of Live mode "starting then immediately stopping".
+- [ ] **Verify the Qwen3-ASR-Flash-Realtime protocol update** (`session.update` with `pcm` + `sample_rate`, `corpus.text` biasing, `session.finish` → `session.finished` soft-flush) against DashScope with a real key; no Qwen key is configured on the dev machine.
+- [ ] **Retire the OpenAI `gpt-4o-*-transcribe` / `whisper-1` models before 2027-02-26** (deprecated 2026-08-26). They are still offered as a fallback. Retiring them via `RETIRED_MODELS` needs a Live-vs-batch split: Live should map to `gpt-live-transcribe`, batch to `gpt-transcribe` — and the batch path (`transcription/cloud.rs`) still sends the singular `language` and requests `verbose_json`, both of which `gpt-transcribe` is documented not to take. Fix the batch path first, then retire.
+- [ ] Surface `AuthFailed` Live errors more prominently (e.g. open Settings on the Transcription → Live tab). Today the OS notification is easy to miss and the banner lives in a tab the user may not be looking at, so a revoked key reads as "Live mode just stops".
 - [ ] Remove "(Beta)" label after 2 consecutive minor releases with zero Live-mode-related issues + multi-provider validation.
 - [ ] Auto-reconnect on transient network drops.
 - [ ] OS keyring migration for API keys (`tauri-plugin-stronghold` or `keyring-rs`).
@@ -19,7 +23,7 @@
 - [ ] `useLiveDictation.ts` `Promise.race([enhance, timeout])` leaves the `setTimeout` running after enhance resolves — clear it on success to avoid stray unhandled-rejection warnings (and a duplicate timer under React StrictMode dev double-invoke).
 - [ ] `notifyError` in `DictationOverlay.tsx` is wrapped in `useCallback([t])`; every i18n language change rebinds it and tears down/re-subscribes all 5 Live event listeners. Move `t` inside via a ref so the callback identity is stable.
 - [ ] Replace `std::sync::Mutex` access on `samples_buf` in the audio-pump tokio task with `tokio::sync::Mutex` (or move the drain into `spawn_blocking`) — reduces executor jitter under cpal callback contention.
-- [ ] Skip `commit_utterance()` in the soft-flush path when the loop exited via error AND when the provider is `ServerVad` — currently it's always sent, generating a spurious "buffer too small" server error event that the drain loop silently discards.
+- [ ] Skip `end_of_audio()` in the soft-flush path when the loop exited via error — currently it's always sent; on OpenAI (server VAD) a commit of an empty buffer generates a spurious "buffer too small" server error event that the drain loop silently discards.
 - [ ] Call `resampler.flush()` after the audio-pump main loop exits — currently the trailing interpolated sample is dropped (sub-ms audio loss; matters only on perfectly-aligned utterance-end boundaries).
 - [ ] In `useLiveDictation.ts` `subscribe()`, register each unlisten function into `unlistenRef.current` immediately after each `await` resolves instead of all-at-once at the end — if a later `await` rejects, earlier successfully-registered listeners are currently leaked.
 - [ ] **Per-box polish in web/Electron fields**: the post-stop polish swap falls back to clipboard for any browser/Electron field because many text boxes share one render HWND and can't be told apart by HWND (`is_web_render_class` denylist in `clipboard/mod.rs`). Use UI Automation (focused element + `TextPattern`/`ValuePattern`) to identify and scope to individual web boxes so single-field web dictation can auto-replace in place again instead of copying to the clipboard.

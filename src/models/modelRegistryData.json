@@ -6,41 +6,41 @@
       "baseUrl": "https://api.openai.com/v1",
       "models": [
         {
+          "id": "gpt-live-transcribe",
+          "name": "GPT Live Transcribe",
+          "description": "OpenAI's recommended realtime model. Lowest-latency streaming, uses your dictionary. Realtime only.",
+          "streaming": true,
+          "realtimeOnly": true
+        },
+        {
           "id": "gpt-transcribe",
           "name": "GPT Transcribe",
           "description": "Latest speech-to-text. Streaming + file transcription, keyword hints.",
           "streaming": true
         },
         {
-          "id": "gpt-live-transcribe",
-          "name": "GPT Live Transcribe",
-          "description": "Lowest-latency streaming transcript deltas. Realtime only.",
-          "streaming": true,
-          "realtimeOnly": true
-        },
-        {
           "id": "gpt-4o-mini-transcribe",
           "name": "GPT-4o Mini Transcribe",
-          "description": "Streaming server-VAD transcription. Fastest + cheapest.",
+          "description": "Deprecated by OpenAI, removed 2027-02-26. Switch to GPT Live Transcribe.",
           "streaming": true
         },
         {
           "id": "gpt-4o-transcribe",
           "name": "GPT-4o Transcribe",
-          "description": "Streaming server-VAD transcription. High accuracy.",
+          "description": "Deprecated by OpenAI, removed 2027-02-26. Switch to GPT Live Transcribe.",
           "streaming": true
         },
         {
           "id": "gpt-4o-transcribe-diarize",
           "name": "GPT-4o Transcribe + Diarize",
-          "description": "Transcription with speaker identification",
+          "description": "Speaker identification. Deprecated by OpenAI, removed 2027-02-26.",
           "streaming": false
         },
         {
           "id": "whisper-1",
           "name": "Whisper",
           "params": "1.5B",
-          "description": "Original Whisper model",
+          "description": "Original Whisper model. Deprecated by OpenAI, removed 2027-02-26.",
           "streaming": false
         }
       ]
@@ -94,7 +94,7 @@
         {
           "id": "qwen3-asr-flash-realtime",
           "name": "Qwen3-ASR-Flash Realtime",
-          "description": "Streaming ASR, 16 kHz audio. 30 langs + 22 Chinese dialects. (~$0.002/min)",
+          "description": "Streaming ASR, 16 kHz audio, biased by your dictionary. 30 langs + 22 Chinese dialects. (~$0.002/min)",
           "streaming": true
         },
         {

@@ -67,6 +67,21 @@ pub fn get_foreground_window_class() -> Result<Option<String>, String> {
     Ok(current_foreground_window_class())
 }
 
+/// Resolve the language the frontend hands over into what the provider's
+/// `session.update` expects: `None` for auto-detect ("auto", empty, or absent),
+/// otherwise a lower-case ISO 639-1 code. The stored `preferredLanguage` is a
+/// locale for English (`en-US` / `en-GB`); providers reject malformed codes, so
+/// the region suffix is dropped exactly as Standard mode's `normalize_language`
+/// does.
+fn session_language(language: Option<&str>) -> Option<String> {
+    let lang = language?.trim();
+    if lang.is_empty() || lang.eq_ignore_ascii_case("auto") {
+        return None;
+    }
+    let base = lang.split('-').next().unwrap_or(lang);
+    Some(base.to_ascii_lowercase())
+}
+
 #[tauri::command]
 pub async fn start_live_session(
     app: AppHandle,
@@ -92,14 +107,10 @@ pub async fn start_live_session(
     let provider = providers::lookup(&provider_id)
         .ok_or_else(|| format!("Unknown Live provider: {}", provider_id))?;
 
-    // Language is now optional (matches Standard mode's auto-detect). The
-    // adapter omits the field from session.update when caller passes None or
-    // "auto", letting the provider auto-detect from audio. We normalize "auto"
-    // to None here so the adapter sees a consistent value.
-    let language_for_session = match language.as_deref() {
-        Some("auto") | Some("") => None,
-        other => other.map(String::from),
-    };
+    // Language is optional (matches Standard mode's auto-detect). The adapter
+    // omits the field from session.update when this is None, letting the
+    // provider auto-detect from audio.
+    let language_for_session = session_language(language.as_deref());
 
     // Defensive fallback: if the frontend somehow passes an empty model
     // (stale/empty setting), fall back to the provider's documented default
@@ -191,7 +202,15 @@ pub async fn start_live_session(
                             emit_error(&app_for_task, session_id, message, kind);
                             break;
                         }
-                        Ok(Some(StreamingEvent::SessionClosed)) | Ok(None) => {}
+                        Ok(Some(StreamingEvent::SessionClosed)) => {
+                            // The provider ended the session on its own (we have
+                            // not sent end-of-audio yet); nothing more will be
+                            // transcribed, so surface it instead of pumping audio
+                            // into a finished session.
+                            emit_error(&app_for_task, session_id, "provider ended the session".to_string(), crate::transcription::streaming::ErrorKind::ServerError);
+                            break;
+                        }
+                        Ok(None) => {}
                         Err(e) => {
                             emit_error(&app_for_task, session_id, format!("websocket: {}", e), crate::transcription::streaming::ErrorKind::NetworkDrop);
                             break;
@@ -207,8 +226,10 @@ pub async fn start_live_session(
             }
         }
 
-        // Soft flush: commit any pending utterance, drain final events for up to 800ms
-        let _ = client.commit_utterance().await;
+        // Soft flush: tell the provider no more audio is coming (OpenAI: commit
+        // the buffer; DashScope: `session.finish`), then drain final events for
+        // up to 800ms or until the provider says the session is finished.
+        let _ = client.end_of_audio().await;
         let flush_deadline = tokio::time::Instant::now() + Duration::from_millis(800);
         loop {
             let remaining = flush_deadline.saturating_duration_since(tokio::time::Instant::now());
@@ -222,6 +243,7 @@ pub async fn start_live_session(
                         Ok(Some(evt @ StreamingEvent::UtteranceCompleted { .. })) => {
                             emit_utterance(&app_for_task, session_id, evt);
                         }
+                        Ok(Some(StreamingEvent::SessionClosed)) => break,
                         Ok(_) => {}
                         Err(_) => break,
                     }
@@ -354,4 +376,28 @@ fn emit_error(
             "kind": kind,
         }),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The frontend hands over the stored `preferredLanguage`, which for English
+    /// is a locale (`en-US` / `en-GB`). Providers take ISO 639-1 codes and reject
+    /// malformed ones, so the Live path must normalize exactly like Standard mode.
+    #[test]
+    fn session_language_normalizes_locales_to_iso_639_1() {
+        assert_eq!(session_language(Some("en-US")), Some("en".to_string()));
+        assert_eq!(session_language(Some("en-GB")), Some("en".to_string()));
+        assert_eq!(session_language(Some("zh")), Some("zh".to_string()));
+        assert_eq!(session_language(Some("JA")), Some("ja".to_string()));
+    }
+
+    #[test]
+    fn session_language_auto_and_empty_mean_auto_detect() {
+        assert_eq!(session_language(None), None);
+        assert_eq!(session_language(Some("auto")), None);
+        assert_eq!(session_language(Some("")), None);
+        assert_eq!(session_language(Some("  ")), None);
+    }
 }

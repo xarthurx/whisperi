@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased]
+
+### Highlights
+
+- Live dictation now defaults to OpenAI's recommended realtime model, GPT Live Transcribe. The older GPT-4o transcription models still work, but OpenAI is removing them in February 2027, so they are marked as deprecated in the model list
+- If Live dictation starts and stops within a second, check your OpenAI key first: a revoked key is only rejected after the connection opens, so it looks like a model outage. The reason is shown in Settings → Transcription → Live
+- Live dictation with a fixed English language no longer sends a region code the provider may reject
+- Qwen realtime dictation now follows Alibaba's current session protocol, sends your custom dictionary as recognition hints, and ends each session cleanly so the final words are delivered
+
+### Fixes
+
+- Changed the OpenAI Live default from `gpt-4o-mini-transcribe` to `gpt-live-transcribe`, which OpenAI's realtime-transcription guide recommends. OpenAI deprecated `whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe` and `gpt-4o-transcribe-diarize` on 2026-08-26 with API removal on 2027-02-26; they remain selectable (Live and batch) with the retirement date in their description, and `gpt-live-transcribe` now leads the OpenAI list so it is the Live picker's fallback. Existing Live selections are not changed automatically — a Live-only migration would need a separate table from the shared `RETIRED_MODELS` map because the batch replacement (`gpt-transcribe`) differs.
+- `session.update` now sends the `languages: [code]` array for `gpt-live-transcribe` / `gpt-transcribe` (OpenAI documents that the singular `language` must not be sent alongside it) and keeps the singular `language` for the legacy models. Auto-detect still omits both.
+- `start_live_session` normalizes locale codes to ISO 639-1 (`en-US` → `en`) the way Standard mode already did. Live mode previously forwarded the stored `preferredLanguage` verbatim, and both OpenAI and DashScope reject malformed language codes.
+- Brought the Qwen3-ASR-Flash-Realtime session up to DashScope's currently documented shape: `session.update` (not `transcription_session.update`) with `input_audio_format: "pcm"` plus a separate `sample_rate: 16000`, the dictionary sent as `input_audio_transcription.corpus.text` (the provider's context-biasing field; previously the dictionary was skipped for Qwen), and no `OpenAI-Beta: realtime=v1` header, which is not among DashScope's documented request headers.
+- The stop soft-flush now sends a provider-specific end-of-audio event: OpenAI keeps `input_audio_buffer.commit`, Qwen gets `session.finish`. DashScope rejects manual commits in server-VAD mode and discards the in-progress utterance if the socket closes without `session.finish`; the drain loop now also ends as soon as `session.finished` arrives instead of waiting out its 800ms deadline. An unsolicited `session.finished` mid-session is surfaced as a Live error rather than silently pumping audio into a finished session.
+- Every client `session.update` now carries an `event_id`, which DashScope documents as required.
+
+### Internal
+
+- `ProviderConfig` replaces `supports_transcription_prompt: bool` with `vocabulary_field: VocabularyField` (`None` / `Prompt` / `CorpusText`) and gains `end_of_audio_event`; `StreamingTranscriber` gains `end_of_audio()`. New unit tests cover the `languages` array switch, locale normalization, the Qwen `session.update` shape and corpus text, and `session.finished` parsing; the mock-WebSocket suite gains a `session.finish` → `session.finished` handshake test.
+- Diagnosis notes for the "Live mode starts then immediately stops" report of 2026-09-04: the machine's stored OpenAI key returned HTTP 401 `invalid_api_key` (the WebSocket handshake succeeds and the server rejects the first event, so the UI flashes "listening" before the `AuthFailed` error arrives). Neither the wire protocol nor model availability was the cause; `gpt-4o-mini-transcribe` still works until 2027-02-26.
+
 ## [0.8.7] - 2026-08-25
 
 ### Highlights

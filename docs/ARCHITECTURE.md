@@ -95,7 +95,7 @@ Whisperi is Windows-first. Clipboard read/write, terminal detection, and keystro
 |--------|---------|----------------|
 | **audio** | `audio/recorder.rs` | Device enumeration, recording lifecycle, sample-rate negotiation (16k → 44.1k → 48k → default), WAV encoding (16-bit PCM mono), audio-level events |
 | **transcription** | `transcription/cloud.rs` | Cloud providers (OpenAI, Groq, Mistral, Qwen, OpenRouter) — multipart HTTP or multimodal chat completions |
-| **transcription/streaming** | `transcription/streaming/{mod.rs, audio_pump.rs, providers.rs, realtime_openai_compatible.rs}` | Live mode: WebSocket streaming ASR over the OpenAI Realtime API wire protocol. Online resampler + PCM16 encoder feeds 100ms audio chunks; `.completed` utterance events emit Tauri events for the frontend to type into the focused window. |
+| **transcription/streaming** | `transcription/streaming/{mod.rs, audio_pump.rs, providers.rs, realtime_openai_compatible.rs}` | Live mode: WebSocket streaming ASR over the OpenAI Realtime API wire protocol (OpenAI `gpt-live-transcribe` / `gpt-transcribe`, Qwen3-ASR-Flash-Realtime). Online resampler + PCM16 encoder feeds 100ms audio chunks; `.completed` utterance events emit Tauri events for the frontend to type into the focused window. `ProviderConfig` carries the per-provider `session.update` template, vocabulary field (`prompt` vs `corpus.text`) and end-of-audio event (`input_audio_buffer.commit` vs `session.finish`). |
 | **reasoning** | `reasoning/openai.rs`, `anthropic.rs`, `gemini.rs` | AI text enhancement. OpenAI-compatible (OpenAI, Groq, Qwen, OpenRouter) via Chat Completions; Anthropic via Messages API; Gemini via Generative API |
 | **clipboard** | `clipboard/mod.rs` | Win32 clipboard get/set, foreground-window terminal detection, paste via `SendInput` with terminal-aware key combos |
 | **database** | `database/mod.rs`, `migrations.rs` | SQLite via rusqlite. Single `transcriptions` table. Auto-migrates on startup. `Mutex<Connection>` for thread safety |
@@ -189,9 +189,12 @@ Live mode streams audio over WebSocket to a cloud ASR provider, typing utterance
 2.  useLiveDictation.start() snapshots foreground HWND
         ↓
 3.  invoke("start_live_session", { provider, api_key, model, language, dictionary })
-    → Rust opens WebSocket to provider
-    → OpenAI receives canonical vocabulary in its transcription prompt
-    → Providers without prompt support (currently Qwen) omit the field
+    → Rust normalizes the language (`en-US` → `en`; auto/empty → omitted) and opens
+      the WebSocket to the provider
+    → session.update: OpenAI's `gpt-live-transcribe` / `gpt-transcribe` take a
+      `languages: [code]` array, legacy models the singular `language`; canonical
+      vocabulary goes into OpenAI's transcription `prompt` or Qwen's
+      `input_audio_transcription.corpus.text`
     → Spawns audio pump tokio task; returns the new `session_id` (u64)
         ↓
 4.  cpal feeds samples at 100ms ticks → pump online-resamples to provider rate, encodes PCM16, sends base64 over WS
@@ -214,7 +217,9 @@ Live mode streams audio over WebSocket to a cloud ASR provider, typing utterance
 6.  User releases hotkey / clicks stop
         ↓
 7.  invoke("stop_live_session", { session_id })  →  returns ()
-    → Rust signals cancel, runs ~800ms soft-flush (commit_utterance + drain), closes WS
+    → Rust signals cancel, runs the soft-flush (provider end-of-audio event — OpenAI
+      `input_audio_buffer.commit`, Qwen `session.finish` — then drains for up to
+      ~800ms or until Qwen's `session.finished`), closes WS
     → Final "live-utterance" events may arrive during the soft-flush; the frontend chains them onto its accumulator
         ↓
 8.  Enhancement (optional):
@@ -256,7 +261,8 @@ canonical `term`, zero or more likely ASR `aliases`, and a `policy` of
 `contextual` or `always`. The loader also accepts the legacy `string[]` format
 and normalizes it in memory, so existing settings remain valid.
 
-- Canonical terms bias buffered providers and OpenAI Live transcription.
+- Canonical terms bias buffered providers and Live transcription (OpenAI prompt,
+  Qwen corpus text).
 - `always` aliases are replaced locally before optional enhancement in both
   Standard and Live modes.
 - `contextual` aliases are expressed as explicit mappings in the AI enhancement

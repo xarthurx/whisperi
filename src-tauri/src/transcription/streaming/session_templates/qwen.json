@@ -1,9 +1,9 @@
 {
-  "type": "transcription_session.update",
+  "type": "session.update",
   "session": {
-    "input_audio_format": "pcm16",
+    "input_audio_format": "pcm",
+    "sample_rate": 16000,
     "input_audio_transcription": {
-      "model": "{model}",
       "language": "{language}"
     },
     "turn_detection": {

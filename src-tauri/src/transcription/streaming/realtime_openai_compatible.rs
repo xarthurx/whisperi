@@ -16,7 +16,7 @@ use tokio_tungstenite::{
     tungstenite::{Message, client::IntoClientRequest, protocol::WebSocketConfig},
 };
 
-use super::providers::{AuthScheme, ProviderConfig, VadMode};
+use super::providers::{AuthScheme, ProviderConfig, VadMode, VocabularyField};
 use super::reorder::ReorderBuffer;
 use super::{SessionConfig, StreamingEvent, StreamingTranscriber, ErrorKind};
 use std::collections::VecDeque;
@@ -130,6 +130,7 @@ impl RealtimeOpenAiCompatibleClient {
             WireEvent::Error { message, kind } => {
                 Ok(Some(StreamingEvent::Error { message, kind }))
             }
+            WireEvent::Finished => Ok(Some(StreamingEvent::SessionClosed)),
             WireEvent::Ignored => Ok(None),
         }
     }
@@ -203,6 +204,10 @@ enum WireEvent {
     /// A transcription finished. `transcript` may be empty (silence/noise).
     Completed { item_id: String, transcript: String },
     Error { message: String, kind: ErrorKind },
+    /// The server ended the session (DashScope's `session.finished`, sent after
+    /// the trailing utterance in reply to `session.finish`). Nothing more will
+    /// arrive; the client should close the socket.
+    Finished,
     /// A message we don't act on (session.created, deltas, pings, …).
     Ignored,
 }
@@ -256,6 +261,7 @@ fn parse_event(v: &Value) -> Result<WireEvent> {
             let kind = classify_error(code);
             Ok(WireEvent::Error { message, kind })
         }
+        "session.finished" => Ok(WireEvent::Finished),
         _ => Ok(WireEvent::Ignored),
     }
 }
@@ -284,29 +290,64 @@ fn classify_error(code: &str) -> ErrorKind {
     }
 }
 
+/// Whether an OpenAI transcription model takes the plural `languages` array.
+/// `gpt-transcribe` and `gpt-live-transcribe` (and their dated snapshots) do,
+/// and OpenAI's docs say the singular `language` must not be sent alongside it.
+/// The legacy `whisper-1` / `gpt-4o-*-transcribe` models take `language`.
+fn uses_languages_array(model: &str) -> bool {
+    model.starts_with("gpt-transcribe") || model.starts_with("gpt-live-transcribe")
+}
+
+/// Render the dictionary as one biasing sentence, deduplicated case-insensitively.
+/// `None` when nothing usable remains.
+fn vocabulary_hint(dictionary: &[String]) -> Option<String> {
+    let mut seen = std::collections::HashSet::new();
+    let terms: Vec<&str> = dictionary
+        .iter()
+        .map(|term| term.trim())
+        .filter(|term| !term.is_empty())
+        .filter(|term| seen.insert(term.to_lowercase()))
+        .collect();
+    if terms.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "Expected names and specialized vocabulary: {}.",
+        terms.join(", ")
+    ))
+}
+
 /// Build the `session.update` JSON for a session. The template carries a
 /// placeholder `{model}` and a literal `"language": "{language}"` field; this
-/// function substitutes the model, either substitutes a real language code or
-/// removes the language field entirely (for auto-detect), and supplies
-/// provider-supported vocabulary hints.
+/// function substitutes the model, replaces the language placeholder with the
+/// field the model expects (singular `language`, or the `languages` array for
+/// OpenAI's current models) or removes it entirely for auto-detect, writes the
+/// dictionary into the provider's vocabulary field, and stamps an `event_id`
+/// (optional for OpenAI, required by DashScope).
 ///
-/// Both OpenAI Realtime and Qwen3-ASR-Flash-Realtime treat an absent
-/// `language` as "auto-detect from audio" — same semantics as Standard mode's
-/// whisper.cpp without `-l`.
+/// Both OpenAI Realtime and Qwen3-ASR-Flash-Realtime treat an absent language
+/// as "auto-detect from audio" — same semantics as Standard mode's auto mode.
 fn build_session_update(
     template: &str,
     model: &str,
     language: Option<&str>,
     dictionary: &[String],
-    supports_transcription_prompt: bool,
+    vocabulary_field: &VocabularyField,
 ) -> Result<String> {
     let with_model = template.replace("{model}", model);
     let mut value: serde_json::Value =
         serde_json::from_str(&with_model).context("parse session template")?;
 
+    if let Some(root) = value.as_object_mut() {
+        root.insert(
+            "event_id".to_string(),
+            serde_json::json!(uuid::Uuid::new_v4().to_string()),
+        );
+    }
+
     // The transcription config lives at one of two paths depending on provider:
-    //   - OpenAI Realtime (new shape): session.audio.input.transcription
-    //   - Qwen / OpenAI Realtime (legacy shape): session.input_audio_transcription
+    //   - OpenAI Realtime (GA shape): session.audio.input.transcription
+    //   - Qwen3-ASR-Flash-Realtime:   session.input_audio_transcription
     // Both providers' templates put `"language": "{language}"` inside that
     // object; we navigate to it and either set the real value or drop the
     // field (auto-detect).
@@ -322,33 +363,30 @@ fn build_session_update(
         .pointer_mut(path)
         .and_then(|t| t.as_object_mut())
         .ok_or_else(|| anyhow!("session template missing transcription config"))?;
-    match language {
-        Some(lang) if !lang.is_empty() && lang != "auto" => {
+    transcription.remove("language");
+    transcription.remove("languages");
+    if let Some(lang) = language.filter(|l| !l.is_empty() && *l != "auto") {
+        if uses_languages_array(model) {
+            transcription.insert("languages".to_string(), serde_json::json!([lang]));
+        } else {
             transcription.insert("language".to_string(), serde_json::json!(lang));
         }
-        _ => {
-            transcription.remove("language");
-        }
     }
-    if supports_transcription_prompt {
-        let mut seen = std::collections::HashSet::new();
-        let terms: Vec<&str> = dictionary
-            .iter()
-            .map(|term| term.trim())
-            .filter(|term| !term.is_empty())
-            .filter(|term| seen.insert(term.to_lowercase()))
-            .collect();
-        if !terms.is_empty() {
-            transcription.insert(
-                "prompt".to_string(),
-                serde_json::json!(format!(
-                    "Expected names and specialized vocabulary: {}.",
-                    terms.join(", ")
-                )),
-            );
+    transcription.remove("prompt");
+    transcription.remove("corpus");
+    if let Some(hint) = vocabulary_hint(dictionary) {
+        match vocabulary_field {
+            VocabularyField::Prompt => {
+                transcription.insert("prompt".to_string(), serde_json::json!(hint));
+            }
+            VocabularyField::CorpusText => {
+                transcription.insert(
+                    "corpus".to_string(),
+                    serde_json::json!({ "text": hint }),
+                );
+            }
+            VocabularyField::None => {}
         }
-    } else {
-        transcription.remove("prompt");
     }
     Ok(serde_json::to_string(&value).context("serialize session.update")?)
 }
@@ -426,7 +464,7 @@ impl StreamingTranscriber for RealtimeOpenAiCompatibleClient {
             &cfg.model,
             cfg.language.as_deref(),
             &cfg.dictionary,
-            self.cfg.supports_transcription_prompt,
+            &self.cfg.vocabulary_field,
         )?;
         log::info!(
             "[Live] sending session.update ({} bytes)",
@@ -453,6 +491,15 @@ impl StreamingTranscriber for RealtimeOpenAiCompatibleClient {
         self.send_text(&evt.to_string()).await
     }
 
+    async fn end_of_audio(&mut self) -> Result<()> {
+        let evt = serde_json::json!({
+            "event_id": uuid::Uuid::new_v4().to_string(),
+            "type": self.cfg.end_of_audio_event,
+        });
+        log::info!("[Live] sending end-of-audio event {}", self.cfg.end_of_audio_event);
+        self.send_text(&evt.to_string()).await
+    }
+
     async fn close(&mut self) -> Result<()> {
         if let Some(mut sink) = self.sink.take() {
             let _ = sink.send(Message::Close(None)).await;
@@ -475,6 +522,34 @@ impl RealtimeOpenAiCompatibleClient {
 mod tests {
     use super::*;
 
+    use crate::transcription::streaming::providers::{
+        OPENAI_REALTIME, QWEN_REALTIME, VocabularyField,
+    };
+
+    fn openai_update(model: &str, language: Option<&str>, dictionary: &[String]) -> Value {
+        let json = build_session_update(
+            OPENAI_REALTIME.session_template,
+            model,
+            language,
+            dictionary,
+            &OPENAI_REALTIME.vocabulary_field,
+        )
+        .unwrap();
+        serde_json::from_str(&json).unwrap()
+    }
+
+    fn qwen_update(language: Option<&str>, dictionary: &[String]) -> Value {
+        let json = build_session_update(
+            QWEN_REALTIME.session_template,
+            "qwen3-asr-flash-realtime",
+            language,
+            dictionary,
+            &QWEN_REALTIME.vocabulary_field,
+        )
+        .unwrap();
+        serde_json::from_str(&json).unwrap()
+    }
+
     #[test]
     fn session_update_adds_openai_vocabulary_prompt() {
         let dictionary = vec![
@@ -482,15 +557,7 @@ mod tests {
             "Tauri".to_string(),
             "claude".to_string(),
         ];
-        let json = build_session_update(
-            crate::transcription::streaming::providers::OPENAI_REALTIME.session_template,
-            "gpt-4o-mini-transcribe",
-            Some("en"),
-            &dictionary,
-            true,
-        )
-        .unwrap();
-        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let value = openai_update("gpt-4o-mini-transcribe", Some("en"), &dictionary);
         let transcription = value
             .pointer("/session/audio/input/transcription")
             .unwrap();
@@ -501,23 +568,131 @@ mod tests {
         );
     }
 
+    /// OpenAI's `gpt-live-transcribe` and `gpt-transcribe` take the plural
+    /// `languages` array and the docs say the singular `language` must not be
+    /// sent alongside it. The legacy `gpt-4o-*`/`whisper-1` models still take
+    /// the singular field (covered above).
     #[test]
-    fn session_update_omits_prompt_for_unsupported_provider() {
-        let dictionary = vec!["CLAUDE".to_string()];
-        let json = build_session_update(
-            crate::transcription::streaming::providers::QWEN_REALTIME.session_template,
-            "qwen3-asr-flash-realtime",
-            None,
-            &dictionary,
-            false,
-        )
-        .unwrap();
-        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+    fn session_update_uses_languages_array_for_new_openai_models() {
+        for model in ["gpt-live-transcribe", "gpt-transcribe"] {
+            let value = openai_update(model, Some("zh"), &[]);
+            let transcription = value
+                .pointer("/session/audio/input/transcription")
+                .unwrap();
+            assert_eq!(transcription["model"], model);
+            assert_eq!(
+                transcription["languages"],
+                serde_json::json!(["zh"]),
+                "{model} must receive `languages`"
+            );
+            assert!(
+                transcription.get("language").is_none(),
+                "{model} must not also receive the singular `language`"
+            );
+        }
+    }
+
+    #[test]
+    fn session_update_legacy_model_never_gets_languages_array() {
+        let value = openai_update("gpt-4o-transcribe", Some("en"), &[]);
+        let transcription = value
+            .pointer("/session/audio/input/transcription")
+            .unwrap();
+        assert_eq!(transcription["language"], "en");
+        assert!(transcription.get("languages").is_none());
+    }
+
+    #[test]
+    fn session_update_auto_detect_omits_both_language_fields() {
+        for model in ["gpt-live-transcribe", "gpt-4o-mini-transcribe"] {
+            for language in [None, Some("auto"), Some("")] {
+                let value = openai_update(model, language, &[]);
+                let transcription = value
+                    .pointer("/session/audio/input/transcription")
+                    .unwrap();
+                assert!(transcription.get("language").is_none(), "{model} {language:?}");
+                assert!(transcription.get("languages").is_none(), "{model} {language:?}");
+            }
+        }
+    }
+
+    /// Every client event carries an `event_id`; DashScope documents it as
+    /// required on `session.update`, OpenAI as optional.
+    #[test]
+    fn session_update_carries_event_id() {
+        let openai = openai_update("gpt-live-transcribe", None, &[]);
+        assert!(!openai["event_id"].as_str().unwrap_or("").is_empty());
+        let qwen = qwen_update(None, &[]);
+        assert!(!qwen["event_id"].as_str().unwrap_or("").is_empty());
+    }
+
+    /// Qwen3-ASR-Flash-Realtime's documented `session.update` shape: `pcm` plus a
+    /// separate `sample_rate`, language under `input_audio_transcription`, and
+    /// server VAD. (The old `transcription_session.update` / `pcm16` shape is no
+    /// longer documented.)
+    #[test]
+    fn qwen_session_update_matches_documented_shape() {
+        let value = qwen_update(Some("zh"), &[]);
+        assert_eq!(value["type"], "session.update");
+        let session = &value["session"];
+        assert_eq!(session["input_audio_format"], "pcm");
+        assert_eq!(session["sample_rate"], 16_000);
+        assert_eq!(session["input_audio_transcription"]["language"], "zh");
+        assert_eq!(session["turn_detection"]["type"], "server_vad");
+        assert_eq!(session["turn_detection"]["silence_duration_ms"], 400);
+    }
+
+    /// Qwen biases recognition through `input_audio_transcription.corpus.text`,
+    /// not an OpenAI-style `prompt`.
+    #[test]
+    fn qwen_session_update_puts_vocabulary_in_corpus_text() {
+        let dictionary = vec!["CLAUDE".to_string(), "Tauri".to_string(), "claude".to_string()];
+        let value = qwen_update(None, &dictionary);
         let transcription = value
             .pointer("/session/input_audio_transcription")
             .unwrap();
         assert!(transcription.get("language").is_none());
         assert!(transcription.get("prompt").is_none());
+        assert_eq!(
+            transcription["corpus"]["text"],
+            "Expected names and specialized vocabulary: CLAUDE, Tauri."
+        );
+    }
+
+    #[test]
+    fn qwen_session_update_without_vocabulary_has_no_corpus() {
+        let value = qwen_update(None, &[]);
+        let transcription = value
+            .pointer("/session/input_audio_transcription")
+            .unwrap();
+        assert!(transcription.get("corpus").is_none());
+    }
+
+    #[test]
+    fn session_update_omits_vocabulary_when_provider_has_no_field() {
+        let dictionary = vec!["CLAUDE".to_string()];
+        let json = build_session_update(
+            QWEN_REALTIME.session_template,
+            "qwen3-asr-flash-realtime",
+            None,
+            &dictionary,
+            &VocabularyField::None,
+        )
+        .unwrap();
+        let value: Value = serde_json::from_str(&json).unwrap();
+        let transcription = value
+            .pointer("/session/input_audio_transcription")
+            .unwrap();
+        assert!(transcription.get("prompt").is_none());
+        assert!(transcription.get("corpus").is_none());
+    }
+
+    /// Qwen answers `session.finish` with `session.finished` once the trailing
+    /// utterance has been delivered; the soft-flush stops draining on it.
+    #[test]
+    fn parse_event_session_finished_is_terminal() {
+        let json = r#"{"type":"session.finished","event_id":"event_9"}"#;
+        assert!(matches!(parse(json), WireEvent::Finished));
     }
 
     #[tokio::test]

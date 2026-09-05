@@ -1,10 +1,11 @@
 //! Streaming transcription — Live mode backend.
 //!
 //! `StreamingTranscriber` is the trait every realtime ASR backend implements.
-//! Two providers ship MVP: OpenAI Realtime (`gpt-4o-mini-transcribe` /
-//! `gpt-4o-transcribe`) and Alibaba Qwen3-ASR-Flash-Realtime. Both speak the
-//! OpenAI Realtime API wire protocol so they share a single concrete
-//! implementation, parameterized by `ProviderConfig`.
+//! Two providers ship: OpenAI Realtime (`gpt-live-transcribe` / `gpt-transcribe`,
+//! plus the deprecated `gpt-4o-*-transcribe` models until 2027-02-26) and
+//! Alibaba Qwen3-ASR-Flash-Realtime. Both speak the OpenAI Realtime API wire
+//! protocol so they share a single concrete implementation, parameterized by
+//! `ProviderConfig`.
 
 pub mod audio_pump;
 pub mod providers;
@@ -56,9 +57,15 @@ pub trait StreamingTranscriber: Send {
     async fn push_pcm16(&mut self, samples: &[i16]) -> anyhow::Result<()>;
 
     /// Send `input_audio_buffer.commit` to flush any pending utterance.
-    /// Used for manual-commit providers (OpenAI gpt-realtime-whisper) and as
-    /// the soft-flush trigger on stop for all providers.
+    /// Used for manual-commit providers (OpenAI gpt-realtime-whisper).
     async fn commit_utterance(&mut self) -> anyhow::Result<()>;
+
+    /// Tell the provider no more audio is coming, so it finalises whatever it is
+    /// still holding — the stop soft-flush trigger. Provider-specific: OpenAI
+    /// commits the buffer; DashScope needs `session.finish` (it rejects manual
+    /// commits in server-VAD mode and drops the in-progress utterance if the
+    /// socket is closed without it) and answers with `session.finished`.
+    async fn end_of_audio(&mut self) -> anyhow::Result<()>;
 
     /// Close the WebSocket cleanly.
     async fn close(&mut self) -> anyhow::Result<()>;

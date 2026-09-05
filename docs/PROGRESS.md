@@ -1,5 +1,17 @@
 # Progress
 
+## Live provider refresh (unreleased, 2026-09-05)
+
+Triggered by a report that Live mode "starts and immediately stops". Root cause on this machine was the stored OpenAI key (HTTP 401 `invalid_api_key` on both the Realtime WebSocket and `/v1/models`); the WebSocket handshake itself succeeds, so the overlay shows "listening" until the server rejects the first event. Fixing that is a Settings action (paste a fresh key), not code.
+
+Provider audit done alongside it (docs only — no valid OpenAI or Qwen key was available to exercise the new paths):
+
+- OpenAI deprecated `whisper-1` and the `gpt-4o-*-transcribe` family on 2026-08-26 (removal 2027-02-26) and recommends `gpt-live-transcribe` for realtime. Default Live model switched; `gpt-live-transcribe` / `gpt-transcribe` take a `languages` array instead of `language`. The Realtime *beta* (`OpenAI-Beta: realtime=v1`) was removed on 2026-05-12; the OpenAI adapter never sent it.
+- Alibaba now recommends `qwen-audio-3.0-asr-flash-streaming`, but it speaks the DashScope-native `run-task` protocol, not the OpenAI-style wire this client implements, so `qwen3-asr-flash-realtime` (still current, snapshots through 2026-02-10) stays. Its `session.update` shape, `corpus.text` biasing field and `session.finish` handshake were updated to the current docs.
+- Live-mode language codes are now normalized (`en-US` → `en`) like Standard mode.
+
+Open verification items are listed under TODO → Live mode stabilization.
+
 ## Semantic Punctuation Restoration (v0.8.6)
 
 - Standard and Full enhancement now treat punctuation-free transcripts as an
