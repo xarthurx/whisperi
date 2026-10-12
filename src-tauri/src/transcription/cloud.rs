@@ -62,14 +62,21 @@ pub fn strip_prompt_echo(
     };
 
     // Full echo: every word in text comes from the prompt → probable silence.
-    // Never discard a protected canonical term, though: it may be exactly what
-    // the user spoke, and prompt membership alone cannot distinguish that from
-    // a hallucinated echo.
+    // A complete protected phrase anywhere in the output may be spoken
+    // vocabulary, including a pair of terms or words in language conditioning.
+    // Prompt membership alone cannot distinguish that from a hallucinated echo.
     let text_tokens = tokenize(trimmed);
-    let exactly_protected = protected_terms
+    let protected_tokens: Vec<Vec<String>> = protected_terms
         .iter()
-        .any(|term| tokenize(term) == text_tokens);
-    if is_dictionary_echo(trimmed, p) && !exactly_protected {
+        .map(|term| tokenize(term))
+        .filter(|term| !term.is_empty())
+        .collect();
+    let contains_protected = |tokens: &[String]| {
+        protected_tokens
+            .iter()
+            .any(|term| tokens.windows(term.len()).any(|span| span == term))
+    };
+    if is_dictionary_echo(trimmed, p) && !contains_protected(&text_tokens) {
         log::warn!(
             "[Whisperi] Stripped dictionary echo (silence): \"{}\"",
             trimmed
@@ -108,6 +115,9 @@ pub fn strip_prompt_echo(
         // text_words are &str slices into trimmed, so this is always valid UTF-8.
         let last = text_words[match_count - 1];
         let byte_offset = last.as_ptr() as usize - trimmed.as_ptr() as usize + last.len();
+        if contains_protected(&tokenize(&trimmed[..byte_offset])) {
+            return trimmed.to_string();
+        }
         let stripped = trimmed[byte_offset..].trim();
         if !stripped.is_empty() {
             log::info!(
@@ -678,7 +688,15 @@ mod tests {
                 Some("Whisperi CLAUDE"),
                 &protected
             ),
-            ""
+            "Whisperi CLAUDE"
+        );
+        assert_eq!(
+            strip_prompt_echo(
+                "Whisperi CLAUDE this is real speech",
+                Some("Whisperi CLAUDE"),
+                &protected,
+            ),
+            "Whisperi CLAUDE this is real speech"
         );
     }
 

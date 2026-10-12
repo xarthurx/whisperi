@@ -1,5 +1,81 @@
 # Progress
 
+## v0.8.9 release (2026-10-12)
+
+- [COMPUTED] The user authorized publishing the dictionary-echo recovery fix
+  and submitting the new version to WinGet. Changelog and application version
+  metadata are synchronized to 0.8.9; release and package verification follow.
+
+## Dictionary echo recovery implementation (2026-10-12)
+
+- [COMPUTED] Standard transcription now retries the same WAV once when a
+  leading/trailing run contains at least three distinct consecutive dictionary
+  entries in prompt order. Casing, punctuation, multiword terms, CJK-adjacent
+  ASCII hints, and an echoed agent name are handled conservatively.
+- [COMPUTED] The second request removes dictionary hints while preserving
+  provider, model, and language conditioning. Its text and language detection
+  replace the first result; unchanged spoken lists and empty results survive.
+  A retry error is reported rather than deleting possibly spoken vocabulary or
+  pasting the suspect first response. Qwen batch sends no hints and bypasses
+  dictionary-based recovery.
+- [COMPUTED] The Standard cleanup path no longer deletes dictionary words based
+  on membership. Conditioning-echo suppression preserves complete protected
+  phrases, including canonical pairs and protected words overlapping the
+  conditioning text. Existing dictionary alias corrections still follow ASR.
+- [COMPUTED] Tests first reproduced the missing retry and deletion of canonical
+  pairs, then passed with recovery. A separate regression reproduced protected
+  vocabulary overlapping conditioning and a spoken protected prefix.
+- [COMPUTED] Verification: 239 Rust unit tests, 7 Rust integration tests, and
+  all 24 Bun tests pass. TypeScript checking passes. `cargo clippy --all-targets`
+  completes with the existing baseline warnings and no new recovery warnings.
+  Cloud responses were controlled fixtures; no production API calls were used.
+- [COMPUTED] A fresh independent review found no actionable issues. The final
+  Rust suite and lint checks were rerun after review and passed with the same
+  counts and baseline warnings.
+- [INFERRED] Live streaming recovery would need retained utterance audio; this
+  change addresses the diagnosed Standard-mode failure. Segment confidence is
+  still a separate follow-up, and historical missing speech cannot be recovered
+  without its original audio.
+
+## Dictionary suffix investigation (2026-10-12)
+
+- [COMPUTED] A read-only scan of 3,881 local history rows found 18 original
+  transcripts ending in runs of at least three current dictionary/agent terms.
+  The latest two are rows 7890 and 7895 on 2026-10-11, lasting 31.915 and 32.157
+  seconds; both already contain `Tauri cairo wezterm ultrathink Komodo Jasper`
+  before enhancement. Enhancement preserves and punctuates that run.
+- [COMPUTED] The current Standard configuration uses Groq
+  `whisper-large-v3-turbo`, Auto language, and Standard enhancement.
+  `buildTranscriptionDictionary` appends the agent name to the canonical terms;
+  `build_prompt` sends the resulting space-separated list as the entire prompt
+  in Auto mode.
+- [COMPUTED] v0.8.5 (`c477da9`) widened `protected_terms` from agent names to
+  every canonical dictionary term. `strip_dictionary_edge_echo` subtracts all
+  protected tokens from its candidates, leaving an empty set in the normal
+  frontend call. Its existing tests supply empty or agent-only protection,
+  rather than the complete protection list the frontend now sends.
+- [COMPUTED] An isolated Rust probe using the unchanged filter functions and
+  the frontend's actual dictionary-protection helper confirmed that both echo
+  filters preserve mixed speech plus a dictionary suffix. Reverting to
+  agent-only protection alone is insufficient: the protected `Jasper` at the
+  end stops the backward scan before the preceding echoed dictionary terms.
+- [INFERRED] The matching ordered vocabulary run originates in transcription
+  prompt echo, upstream of enhancement and paste. Several affected originals
+  end mid-clause before the run. The history does not retain the audio needed
+  to establish exactly which spoken ending was omitted; the two recent
+  recordings being just over 30 seconds suggests a short final decoding window
+  as a possible trigger, not a verified provider implementation detail.
+- [COMPUTED] The recorder's silence gate evaluates whole recordings, so speech
+  earlier in a clip allows a silent/noisy tail through. The cloud response
+  parser discards segment metadata even when `verbose_json` is requested.
+- [INFERRED] A corrective implementation should detect sufficiently long
+  ordered dictionary runs, including an echoed agent name, while preserving
+  genuine individual dictionary terms. Retrying the same retained request
+  audio without vocabulary hints can recover omitted speech; stripping the
+  list alone cannot. Segment confidence and speech/silence evidence should
+  support the decision. The initial investigation made no runtime changes;
+  implementation and verification are recorded above.
+
 ## Live provider refresh (unreleased, 2026-09-05)
 
 Triggered by a report that Live mode "starts and immediately stops". Root cause on this machine was the stored OpenAI key (HTTP 401 `invalid_api_key` on both the Realtime WebSocket and `/v1/models`); the WebSocket handshake itself succeeds, so the overlay shows "listening" until the server rejects the first event. Fixing that is a Settings action (paste a fresh key), not code.

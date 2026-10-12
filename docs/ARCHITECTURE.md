@@ -95,6 +95,7 @@ Whisperi is Windows-first. Clipboard read/write, terminal detection, and keystro
 |--------|---------|----------------|
 | **audio** | `audio/recorder.rs` | Device enumeration, recording lifecycle, sample-rate negotiation (16k → 44.1k → 48k → default), WAV encoding (16-bit PCM mono), audio-level events |
 | **transcription** | `transcription/cloud.rs` | Cloud providers (OpenAI, Groq, Mistral, Qwen, OpenRouter) — multipart HTTP or multimodal chat completions |
+| **dictionary echo recovery** | `transcription/dictionary_echo.rs` | [COMPUTED] Standard transcription detects distinct ordered vocabulary runs at output edges and verifies them by retrying identical audio once without dictionary hints; successful retry text/language are authoritative, and retry failures are surfaced. |
 | **transcription/streaming** | `transcription/streaming/{mod.rs, audio_pump.rs, providers.rs, realtime_openai_compatible.rs}` | Live mode: WebSocket streaming ASR over the OpenAI Realtime API wire protocol (OpenAI `gpt-live-transcribe` / `gpt-transcribe`, Qwen3-ASR-Flash-Realtime). Online resampler + PCM16 encoder feeds 100ms audio chunks; `.completed` utterance events emit Tauri events for the frontend to type into the focused window. `ProviderConfig` carries the per-provider `session.update` template, vocabulary field (`prompt` vs `corpus.text`) and end-of-audio event (`input_audio_buffer.commit` vs `session.finish`). |
 | **reasoning** | `reasoning/openai.rs`, `anthropic.rs`, `gemini.rs` | AI text enhancement. OpenAI-compatible (OpenAI, Groq, Qwen, OpenRouter) via Chat Completions; Anthropic via Messages API; Gemini via Generative API |
 | **clipboard** | `clipboard/mod.rs` | Win32 clipboard get/set, foreground-window terminal detection, paste via `SendInput` with terminal-aware key combos |
@@ -160,7 +161,11 @@ Language codes from `languageRegistry.json` use locale format (`en-US`, `en-GB`)
 6.  Cloud transcription:
     invoke("transcribe_cloud", { audio, provider, api_key, model, ... })
     → Provider receives canonical vocabulary as recognition context where supported
-    → Prompt-echo cleanup preserves an exact canonical term the user may have spoken
+    → [COMPUTED] Ordered edge lists of 3+ distinct dictionary entries trigger one
+      retry of identical audio without dictionary hints, retaining language conditioning
+    → [COMPUTED] Retry text/language are authoritative, including genuinely spoken lists
+    → [COMPUTED] Individual dictionary words and pairs are preserved; only unprotected
+      language-conditioning echoes and known whole-output hallucinations are filtered
         ↓
 7.  Apply local "Always replace" dictionary aliases using whole-word boundaries
         ↓

@@ -1,4 +1,5 @@
 pub mod cloud;
+pub(crate) mod dictionary_echo;
 pub mod hallucination;
 pub mod normalize;
 pub mod streaming;

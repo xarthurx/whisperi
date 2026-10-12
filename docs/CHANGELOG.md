@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.9] - 2026-10-12
+
+### Highlights
+
+- [COMPUTED] Dictionary words you actually say are preserved, and unexpected vocabulary lists trigger a fresh transcription to recover the ending.
+
+### Fixes
+
+- [COMPUTED] Standard cloud dictation detects runs of at least three distinct dictionary entries in prompt order at a transcript edge, including an echoed agent name, and retries the same audio once with the same provider/model/language settings but no dictionary hints. A successful retry supplies both text and detected language; genuine spoken lists and empty results are retained. Retry failures are reported instead of pasting the contaminated first result. Qwen batch, which receives no vocabulary hints, does not retry on dictionary membership.
+- [COMPUTED] Removed dictionary-membership and individual edge-word deletion from the Standard pipeline. Language-conditioning echo cleanup also preserves complete protected phrases within the output or a candidate prefix, covering canonical pairs and vocabulary shared with conditioning text.
+- [COMPUTED] Added regression coverage for ordered and unordered lists, CJK-adjacent echoes, multiword and duplicate entries, protected terms and pairs, repeated lists, identical retry audio, dictionary-free Single/Bilingual prompts, recovered language/Chinese normalization, genuine spoken lists, empty replies, and failed retries.
+
 ## [0.8.8] - 2026-09-05
 
 ### Highlights

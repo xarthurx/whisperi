@@ -1,6 +1,7 @@
 use super::ResultExt;
 use crate::transcription;
 use serde::Serialize;
+use std::future::Future;
 
 /// Normalize locale codes like "en-US" to ISO 639-1 "en" for transcription APIs.
 fn normalize_language(lang: Option<String>) -> Option<String> {
@@ -89,8 +90,16 @@ fn script_language<'a>(text: &str, primary: &'a str, secondary: &'a str) -> Opti
     if (pc == Script::Kana && sc == Script::Han) || (pc == Script::Han && sc == Script::Kana) {
         let has_kana = text.chars().any(|c| char_script(c) == Some(Script::Kana));
         let has_han = text.chars().any(|c| char_script(c) == Some(Script::Han));
-        let kana_lang = if pc == Script::Kana { primary } else { secondary };
-        let han_lang = if pc == Script::Han { primary } else { secondary };
+        let kana_lang = if pc == Script::Kana {
+            primary
+        } else {
+            secondary
+        };
+        let han_lang = if pc == Script::Han {
+            primary
+        } else {
+            secondary
+        };
         return match (has_kana, has_han) {
             (true, _) => Some(kana_lang),
             (false, true) => Some(han_lang),
@@ -100,9 +109,8 @@ fn script_language<'a>(text: &str, primary: &'a str, secondary: &'a str) -> Opti
 
     // A char counts toward a language when it is in that language's script;
     // Han also counts toward Japanese (kanji inside Japanese text).
-    let counts_toward = |cs: Script, class: Script| {
-        cs == class || (class == Script::Kana && cs == Script::Han)
-    };
+    let counts_toward =
+        |cs: Script, class: Script| cs == class || (class == Script::Kana && cs == Script::Han);
     let weight = |cs: Script| match cs {
         Script::Han | Script::Kana | Script::Hangul => 3.0_f32,
         _ => 1.0,
@@ -215,66 +223,131 @@ pub async fn transcribe_cloud(
         !api_key.is_empty()
     );
 
-    let (primary, secondary, prompt, engine_lang) =
-        prepare_language_params(language, secondary_language, &dictionary);
-
-    let output = match provider.as_str() {
-        "openai" => transcription::cloud::transcribe_openai(
-            audio_data,
-            &api_key,
-            &model,
-            engine_lang.as_deref(),
-            Some(prompt.as_str()),
-            None,
-        )
-        .await
-        .str_err()?,
-
-        "groq" => transcription::cloud::transcribe_groq(
-            audio_data,
-            &api_key,
-            &model,
-            engine_lang.as_deref(),
-            Some(prompt.as_str()),
-        )
-        .await
-        .str_err()?,
-
-        "qwen" => transcription::cloud::transcribe_qwen(audio_data, &api_key, &model)
-            .await
-            .str_err()?,
-
-        "mistral" => transcription::cloud::transcribe_mistral(
-            audio_data,
-            &api_key,
-            &model,
-            engine_lang.as_deref(),
-            Some(prompt.as_str()),
-        )
-        .await
-        .str_err()?,
-
-        "openrouter" => transcription::cloud::transcribe_openrouter(
-            audio_data,
-            &api_key,
-            &model,
-            engine_lang.as_deref(),
-            Some(prompt.as_str()),
-        )
-        .await
-        .str_err()?,
-
-        other => return Err(format!("Unknown transcription provider: {}", other)),
+    let engine_lang = if secondary_language.is_some() {
+        None
+    } else {
+        normalize_language(language.clone())
     };
+    transcribe_cloud_with_request(
+        audio_data,
+        language,
+        secondary_language,
+        dictionary,
+        protected_terms,
+        provider != "qwen",
+        |audio, prompt| {
+            request_cloud_transcription(
+                audio,
+                &provider,
+                &api_key,
+                &model,
+                engine_lang.as_deref(),
+                prompt,
+            )
+        },
+    )
+    .await
+}
 
+async fn request_cloud_transcription(
+    audio_data: Vec<u8>,
+    provider: &str,
+    api_key: &str,
+    model: &str,
+    language: Option<&str>,
+    prompt: String,
+) -> anyhow::Result<transcription::cloud::CloudTranscription> {
+    match provider {
+        "openai" => {
+            transcription::cloud::transcribe_openai(
+                audio_data,
+                api_key,
+                model,
+                language,
+                Some(prompt.as_str()),
+                None,
+            )
+            .await
+        }
+
+        "groq" => {
+            transcription::cloud::transcribe_groq(
+                audio_data,
+                api_key,
+                model,
+                language,
+                Some(prompt.as_str()),
+            )
+            .await
+        }
+
+        "qwen" => transcription::cloud::transcribe_qwen(audio_data, api_key, model).await,
+
+        "mistral" => {
+            transcription::cloud::transcribe_mistral(
+                audio_data,
+                api_key,
+                model,
+                language,
+                Some(prompt.as_str()),
+            )
+            .await
+        }
+
+        "openrouter" => {
+            transcription::cloud::transcribe_openrouter(
+                audio_data,
+                api_key,
+                model,
+                language,
+                Some(prompt.as_str()),
+            )
+            .await
+        }
+
+        other => Err(anyhow::anyhow!("Unknown transcription provider: {}", other)),
+    }
+}
+
+async fn transcribe_cloud_with_request<F, Fut>(
+    audio_data: Vec<u8>,
+    language: Option<String>,
+    secondary_language: Option<String>,
+    dictionary: Vec<String>,
+    protected_terms: Vec<String>,
+    supports_dictionary: bool,
+    request: F,
+) -> Result<TranscriptionResult, String>
+where
+    F: FnMut(Vec<u8>, String) -> Fut,
+    Fut: Future<Output = anyhow::Result<transcription::cloud::CloudTranscription>>,
+{
+    // Qwen batch has no vocabulary field: there are no sent hints to echo.
+    let dictionary = if supports_dictionary {
+        dictionary
+    } else {
+        Vec::new()
+    };
+    let (primary, secondary, prompt, _) =
+        prepare_language_params(language, secondary_language, &dictionary);
+    let (_, _, conditioning_prompt, _) =
+        prepare_language_params(primary.clone(), secondary.clone(), &[]);
+    let output = transcription::dictionary_echo::transcribe_with_recovery(
+        audio_data,
+        &dictionary,
+        prompt,
+        conditioning_prompt.clone(),
+        request,
+    )
+    .await
+    .str_err()?;
+
+    // Dictionary membership is not evidence that a word was unspoken. Only
+    // remove language-conditioning echoes here; a dictionary-free retry may
+    // have confirmed a genuinely spoken list, so never strip that list again.
     let stripped = transcription::cloud::strip_prompt_echo(
         &output.text,
-        Some(prompt.as_str()),
-        &protected_terms,
-    );
-    let stripped = transcription::cloud::strip_dictionary_edge_echo(
-        &stripped,
-        &dictionary,
+        Some(conditioning_prompt.as_str()),
         &protected_terms,
     );
     // Whole-output hallucination phrases (silence artifacts) are blanked; the
@@ -301,6 +374,214 @@ pub async fn transcribe_cloud(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transcription::cloud::CloudTranscription;
+    use std::collections::VecDeque;
+    use std::future::ready;
+
+    fn vocabulary() -> Vec<String> {
+        ["CLAUDE", "Tauri", "cairo", "wezterm", "Jasper"]
+            .map(String::from)
+            .to_vec()
+    }
+
+    fn cloud_output(text: &str, detected_language: Option<&str>) -> CloudTranscription {
+        CloudTranscription {
+            text: text.into(),
+            detected_language: detected_language.map(String::from),
+        }
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_preserves_canonical_terms_and_pairs() {
+        for spoken in ["CLAUDE", "CLAUDE Tauri", "please use Tauri"] {
+            let mut calls = 0;
+            let result = transcribe_cloud_with_request(
+                vec![1],
+                Some("auto".into()),
+                None,
+                vocabulary(),
+                vocabulary(),
+                true,
+                |_, _| {
+                    calls += 1;
+                    ready(Ok(cloud_output(spoken, Some("en"))))
+                },
+            )
+            .await
+            .unwrap();
+            assert_eq!(result.text, spoken);
+            assert_eq!(calls, 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_preserves_dictionary_words_also_found_in_language_conditioning() {
+        let dict = vec!["Hello".into(), "today".into()];
+        let result = transcribe_cloud_with_request(
+            vec![1],
+            Some("en".into()),
+            None,
+            dict.clone(),
+            dict,
+            true,
+            |_, _| ready(Ok(cloud_output("Hello today", Some("en")))),
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.text, "Hello today");
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_recovers_final_speech_and_uses_retry_language() {
+        let mut responses = VecDeque::from([
+            Ok(cloud_output(
+                "unfinished sentence Tauri cairo wezterm Jasper",
+                Some("en"),
+            )),
+            Ok(cloud_output("請使用 Tauri 和 CLAUDE。", Some("zh"))),
+        ]);
+        let result = transcribe_cloud_with_request(
+            vec![1],
+            Some("auto".into()),
+            None,
+            vocabulary(),
+            vocabulary(),
+            true,
+            |_, _| ready(responses.pop_front().unwrap()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.text, "请使用 Tauri 和 CLAUDE。");
+        assert_eq!(result.detected_language.as_deref(), Some("zh"));
+        assert!(responses.is_empty());
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_preserves_a_confirmed_dictionary_only_list() {
+        let spoken = "Tauri cairo wezterm Jasper";
+        let mut calls = 0;
+        let result = transcribe_cloud_with_request(
+            vec![1],
+            Some("auto".into()),
+            None,
+            vocabulary(),
+            vocabulary(),
+            true,
+            |_, _| {
+                calls += 1;
+                ready(Ok(cloud_output(spoken, Some("en"))))
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.text, spoken);
+        assert_eq!(calls, 2);
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_retry_keeps_single_and_bilingual_conditioning_without_hints() {
+        for (primary, secondary, expected) in [
+            (
+                "en-US",
+                None,
+                "Hello, how are you today? I'm fine, thank you! Let's begin.",
+            ),
+            (
+                "zh-CN",
+                Some("en-US"),
+                "Hello, how are you today? I'm fine, thank you! Let's begin. 你好，欢迎。今天过得怎么样？我很好，谢谢！让我们开始吧。",
+            ),
+        ] {
+            let mut prompts = Vec::new();
+            transcribe_cloud_with_request(
+                vec![1],
+                Some(primary.into()),
+                secondary.map(String::from),
+                vocabulary(),
+                vocabulary(),
+                true,
+                |_, prompt| {
+                    prompts.push(prompt);
+                    ready(Ok(cloud_output(
+                        if prompts.len() == 1 {
+                            "speech Tauri cairo wezterm Jasper"
+                        } else {
+                            "recovered speech"
+                        },
+                        None,
+                    )))
+                },
+            )
+            .await
+            .unwrap();
+            assert_eq!(prompts.len(), 2);
+            assert!(prompts[0].ends_with("CLAUDE Tauri cairo wezterm Jasper"));
+            assert_eq!(prompts[1], expected);
+        }
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_provider_without_hints_does_not_retry_or_delete_vocabulary() {
+        let mut prompts = Vec::new();
+        let result = transcribe_cloud_with_request(
+            vec![1],
+            Some("auto".into()),
+            None,
+            vocabulary(),
+            vocabulary(),
+            false,
+            |_, prompt| {
+                prompts.push(prompt);
+                ready(Ok(cloud_output("Tauri cairo wezterm Jasper", None)))
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.text, "Tauri cairo wezterm Jasper");
+        assert_eq!(prompts, vec![String::new()]);
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_empty_retry_does_not_restore_the_first_result() {
+        let mut responses = VecDeque::from([
+            Ok(cloud_output("speech Tauri cairo wezterm Jasper", None)),
+            Ok(cloud_output("", None)),
+        ]);
+        let result = transcribe_cloud_with_request(
+            vec![1],
+            None,
+            None,
+            vocabulary(),
+            vocabulary(),
+            true,
+            |_, _| ready(responses.pop_front().unwrap()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.text, "");
+        assert!(responses.is_empty());
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_retry_error_is_returned_without_a_contaminated_fallback() {
+        let mut responses = VecDeque::from([
+            Ok(cloud_output("speech Tauri cairo wezterm Jasper", None)),
+            Err(anyhow::anyhow!("provider unavailable")),
+        ]);
+        let error = transcribe_cloud_with_request(
+            vec![1],
+            None,
+            None,
+            vocabulary(),
+            vocabulary(),
+            true,
+            |_, _| ready(responses.pop_front().unwrap()),
+        )
+        .await
+        .unwrap_err();
+        assert!(error.contains("provider unavailable"));
+        assert!(responses.is_empty());
+    }
 
     #[test]
     fn resolve_keeps_in_set_detection_without_script_evidence() {
@@ -320,7 +601,12 @@ mod tests {
         // A Chinese transcript with a mis-detected in-pair "en" resolves to zh —
         // the transcript's script is ground truth.
         assert_eq!(
-            resolve_language(Some("en"), Some("zh"), Some("en"), "今天天气很好，我们去公园吧"),
+            resolve_language(
+                Some("en"),
+                Some("zh"),
+                Some("en"),
+                "今天天气很好，我们去公园吧"
+            ),
             Some("zh".to_string())
         );
     }
@@ -345,7 +631,10 @@ mod tests {
     fn resolve_out_of_set_detection_is_unresolved() {
         // Bilingual: a third-language detection no longer snaps to primary —
         // that snap injected an unspoken language into enhancement (translation bug).
-        assert_eq!(resolve_language(Some("zh"), Some("en"), Some("ko"), ""), None);
+        assert_eq!(
+            resolve_language(Some("zh"), Some("en"), Some("ko"), ""),
+            None
+        );
     }
 
     #[test]
@@ -360,7 +649,10 @@ mod tests {
             resolve_language(Some("de"), Some("fr"), Some("fr"), "Bonjour tout le monde"),
             Some("fr".to_string())
         );
-        assert_eq!(resolve_language(Some("de"), Some("fr"), None, "hello"), None);
+        assert_eq!(
+            resolve_language(Some("de"), Some("fr"), None, "hello"),
+            None
+        );
     }
 
     #[test]

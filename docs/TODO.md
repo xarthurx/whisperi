@@ -36,6 +36,10 @@
 
 ## Dictation stability follow-ups (deferred from 2026-07-23 fixes)
 
+- [x] [COMPUTED] Fix Standard-mode dictionary-list echoes diagnosed on
+  2026-10-12 (see PROGRESS): verify ordered edge runs with one dictionary-free
+  retry of the same audio, preserve genuine terms/pairs/lists, and surface
+  recovery failures without a contaminated fallback.
 - [ ] Apply the hallucination blocklist (`transcription/hallucination.rs`) to Live-mode utterances too — server VAD already gates silence, so deferred; wire into the utterance path if hallucinated utterances are ever reported in Live.
 - [ ] Parse `no_speech_prob`/`avg_logprob` from `verbose_json` responses (whisper-1/Groq/Mistral only) as an additional no-speech signal; the recorder gate + blocklist cover the default gpt-4o path, which returns no such metadata.
 - [ ] Consider dropping the conditioning sentence in Single/Bilingual prompts (auto mode already sends none) — it is the main text Whisper echoes on silence; the dictionary-only prompt is lower-risk.
