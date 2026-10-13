@@ -1,5 +1,13 @@
 # Progress
 
+## Bilingual dictionary-only prompt (unreleased, 2026-10-13)
+
+- **Symptom after v0.8.10:** Chinese dictation sometimes came back as an English translation with the same meaning (history #5866, #5868; Groq `whisper-large-v3-turbo`, bilingual en-US + zh).
+- **Evidence:** app log shows the raw Groq output already English (`detected language: en` for #5868) — the transcription step, not AI cleanup. On turbo, a noisy long Chinese TTS clip returned "This is my personal data, including my personal data, and my sleep and work…" only under the v0.8.10 en-first prompt (`English sentence + dictionary`), while Groq still reported `lang=Chinese`: detection is audio-only, but the decoder picks its output language from the prompt. Turbo also returned empty text on some clips whenever a conditioning sentence was present.
+- **Eval (turbo, 18 Chinese clips):** old two-language prompt 3 failures, v0.8.10 en-first 2, dictionary + zh sentence 2 (empty outputs, stray `Ｂ` marks), dictionary only 0, no prompt 0. English clips on turbo with dictionary only: 8/8. large-v3 dictionary only: 22/22 earlier.
+- **Fix (branch `fix/bilingual-dictionary-only-prompt`):** bilingual sends the dictionary only. Single mode unchanged (it forces `language`).
+- **Model note:** on long clips that start with English and continue in Chinese, turbo dropped the Chinese body under every prompt (even none), while `whisper-large-v3` transcribed all of them — prefer large-v3 for mixed dictation.
+
 ## v0.8.10 release (2026-10-13)
 
 - Published [v0.8.10](https://github.com/xarthurx/whisperi/releases/tag/v0.8.10) from `321ee2b` (release commit on top of squash-merged PR [#16](https://github.com/xarthurx/whisperi/pull/16), `69cef7f`). The release commit had to be cherry-picked onto `main` because its push to the PR branch had failed before the merge; the merged tree was verified identical to the tested PR head.

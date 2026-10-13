@@ -95,7 +95,7 @@ Whisperi is Windows-first. Clipboard read/write, terminal detection, and keystro
 |--------|---------|----------------|
 | **audio** | `audio/recorder.rs` | Device enumeration, recording lifecycle, sample-rate negotiation (16k → 44.1k → 48k → default), WAV encoding (16-bit PCM mono), audio-level events |
 | **transcription** | `transcription/cloud.rs` | Cloud providers (OpenAI, Groq, Mistral, Qwen, OpenRouter) — multipart HTTP or multimodal chat completions. Each request carries `RequestHints` (free-text `prompt` + `vocabulary` list) and the requested languages; `openai_form_fields` / `mistral_form_fields` decide per model family which fields are sent (`verbose_json` only for Whisper; `languages[]` + `keywords[]` for `gpt-transcribe`; `context_bias` for Mistral; no `prompt` for diarize models) |
-| **conditioning prompts** | `transcription/mod.rs` | Whisper `prompt` builders. Single/auto: the language's punctuation sentence + dictionary. Bilingual: ONE sentence (first slot that has one) — dictionary after a Latin-script sentence, before a CJK one — because two languages' sentences made Whisper write every segment twice (translation or duplicate) |
+| **conditioning prompts** | `transcription/mod.rs`, `commands/transcription.rs` | Whisper `prompt` builders. Single: the language's punctuation sentence + dictionary (with a forced `language`). Auto and Bilingual: dictionary only, no forced `language` — Groq Whisper picks its *output* language from the prompt, so any conditioning sentence in bilingual mode leaked into the output language (two sentences → doubled segments ≤ v0.8.9; one English sentence → whole English translations on whisper-large-v3-turbo in v0.8.10) |
 | **dictionary echo recovery** | `transcription/dictionary_echo.rs` | [COMPUTED] Standard transcription detects distinct ordered vocabulary runs at output edges and verifies them by retrying identical audio once without dictionary hints; successful retry text/language are authoritative, and retry failures are surfaced. |
 | **transcription/streaming** | `transcription/streaming/{mod.rs, audio_pump.rs, providers.rs, realtime_openai_compatible.rs}` | Live mode: WebSocket streaming ASR over the OpenAI Realtime API wire protocol (OpenAI `gpt-live-transcribe` / `gpt-transcribe`, Qwen3-ASR-Flash-Realtime). Online resampler + PCM16 encoder feeds 100ms audio chunks; `.completed` utterance events emit Tauri events for the frontend to type into the focused window. `ProviderConfig` carries the per-provider `session.update` template, vocabulary field (`prompt` vs `corpus.text`) and end-of-audio event (`input_audio_buffer.commit` vs `session.finish`). |
 | **reasoning** | `reasoning/openai.rs`, `anthropic.rs`, `gemini.rs` | AI text enhancement. OpenAI-compatible (OpenAI, Groq, Qwen, OpenRouter) via Chat Completions; Anthropic via Messages API; Gemini via Generative API |
@@ -161,7 +161,8 @@ Language codes from `languageRegistry.json` use locale format (`en-US`, `en-GB`)
         ↓
 6.  Cloud transcription:
     invoke("transcribe_cloud", { audio, provider, api_key, model, ... })
-    → Bilingual mode conditions Whisper on one language only and forces none;
+    → Bilingual mode sends the dictionary only (no conditioning sentence) and
+      forces no language;
       gpt-transcribe receives both languages as `languages[]`
     → Provider receives canonical vocabulary as recognition context where supported
     → [COMPUTED] Ordered edge lists of 3+ distinct dictionary entries trigger one
