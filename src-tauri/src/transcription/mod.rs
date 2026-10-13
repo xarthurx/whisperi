@@ -65,40 +65,6 @@ pub fn build_prompt(dictionary: &[String], language: Option<&str>) -> String {
     }
 }
 
-/// Languages written in a CJK script. A Latin-script dictionary placed right
-/// after one of their conditioning sentences is imitated by Whisper as a
-/// trailing echo of the word list.
-fn is_cjk_language(language: &str) -> bool {
-    matches!(language, "zh" | "ja" | "ko")
-}
-
-/// Build the conditioning prompt for **bilingual** mode: ONE language's
-/// native conditioning sentence plus the deduped dictionary.
-///
-/// Whisper treats the prompt as the preceding transcript and copies its
-/// structure. A sentence in each language (the previous design) reads as
-/// "every utterance is written twice", and Whisper answered by appending an
-/// English translation or a verbatim duplicate after each spoken segment. So
-/// only the first slot that has a conditioning sentence is used. The
-/// dictionary goes after a Latin-script sentence but before a CJK one: a
-/// Latin word list following CJK text is echoed after short clips, while a
-/// Latin sentence nearest the audio pulls code-switched CJK speech into
-/// English. Engine-side language detection still runs within the pair (no
-/// `language` is forced). Returns `""` when there is nothing to send, so
-/// callers omit the `prompt` field (same contract as [`build_prompt`]).
-pub fn build_bilingual_prompt(dictionary: &[String], primary: &str, secondary: &str) -> String {
-    let dict = dedupe_dictionary(dictionary).join(" ");
-    let conditioning = [primary, secondary]
-        .into_iter()
-        .find_map(|lang| punctuation_prompt(Some(lang)).map(|cond| (lang, cond)));
-    match conditioning {
-        None => dict,
-        Some((_, cond)) if dict.is_empty() => cond.to_string(),
-        Some((lang, cond)) if is_cjk_language(lang) => format!("{dict} {cond}"),
-        Some((_, cond)) => format!("{cond} {dict}"),
-    }
-}
-
 /// De-duplicate dictionary entries case-insensitively (preserving first-seen
 /// order) and drop blank entries. Fewer, unique hotwords mean less for Whisper
 /// to echo back, and avoid wasting the prompt's limited token budget.
@@ -197,58 +163,9 @@ mod tests {
         assert_eq!(punctuation_prompt(Some("en")), Some(PUNCTUATION_PROMPT));
     }
 
-    #[test]
-    fn bilingual_prompt_conditions_on_one_language_only() {
-        // Two languages' sentences read to Whisper as "write everything
-        // twice": it emitted interleaved translations and duplicated
-        // sentences. Only the first slot's sentence is sent.
-        let zh_first = build_bilingual_prompt(&[], "zh", "en");
-        assert!(zh_first.contains("你好"));
-        assert!(!zh_first.contains("Hello"));
-        let en_first = build_bilingual_prompt(&[], "en", "zh");
-        assert!(en_first.contains("Hello"));
-        assert!(!en_first.contains("你好"));
-    }
 
-    #[test]
-    fn bilingual_prompt_places_dictionary_by_script() {
-        let dict = vec!["Whisperi".to_string(), "Tauri".to_string()];
-        // Latin sentence: dictionary after it.
-        assert_eq!(
-            build_bilingual_prompt(&dict, "en", "zh"),
-            format!("{PUNCTUATION_PROMPT} Whisperi Tauri")
-        );
-        // CJK sentence: dictionary before it, so no Latin list follows CJK text.
-        let zh = build_bilingual_prompt(&dict, "zh", "en");
-        assert!(zh.starts_with("Whisperi Tauri "));
-        assert!(zh.ends_with("让我们开始吧。"));
-    }
 
-    #[test]
-    fn bilingual_prompt_falls_back_to_the_second_slot_sentence() {
-        // "xx" has no conditioning sentence → the zh sentence is used.
-        let result = build_bilingual_prompt(&[], "xx", "zh");
-        assert!(result.contains("你好"));
-    }
 
-    #[test]
-    fn bilingual_prompt_appends_dictionary() {
-        let dict = vec!["Whisperi".to_string()];
-        let result = build_bilingual_prompt(&dict, "en", "zh");
-        assert!(result.ends_with("Whisperi"));
-    }
 
-    #[test]
-    fn bilingual_prompt_skips_language_without_conditioning() {
-        // "xx" has no native conditioning sentence → only the zh sentence remains.
-        let result = build_bilingual_prompt(&[], "zh", "xx");
-        assert!(result.contains("你好"));
-        assert!(!result.contains("Hello"));
-    }
 
-    #[test]
-    fn bilingual_prompt_empty_when_nothing_to_say() {
-        // Two unknown languages + no dictionary → empty (caller omits --prompt).
-        assert_eq!(build_bilingual_prompt(&[], "xx", "yy"), "");
-    }
 }

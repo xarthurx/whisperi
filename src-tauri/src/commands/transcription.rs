@@ -203,12 +203,18 @@ fn prepare_language_params(
 ) -> (Option<String>, Option<String>, String) {
     let primary = normalize_language(language);
     let secondary = normalize_language(secondary_language);
-    // Bilingual: condition on one language of the pair (see
-    // build_bilingual_prompt) and let the model detect within the pair (no
-    // forced -l). Otherwise keep the single/auto prompt.
-    let prompt = match (primary.as_deref(), secondary.as_deref()) {
-        (Some(p), Some(s)) => crate::transcription::build_bilingual_prompt(dictionary, p, s),
-        _ => crate::transcription::build_prompt(dictionary, primary.as_deref()),
+    // Bilingual: vocabulary only, no conditioning sentence, and no forced
+    // `language`. Groq Whisper picks its output language from the prompt, not
+    // only from the audio: a sentence in each language (≤ v0.8.9) made it
+    // write segments twice (translation or duplicate), and one language's
+    // sentence (v0.8.10) made whisper-large-v3-turbo emit a whole English
+    // translation of Chinese speech. Dictionary-only had no failures on
+    // either large-v3 or turbo; AI cleanup restores the punctuation the
+    // conditioning sentence used to prime. Otherwise keep the single/auto
+    // prompt.
+    let prompt = match secondary {
+        Some(_) => crate::transcription::build_prompt(dictionary, None),
+        None => crate::transcription::build_prompt(dictionary, primary.as_deref()),
     };
     (primary, secondary, prompt)
 }
@@ -461,18 +467,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn cloud_pipeline_retry_keeps_single_and_bilingual_conditioning_without_hints() {
+    async fn cloud_pipeline_retry_keeps_single_conditioning_and_sends_bilingual_retries_bare() {
+        // Single mode keeps its conditioning sentence on the hint-free retry;
+        // bilingual has no conditioning sentence, so its retry sends no prompt.
         for (primary, secondary, expected) in [
             (
                 "en-US",
                 None,
                 "Hello, how are you today? I'm fine, thank you! Let's begin.",
             ),
-            (
-                "zh-CN",
-                Some("en-US"),
-                "你好，欢迎。今天过得怎么样？我很好，谢谢！让我们开始吧。",
-            ),
+            ("zh-CN", Some("en-US"), ""),
         ] {
             let mut prompts = Vec::new();
             transcribe_cloud_with_request(
@@ -584,6 +588,22 @@ mod tests {
             result.text,
             "我觉得可以。 I think this plan works well for everyone today."
         );
+    }
+
+    #[test]
+    fn bilingual_prompt_is_dictionary_only_in_either_slot_order() {
+        // Groq Whisper picks its output language from the prompt: an
+        // English-only prompt made turbo emit an English translation of
+        // Chinese speech, and a two-language prompt made it write segments
+        // twice. Bilingual sends only the vocabulary, for both slot orders.
+        let dict = vec!["CLAUDE".to_string(), "Tauri".to_string()];
+        for (primary, secondary) in [("en-US", "zh"), ("zh", "en-US")] {
+            let (_, _, prompt) =
+                prepare_language_params(Some(primary.into()), Some(secondary.into()), &dict);
+            assert_eq!(prompt, "CLAUDE Tauri", "{primary}+{secondary}");
+        }
+        let (_, _, none) = prepare_language_params(Some("en-US".into()), Some("zh".into()), &[]);
+        assert_eq!(none, "");
     }
 
     #[test]
