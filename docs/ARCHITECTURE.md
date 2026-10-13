@@ -180,7 +180,8 @@ Language codes from `languageRegistry.json` use locale format (`en-US`, `en-GB`)
     → Standard/Full restore sentence and clause punctuation from meaning even when
       the raw transcript contains no punctuation
     → English punctuation is normalized to half-width ASCII; Chinese punctuation
-      is normalized to full-width marks
+      is normalized to full-width marks (`finalize_for_languages`: in a pair that
+      includes Chinese, Han text under an English resolution is treated as Chinese)
     → Strip <think>...</think> tags from output (reasoning model artifacts)
         ↓
 9.  invoke("save_transcription", { original, processed, method, agent })
