@@ -21,7 +21,7 @@
 - Local: 255 cargo + 30 bun tests, typecheck, build green. Hosted [CI](https://github.com/xarthurx/whisperi/actions/runs/38388801407) and [Release](https://github.com/xarthurx/whisperi/actions/runs/38388815391) succeeded.
 - Release is non-draft; x64 NSIS asset SHA-256 `59C229E7…1F51485` matches the WinGet `InstallerSha256`; `releases/latest/download/latest.json` serves 0.8.10 with the NSIS URL and a signature identical to the `.sig` asset.
 - Before the PR, the real Rust request path (`transcribe_groq` + new bilingual prompt) was run live against Groq `whisper-large-v3` on 4 TTS clips: fields accepted, detection returned, no translation/duplication.
-- WinGet: previewed, submitted once → [microsoft/winget-pkgs#451643](https://github.com/microsoft/winget-pkgs/pull/451643) (branch `xarthurx.Whisperi-0.8.10-d7f2987a-49c5-4849-892d-32aef9c80bdf`). Verified in the PR: `License: MIT`, `LicenseUrl` present, one-line `ShortDescription`, `ReleaseDate: 2026-10-13` in the installer manifest. Awaiting merge.
+- WinGet: previewed, submitted once → [microsoft/winget-pkgs#451643](https://github.com/microsoft/winget-pkgs/pull/451643) (branch `xarthurx.Whisperi-0.8.10-d7f2987a-49c5-4849-892d-32aef9c80bdf`). Verified in the PR: `License: MIT`, `LicenseUrl` present, one-line `ShortDescription`, `ReleaseDate: 2026-10-13` in the installer manifest. Merged 2026-10-13 12:31 UTC.
 - Still not live-verified: `gpt-transcribe` batch request shape and Mistral `context_bias` (see TODO).
 
 ## Bilingual prompt + provider request fixes (v0.8.10, 2026-10-13)
