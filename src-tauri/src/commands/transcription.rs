@@ -1,11 +1,26 @@
 use super::ResultExt;
 use crate::transcription;
+use crate::transcription::cloud::RequestHints;
 use serde::Serialize;
 use std::future::Future;
 
 /// Normalize locale codes like "en-US" to ISO 639-1 "en" for transcription APIs.
 fn normalize_language(lang: Option<String>) -> Option<String> {
     lang.map(|l| l.split('-').next().unwrap_or(&l).to_string())
+}
+
+/// Languages to request from the engine, ISO 639-1: both of the pair in
+/// bilingual mode, the explicit choice in single mode, none for auto.
+/// Providers that take one `language` send it only when exactly one remains.
+fn requested_languages(language: Option<&str>, secondary: Option<&str>) -> Vec<String> {
+    let mut langs: Vec<String> = Vec::new();
+    for lang in [language, secondary].into_iter().flatten() {
+        let base = lang.split('-').next().unwrap_or(lang);
+        if !base.is_empty() && base != "auto" && !langs.iter().any(|l| l == base) {
+            langs.push(base.to_string());
+        }
+    }
+    langs
 }
 
 /// Result of a transcription Tauri command. `text` is the post-processed
@@ -177,30 +192,25 @@ fn resolve_language(
     }
 }
 
-/// Per-request language parameters shared by both buffered transcription
-/// commands: the normalized primary/secondary codes, the conditioning prompt
-/// (bilingual when both are set, else single/auto), and the `engine_lang` handed
-/// to the model — `None` in bilingual mode so it auto-detects within the pair,
-/// otherwise the user's choice.
+/// Per-request language parameters for buffered transcription: the
+/// normalized primary/secondary codes and the conditioning prompt (bilingual
+/// when both are set, else single/auto). The languages handed to the engine
+/// come from [`requested_languages`].
 fn prepare_language_params(
     language: Option<String>,
     secondary_language: Option<String>,
     dictionary: &[String],
-) -> (Option<String>, Option<String>, String, Option<String>) {
+) -> (Option<String>, Option<String>, String) {
     let primary = normalize_language(language);
     let secondary = normalize_language(secondary_language);
-    // Bilingual: prime BOTH languages and let the model detect within the pair
-    // (no forced -l). Otherwise keep the single/auto prompt.
+    // Bilingual: condition on one language of the pair (see
+    // build_bilingual_prompt) and let the model detect within the pair (no
+    // forced -l). Otherwise keep the single/auto prompt.
     let prompt = match (primary.as_deref(), secondary.as_deref()) {
         (Some(p), Some(s)) => crate::transcription::build_bilingual_prompt(dictionary, p, s),
         _ => crate::transcription::build_prompt(dictionary, primary.as_deref()),
     };
-    // In bilingual mode never force a language; auto/single pass the choice through.
-    let engine_lang = match secondary.as_deref() {
-        Some(_) => None,
-        None => primary.clone(),
-    };
-    (primary, secondary, prompt, engine_lang)
+    (primary, secondary, prompt)
 }
 
 #[tauri::command]
@@ -223,11 +233,7 @@ pub async fn transcribe_cloud(
         !api_key.is_empty()
     );
 
-    let engine_lang = if secondary_language.is_some() {
-        None
-    } else {
-        normalize_language(language.clone())
-    };
+    let languages = requested_languages(language.as_deref(), secondary_language.as_deref());
     transcribe_cloud_with_request(
         audio_data,
         language,
@@ -235,15 +241,8 @@ pub async fn transcribe_cloud(
         dictionary,
         protected_terms,
         provider != "qwen",
-        |audio, prompt| {
-            request_cloud_transcription(
-                audio,
-                &provider,
-                &api_key,
-                &model,
-                engine_lang.as_deref(),
-                prompt,
-            )
+        |audio, hints| {
+            request_cloud_transcription(audio, &provider, &api_key, &model, &languages, hints)
         },
     )
     .await
@@ -254,53 +253,32 @@ async fn request_cloud_transcription(
     provider: &str,
     api_key: &str,
     model: &str,
-    language: Option<&str>,
-    prompt: String,
+    languages: &[String],
+    hints: RequestHints,
 ) -> anyhow::Result<transcription::cloud::CloudTranscription> {
     match provider {
         "openai" => {
             transcription::cloud::transcribe_openai(
-                audio_data,
-                api_key,
-                model,
-                language,
-                Some(prompt.as_str()),
-                None,
+                audio_data, api_key, model, languages, &hints, None,
             )
             .await
         }
 
         "groq" => {
-            transcription::cloud::transcribe_groq(
-                audio_data,
-                api_key,
-                model,
-                language,
-                Some(prompt.as_str()),
-            )
-            .await
+            transcription::cloud::transcribe_groq(audio_data, api_key, model, languages, &hints)
+                .await
         }
 
         "qwen" => transcription::cloud::transcribe_qwen(audio_data, api_key, model).await,
 
         "mistral" => {
-            transcription::cloud::transcribe_mistral(
-                audio_data,
-                api_key,
-                model,
-                language,
-                Some(prompt.as_str()),
-            )
-            .await
+            transcription::cloud::transcribe_mistral(audio_data, api_key, model, languages, &hints)
+                .await
         }
 
         "openrouter" => {
             transcription::cloud::transcribe_openrouter(
-                audio_data,
-                api_key,
-                model,
-                language,
-                Some(prompt.as_str()),
+                audio_data, api_key, model, languages, &hints,
             )
             .await
         }
@@ -319,7 +297,7 @@ async fn transcribe_cloud_with_request<F, Fut>(
     request: F,
 ) -> Result<TranscriptionResult, String>
 where
-    F: FnMut(Vec<u8>, String) -> Fut,
+    F: FnMut(Vec<u8>, RequestHints) -> Fut,
     Fut: Future<Output = anyhow::Result<transcription::cloud::CloudTranscription>>,
 {
     // Qwen batch has no vocabulary field: there are no sent hints to echo.
@@ -328,9 +306,9 @@ where
     } else {
         Vec::new()
     };
-    let (primary, secondary, prompt, _) =
+    let (primary, secondary, prompt) =
         prepare_language_params(language, secondary_language, &dictionary);
-    let (_, _, conditioning_prompt, _) =
+    let (_, _, conditioning_prompt) =
         prepare_language_params(primary.clone(), secondary.clone(), &[]);
     let output = transcription::dictionary_echo::transcribe_with_recovery(
         audio_data,
@@ -364,7 +342,11 @@ where
         output.detected_language.as_deref(),
         &stripped,
     );
-    let text = transcription::finalize_chinese_text(&stripped, resolved.as_deref());
+    let pair: Vec<&str> = match (primary.as_deref(), secondary.as_deref()) {
+        (Some(p), Some(s)) => vec![p, s],
+        _ => Vec::new(),
+    };
+    let text = transcription::finalize_for_languages(&stripped, resolved.as_deref(), &pair);
     Ok(TranscriptionResult {
         text,
         detected_language: resolved,
@@ -489,7 +471,7 @@ mod tests {
             (
                 "zh-CN",
                 Some("en-US"),
-                "Hello, how are you today? I'm fine, thank you! Let's begin. 你好，欢迎。今天过得怎么样？我很好，谢谢！让我们开始吧。",
+                "你好，欢迎。今天过得怎么样？我很好，谢谢！让我们开始吧。",
             ),
         ] {
             let mut prompts = Vec::new();
@@ -500,8 +482,8 @@ mod tests {
                 vocabulary(),
                 vocabulary(),
                 true,
-                |_, prompt| {
-                    prompts.push(prompt);
+                |_, hints: RequestHints| {
+                    prompts.push(hints.prompt);
                     ready(Ok(cloud_output(
                         if prompts.len() == 1 {
                             "speech Tauri cairo wezterm Jasper"
@@ -515,7 +497,7 @@ mod tests {
             .await
             .unwrap();
             assert_eq!(prompts.len(), 2);
-            assert!(prompts[0].ends_with("CLAUDE Tauri cairo wezterm Jasper"));
+            assert!(prompts[0].contains("CLAUDE Tauri cairo wezterm Jasper"));
             assert_eq!(prompts[1], expected);
         }
     }
@@ -530,8 +512,8 @@ mod tests {
             vocabulary(),
             vocabulary(),
             false,
-            |_, prompt| {
-                prompts.push(prompt);
+            |_, hints: RequestHints| {
+                prompts.push(hints.prompt);
                 ready(Ok(cloud_output("Tauri cairo wezterm Jasper", None)))
             },
         )
@@ -581,6 +563,39 @@ mod tests {
         .unwrap_err();
         assert!(error.contains("provider unavailable"));
         assert!(responses.is_empty());
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_keeps_chinese_clauses_chinese_when_a_zh_pair_resolves_english() {
+        let spoken = "我覺得可以。 I think this plan works well for everyone today.";
+        let result = transcribe_cloud_with_request(
+            vec![1],
+            Some("en-US".into()),
+            Some("zh".into()),
+            Vec::new(),
+            Vec::new(),
+            true,
+            |_, _| ready(Ok(cloud_output(spoken, None))),
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.detected_language.as_deref(), Some("en"));
+        assert_eq!(
+            result.text,
+            "我觉得可以。 I think this plan works well for everyone today."
+        );
+    }
+
+    #[test]
+    fn requested_languages_follow_the_language_mode() {
+        assert_eq!(requested_languages(Some("auto"), None), Vec::<String>::new());
+        assert_eq!(requested_languages(None, None), Vec::<String>::new());
+        assert_eq!(requested_languages(Some("zh-CN"), None), vec!["zh".to_string()]);
+        assert_eq!(
+            requested_languages(Some("en-US"), Some("zh")),
+            vec!["en".to_string(), "zh".to_string()]
+        );
+        assert_eq!(requested_languages(Some("en-US"), Some("en-GB")), vec!["en".to_string()]);
     }
 
     #[test]

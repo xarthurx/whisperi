@@ -256,25 +256,58 @@ fn is_english_language(lang: &str) -> bool {
     base.eq_ignore_ascii_case("en")
 }
 
+/// Map CJK small form variants (U+FE50–U+FE57), which Whisper sometimes emits
+/// in Chinese output ("首尔那边﹗"), to the standard full-width marks.
+fn normalize_small_forms(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            '\u{FE50}' => '，',
+            '\u{FE51}' => '、',
+            '\u{FE52}' => '。',
+            '\u{FE54}' => '；',
+            '\u{FE55}' => '：',
+            '\u{FE56}' => '？',
+            '\u{FE57}' => '！',
+            _ => c,
+        })
+        .collect()
+}
+
 /// Apply the language-aware text post-processing pipeline. Explicit English
 /// output uses ASCII punctuation, while Chinese/auto output retains the CJK
 /// punctuation safety net; Traditional→Simplified conversion then runs when
 /// appropriate for the configured `language`. This is the single entry point
 /// all transcription and reasoning call sites should use.
 ///
+/// - CJK small-form marks are mapped to standard full-width marks first.
 /// - Explicit English converts accidental Chinese full-width marks to ASCII.
 /// - All other modes run Han-adjacent CJK punctuation normalization.
 /// - T→S conversion is gated by `should_convert_to_simplified`.
 pub fn finalize_chinese_text(text: &str, language: Option<&str>) -> String {
+    let text = normalize_small_forms(text);
     let punct = match language {
-        Some(lang) if is_english_language(lang) => normalize_english_punctuation(text),
-        _ => normalize_cjk_punctuation(text),
+        Some(lang) if is_english_language(lang) => normalize_english_punctuation(&text),
+        _ => normalize_cjk_punctuation(&text),
     };
     if should_convert_to_simplified(&punct, language) {
         convert_to_simplified(&punct)
     } else {
         punct
     }
+}
+
+/// [`finalize_chinese_text`] for a bilingual pair (`pair` empty outside
+/// bilingual mode). When the pair includes Chinese, Han text resolved to
+/// English is a code-switched Chinese clause, so the English selection only
+/// owns Han-free text and Han text gets the auto heuristic (CJK punctuation,
+/// Simplified conversion). Any other pair (e.g. ja+en) keeps the plain
+/// per-language behavior — kanji must never be simplified.
+pub fn finalize_for_languages(text: &str, language: Option<&str>, pair: &[&str]) -> String {
+    let chinese_pair = pair.iter().any(|l| is_chinese_language(l));
+    let code_switched_chinese = chinese_pair
+        && language.is_some_and(is_english_language)
+        && text.chars().any(is_han);
+    finalize_chinese_text(text, if code_switched_chinese { None } else { language })
 }
 
 #[cfg(test)]
@@ -800,6 +833,35 @@ mod tests {
             finalize_chinese_text("Hello， world。 How are you？", Some("en-US")),
             "Hello, world. How are you?"
         );
+    }
+
+    #[test]
+    fn finalize_maps_cjk_small_form_punctuation() {
+        assert_eq!(
+            finalize_chinese_text("首尔那边﹗呃﹐我﹑觉得﹖对﹔好﹕", Some("zh")),
+            "首尔那边！呃，我、觉得？对；好："
+        );
+    }
+
+    #[test]
+    fn finalize_english_keeps_chinese_clauses_chinese_in_a_chinese_pair() {
+        // A zh+en transcript resolved to English can still carry Chinese
+        // clauses; they keep CJK punctuation and Simplified characters.
+        assert_eq!(
+            finalize_for_languages("我覺得可以。 I think so.", Some("en"), &["en", "zh"]),
+            "我觉得可以。 I think so."
+        );
+    }
+
+    #[test]
+    fn finalize_english_never_simplifies_kanji_outside_a_chinese_pair() {
+        // ja+en: an English-resolved clip with kanji-only Japanese words, and
+        // an English-only user's chat answer quoting Traditional Chinese.
+        let ja = "I'm going to 東京 tomorrow for the 会議.";
+        assert_eq!(finalize_for_languages(ja, Some("en"), &["ja", "en"]), ja);
+        assert_eq!(finalize_chinese_text(ja, Some("en")), ja);
+        let quote = "Thank you in Chinese is 謝謝.";
+        assert_eq!(finalize_chinese_text(quote, Some("en")), quote);
     }
 
     #[test]

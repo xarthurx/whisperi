@@ -1,5 +1,5 @@
 import promptData from "./promptData.json";
-import { getLanguageInstruction } from "../utils/languageSupport";
+import { getBilingualInstruction, getLanguageInstruction } from "../utils/languageSupport";
 
 export type EnhancementIntensity = "light" | "standard" | "full";
 
@@ -112,10 +112,14 @@ function appendPromptExtras(
   customDictionary?: string[],
   language?: string,
   profile: CleanupProfile = DEFAULT_CLEANUP_PROFILE,
+  languagePair?: readonly [string, string],
 ): string {
   let result = prompt;
   const langInstruction =
-    profile.languageInstruction ?? getLanguageInstruction(language);
+    profile.languageInstruction
+    ?? (languagePair
+      ? getBilingualInstruction(languagePair[0], languagePair[1])
+      : getLanguageInstruction(language));
   if (langInstruction) {
     result += "\n\n" + langInstruction;
   }
@@ -136,6 +140,7 @@ export function getSystemPrompt(
   language?: string,
   customPrompt?: string,
   intensity?: EnhancementIntensity,
+  languagePair?: readonly [string, string],
 ): string {
   const mode = intensity ?? "standard";
   const hasCustomPrompt = Boolean(customPrompt?.trim());
@@ -157,7 +162,7 @@ export function getSystemPrompt(
     : PROMPT_VARIANTS[mode];
   const prompt = profile.internalPrompt.replace(/\{\{agentName\}\}/g, name)
     + "\n\n" + userPart.replace(/\{\{agentName\}\}/g, name);
-  return appendPromptExtras(prompt, customDictionary, language, profile);
+  return appendPromptExtras(prompt, customDictionary, language, profile, languagePair);
 }
 
 /** Get the visible prompt text for a given intensity level. */

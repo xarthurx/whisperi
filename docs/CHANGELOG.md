@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Highlights
+
+- Chinese dictation in bilingual mode no longer comes back with English translations mixed in, or with each sentence written twice
+- AI cleanup keeps every word in the language you spoke it in when you mix two languages
+
+### Fixes
+
+- Bilingual Whisper conditioning no longer sends a sentence in each language. The previous prompt — a Chinese sentence followed by its English translation — was imitated by Whisper, which wrote every spoken segment twice (as an interleaved English translation or a verbatim duplicate). Whisper now gets one language's conditioning sentence (the first of the pair that has one), with the dictionary after a Latin-script sentence and before a CJK one; on a 22-clip Groq `whisper-large-v3` test set, flagged outputs went from 10 to 0.
+- Bilingual enhancement uses a code-switch-preserving instruction (with Japanese's own `、` punctuation) instead of forcing the resolved language. Bare base codes no longer fall into the forced generic template that translated whole dictations into English: a base with one registry entry (`zh`) gets that tailored instruction, and one with several regional variants (`en` → en-US/en-GB) gets the language-preserving auto instruction, so no spelling convention is imposed.
+- OpenAI: `verbose_json` is sent only to Whisper models (`gpt-transcribe` rejects it with HTTP 400 per a third-party report of the API error); `gpt-transcribe` gets `languages[]` (both languages in bilingual mode) and `keywords[]`, and its `languages[].code` detection is read leniently (an unexpected shape loses only detection); `gpt-4o-transcribe-diarize` no longer receives `prompt`. Built from the provider docs — **not yet live-verified** (dev machine's OpenAI key returns 401); verify before release.
+- Mistral: dictionary sent as `context_bias` (the endpoint has no `prompt`/`response_format`); detected `language` is read; `voxtral-small-latest` removed from transcription models and migrated to `voxtral-mini-latest`. **Not yet live-verified** (no Mistral key on the dev machine).
+- Normalization: CJK small-form marks (﹐﹑﹒﹔﹕﹖﹗) map to standard full-width marks; in a bilingual pair that includes Chinese, an English-resolved transcript (and its enhancement) keeps Chinese clauses' punctuation and Simplified characters, while other pairs (e.g. ja+en) and English-only users keep the plain English behavior so kanji are never simplified; more Chinese silence-hallucination phrases are blanked.
+
 ## [0.8.9] - 2026-10-12
 
 ### Highlights

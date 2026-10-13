@@ -4,7 +4,7 @@ pub mod hallucination;
 pub mod normalize;
 pub mod streaming;
 mod t2s_table;
-pub use normalize::finalize_chinese_text;
+pub use normalize::{finalize_chinese_text, finalize_for_languages};
 
 /// Default (English) punctuation-conditioning initial prompt.
 pub(crate) const PUNCTUATION_PROMPT: &str =
@@ -65,32 +65,37 @@ pub fn build_prompt(dictionary: &[String], language: Option<&str>) -> String {
     }
 }
 
-/// Build a conditioning prompt for **bilingual** mode: the native conditioning
-/// sentences for BOTH languages, then the deduped dictionary. Priming both
-/// languages keeps embedded secondary-language terms alive and suppresses the
-/// decode drifting to a third, unspoken language.
+/// Languages written in a CJK script. A Latin-script dictionary placed right
+/// after one of their conditioning sentences is imitated by Whisper as a
+/// trailing echo of the word list.
+fn is_cjk_language(language: &str) -> bool {
+    matches!(language, "zh" | "ja" | "ko")
+}
+
+/// Build the conditioning prompt for **bilingual** mode: ONE language's
+/// native conditioning sentence plus the deduped dictionary.
 ///
-/// The **primary** sentence is placed LAST (closest to the audio): Whisper
-/// continues in the language of the nearest preceding context, giving a mild
-/// lean toward the primary on genuinely ambiguous clips. A language with no
-/// native conditioning sentence is skipped. Returns `""` when there is nothing
-/// to send, so callers omit `--prompt` / the `prompt` field entirely (same
-/// contract as [`build_prompt`]).
+/// Whisper treats the prompt as the preceding transcript and copies its
+/// structure. A sentence in each language (the previous design) reads as
+/// "every utterance is written twice", and Whisper answered by appending an
+/// English translation or a verbatim duplicate after each spoken segment. So
+/// only the first slot that has a conditioning sentence is used. The
+/// dictionary goes after a Latin-script sentence but before a CJK one: a
+/// Latin word list following CJK text is echoed after short clips, while a
+/// Latin sentence nearest the audio pulls code-switched CJK speech into
+/// English. Engine-side language detection still runs within the pair (no
+/// `language` is forced). Returns `""` when there is nothing to send, so
+/// callers omit the `prompt` field (same contract as [`build_prompt`]).
 pub fn build_bilingual_prompt(dictionary: &[String], primary: &str, secondary: &str) -> String {
-    let dict = dedupe_dictionary(dictionary);
-    let mut parts: Vec<&str> = Vec::new();
-    if let Some(s) = punctuation_prompt(Some(secondary)) {
-        parts.push(s);
-    }
-    if let Some(p) = punctuation_prompt(Some(primary)) {
-        parts.push(p);
-    }
-    let conditioning = parts.join(" ");
-    match (conditioning.is_empty(), dict.is_empty()) {
-        (true, true) => String::new(),
-        (true, false) => dict.join(" "),
-        (false, true) => conditioning,
-        (false, false) => format!("{} {}", conditioning, dict.join(" ")),
+    let dict = dedupe_dictionary(dictionary).join(" ");
+    let conditioning = [primary, secondary]
+        .into_iter()
+        .find_map(|lang| punctuation_prompt(Some(lang)).map(|cond| (lang, cond)));
+    match conditioning {
+        None => dict,
+        Some((_, cond)) if dict.is_empty() => cond.to_string(),
+        Some((lang, cond)) if is_cjk_language(lang) => format!("{dict} {cond}"),
+        Some((_, cond)) => format!("{cond} {dict}"),
     }
 }
 
@@ -193,21 +198,43 @@ mod tests {
     }
 
     #[test]
-    fn bilingual_prompt_contains_both_languages_primary_last() {
-        // secondary (en) sentence first, primary (zh) sentence last so the
-        // primary is nearest the audio (mild primary lean on ambiguous clips).
-        let result = build_bilingual_prompt(&[], "zh", "en");
-        assert!(result.contains("你好")); // zh conditioning present
-        assert!(result.contains("Hello")); // en conditioning present
-        let zh_at = result.find("你好").unwrap();
-        let en_at = result.find("Hello").unwrap();
-        assert!(en_at < zh_at, "primary (zh) sentence must come last");
+    fn bilingual_prompt_conditions_on_one_language_only() {
+        // Two languages' sentences read to Whisper as "write everything
+        // twice": it emitted interleaved translations and duplicated
+        // sentences. Only the first slot's sentence is sent.
+        let zh_first = build_bilingual_prompt(&[], "zh", "en");
+        assert!(zh_first.contains("你好"));
+        assert!(!zh_first.contains("Hello"));
+        let en_first = build_bilingual_prompt(&[], "en", "zh");
+        assert!(en_first.contains("Hello"));
+        assert!(!en_first.contains("你好"));
+    }
+
+    #[test]
+    fn bilingual_prompt_places_dictionary_by_script() {
+        let dict = vec!["Whisperi".to_string(), "Tauri".to_string()];
+        // Latin sentence: dictionary after it.
+        assert_eq!(
+            build_bilingual_prompt(&dict, "en", "zh"),
+            format!("{PUNCTUATION_PROMPT} Whisperi Tauri")
+        );
+        // CJK sentence: dictionary before it, so no Latin list follows CJK text.
+        let zh = build_bilingual_prompt(&dict, "zh", "en");
+        assert!(zh.starts_with("Whisperi Tauri "));
+        assert!(zh.ends_with("让我们开始吧。"));
+    }
+
+    #[test]
+    fn bilingual_prompt_falls_back_to_the_second_slot_sentence() {
+        // "xx" has no conditioning sentence → the zh sentence is used.
+        let result = build_bilingual_prompt(&[], "xx", "zh");
+        assert!(result.contains("你好"));
     }
 
     #[test]
     fn bilingual_prompt_appends_dictionary() {
         let dict = vec!["Whisperi".to_string()];
-        let result = build_bilingual_prompt(&dict, "zh", "en");
+        let result = build_bilingual_prompt(&dict, "en", "zh");
         assert!(result.ends_with("Whisperi"));
     }
 

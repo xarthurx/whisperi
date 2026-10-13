@@ -11,6 +11,7 @@ pub async fn process_reasoning(
     max_tokens: Option<u32>,
     temperature: Option<f64>,
     language: Option<String>,
+    language_pair: Option<Vec<String>>,
 ) -> Result<String, String> {
     // Never log any part of the API key (see transcribe_cloud). Presence only.
     log::info!(
@@ -37,9 +38,13 @@ pub async fn process_reasoning(
             // when the configured language is Chinese). Acts as a deterministic
             // safety net for models that occasionally slip into Traditional
             // characters or half-width punctuation despite prompt instructions.
-            Ok(crate::transcription::finalize_chinese_text(
+            // The bilingual pair decides whether Han text under an English
+            // resolution is a Chinese clause (zh pair) or kanji (ja pair).
+            let pair: Vec<&str> = language_pair.iter().flatten().map(String::as_str).collect();
+            Ok(crate::transcription::finalize_for_languages(
                 &response.text,
                 language.as_deref(),
+                &pair,
             ))
         }
         Err(e) => {

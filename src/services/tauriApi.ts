@@ -92,6 +92,7 @@ export async function processReasoning(
   maxTokens?: number,
   temperature?: number,
   language?: string,
+  languagePair?: readonly string[],
 ): Promise<string> {
   return invoke("process_reasoning", {
     text,
@@ -102,6 +103,7 @@ export async function processReasoning(
     maxTokens,
     temperature,
     language,
+    languagePair,
   });
 }
 

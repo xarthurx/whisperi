@@ -59,6 +59,9 @@ export const RETIRED_MODELS: Record<string, Record<string, string>> = {
   mistral: {
     // Retired 2026-05-31; the `-latest` alias now resolves to Transcribe 2
     "voxtral-mini-2507": "voxtral-mini-latest",
+    // Chat-completions audio model; the transcription endpoint serves only
+    // voxtral-mini-latest
+    "voxtral-small-latest": "voxtral-mini-latest",
   },
 };
 
