@@ -1,6 +1,13 @@
 # Progress
 
-## Bilingual dictionary-only prompt (unreleased, 2026-10-13)
+## v0.8.11 release (2026-10-13)
+
+- Published [v0.8.11](https://github.com/xarthurx/whisperi/releases/tag/v0.8.11) from `27952eb` (release commit on top of squash-merged PR [#17](https://github.com/xarthurx/whisperi/pull/17), `a8fd93f`, whose tree was verified identical to the tested PR head). Local: 250 cargo + 30 bun tests and typecheck green; [Release](https://github.com/xarthurx/whisperi/actions/runs/38420553346) workflow succeeded.
+- Release is non-draft; x64 NSIS SHA-256 `F5666E86…465AC42E` matches the WinGet `InstallerSha256`; `latest.json` serves 0.8.11 with the NSIS URL and a signature identical to the `.sig` asset.
+- WinGet: previewed, submitted once → [microsoft/winget-pkgs#451778](https://github.com/microsoft/winget-pkgs/pull/451778) (branch `xarthurx.Whisperi-0.8.11-66a84e74-873f-485c-b880-6f81192cbc74`). Verified in the PR: `License: MIT`, `LicenseUrl`, one-line `ShortDescription`, `ReleaseDate: 2026-10-13` in the installer manifest. Awaiting merge.
+- The v0.8.10 WinGet PR [#451643](https://github.com/microsoft/winget-pkgs/pull/451643) merged 2026-10-13 12:31 UTC.
+
+## Bilingual dictionary-only prompt (v0.8.11, 2026-10-13)
 
 - **Symptom after v0.8.10:** Chinese dictation sometimes came back as an English translation with the same meaning (history #5866, #5868; Groq `whisper-large-v3-turbo`, bilingual en-US + zh).
 - **Evidence:** app log shows the raw Groq output already English (`detected language: en` for #5868) — the transcription step, not AI cleanup. On turbo, a noisy long Chinese TTS clip returned "This is my personal data, including my personal data, and my sleep and work…" only under the v0.8.10 en-first prompt (`English sentence + dictionary`), while Groq still reported `lang=Chinese`: detection is audio-only, but the decoder picks its output language from the prompt. Turbo also returned empty text on some clips whenever a conditioning sentence was present.
