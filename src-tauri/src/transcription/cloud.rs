@@ -11,24 +11,22 @@ struct TranscriptionResponse {
     #[serde(default)]
     language: Option<String>,
     /// `gpt-transcribe` reports detection as `[{"code": "fr"}]`, or `[]`
-    /// when it cannot decide.
+    /// when it cannot decide. Kept as raw JSON: detection is optional
+    /// metadata, so an unexpected shape must lose only the detection, never
+    /// fail the whole transcription.
     #[serde(default)]
-    languages: Option<Vec<DetectedLanguage>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct DetectedLanguage {
-    code: String,
+    languages: Option<serde_json::Value>,
 }
 
 impl TranscriptionResponse {
     fn detected_language(&self) -> Option<String> {
-        let first = self
-            .languages
-            .as_ref()
-            .and_then(|l| l.first())
-            .map(|l| l.code.as_str());
-        normalize_provider_language(self.language.as_deref().or(first))
+        let first = self.languages.as_ref().and_then(|l| l.get(0)).and_then(|entry| {
+            entry
+                .as_str()
+                .or_else(|| entry.get("code").and_then(serde_json::Value::as_str))
+        });
+        normalize_provider_language(self.language.as_deref())
+            .or_else(|| normalize_provider_language(first))
     }
 }
 
@@ -719,6 +717,22 @@ mod tests {
         assert!(fields.iter().all(|(k, _)| *k != "prompt" && *k != "response_format"));
         let pair = mistral_form_fields("voxtral-mini-latest", &langs(&["en", "zh"]), &hints("", &[]));
         assert!(pair.iter().all(|(k, _)| *k != "language"));
+    }
+
+    #[test]
+    fn unexpected_detection_shapes_lose_detection_not_the_transcript() {
+        // Detection is optional metadata; a surprise shape must never fail
+        // the whole transcription.
+        for (body, expected) in [
+            (r#"{"text":"hi","languages":["zh"]}"#, Some("zh")),
+            (r#"{"text":"hi","languages":[{"code":null}]}"#, None),
+            (r#"{"text":"hi","languages":[{"lang":"zh"}]}"#, None),
+            (r#"{"text":"hi","languages":{"code":"zh"}}"#, None),
+            (r#"{"text":"hi","language":"","languages":[{"code":"zh"}]}"#, Some("zh")),
+        ] {
+            let r: TranscriptionResponse = serde_json::from_str(body).expect(body);
+            assert_eq!(r.detected_language().as_deref(), expected, "{body}");
+        }
     }
 
     #[test]
