@@ -139,11 +139,16 @@ describe("cleanup prompt profiles", () => {
 });
 
 describe("language instructions", () => {
-  test("bare base codes use the tailored registry instruction, never the forced generic one", () => {
+  test("bare base codes never fall into the forced generic template", () => {
     // The backend reports ISO 639-1 ("en"), but the registry only has en-US/en-GB.
+    // With two regional variants and no known preference, no spelling
+    // convention may be imposed (a British user must not get "color").
     const en = getLanguageInstruction("en");
-    expect(en).toContain("American English");
+    expect(en).not.toContain("American English");
+    expect(en).not.toContain("British English");
     expect(en).not.toContain("regardless of what language the user spoke");
+    expect(en).toContain("must match the language of the transcribed speech input");
+    // A base with a single registry entry maps to it.
     expect(getLanguageInstruction("zh-CN")).toContain("Simplified Chinese");
   });
 

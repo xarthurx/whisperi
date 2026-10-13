@@ -30,12 +30,15 @@ const BILINGUAL_INSTRUCTION =
 const baseCode = (code: string) => code.split(/[-_]/)[0].toLowerCase();
 
 /** Tailored instruction for a code, tolerating a bare base code: the backend
- *  reports ISO 639-1 ("en"), while English exists only as "en-US"/"en-GB".
- *  Exact match first, then the first registry entry with the same base. */
+ *  reports ISO 639-1 ("zh", "en"). Exact match first, then the registry's
+ *  only entry with that base. A base with several regional variants ("en" →
+ *  en-US/en-GB) carries no spelling preference, so it gets the
+ *  language-preserving auto instruction rather than an arbitrary variant. */
 function instructionFor(code: string): string | undefined {
   if (LANGUAGE_INSTRUCTIONS[code]) return LANGUAGE_INSTRUCTIONS[code];
-  const match = Object.keys(LANGUAGE_INSTRUCTIONS).find((k) => baseCode(k) === baseCode(code));
-  return match ? LANGUAGE_INSTRUCTIONS[match] : undefined;
+  const variants = Object.keys(LANGUAGE_INSTRUCTIONS).filter((k) => baseCode(k) === baseCode(code));
+  if (variants.length > 1) return AUTO_DETECT_INSTRUCTION;
+  return variants.length === 1 ? LANGUAGE_INSTRUCTIONS[variants[0]] : undefined;
 }
 
 function languageLabel(code: string): string {
