@@ -6,11 +6,30 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize)]
 struct TranscriptionResponse {
     text: String,
-    /// Detected language code, returned by OpenAI/Groq when
-    /// `response_format=verbose_json` is requested. Absent for chat-completion
-    /// transcription paths (Qwen, OpenRouter).
+    /// Detected language from Whisper `verbose_json` (OpenAI/Groq) and from
+    /// Mistral, which always returns it.
     #[serde(default)]
     language: Option<String>,
+    /// `gpt-transcribe` reports detection as `[{"code": "fr"}]`, or `[]`
+    /// when it cannot decide.
+    #[serde(default)]
+    languages: Option<Vec<DetectedLanguage>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DetectedLanguage {
+    code: String,
+}
+
+impl TranscriptionResponse {
+    fn detected_language(&self) -> Option<String> {
+        let first = self
+            .languages
+            .as_ref()
+            .and_then(|l| l.first())
+            .map(|l| l.code.as_str());
+        normalize_provider_language(self.language.as_deref().or(first))
+    }
 }
 
 /// Result of a cloud transcription: the text plus, when the provider supports
@@ -244,12 +263,90 @@ pub fn log_transcription_result(provider: &str, text: &str, prompt: Option<&str>
     }
 }
 
-/// Transcribe audio via OpenAI Whisper API
-///
-/// Uses `response_format=verbose_json` so the response includes the
-/// detected language. The `gpt-4o-*-transcribe` models reject verbose_json
-/// (they only support `json` or `text`), so we drop the parameter for them
-/// and accept that detection is unavailable on that path.
+/// Vocabulary entries sent as a provider biasing list. Mistral documents a
+/// maximum of 100 `context_bias` entries; OpenAI documents no limit.
+const MAX_VOCABULARY: usize = 100;
+
+/// Vocabulary safe to send as a list field: trimmed, de-duplicated
+/// case-insensitively, capped at [`MAX_VOCABULARY`], and without entries
+/// containing `<`, `>`, CR or LF — OpenAI rejects the whole request for any
+/// of those characters in `keywords[]`.
+fn sanitize_vocabulary(vocabulary: &[String]) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    vocabulary
+        .iter()
+        .map(|v| v.trim())
+        .filter(|v| !v.is_empty() && !v.contains(['<', '>', '\r', '\n']))
+        .filter(|v| seen.insert(v.to_lowercase()))
+        .take(MAX_VOCABULARY)
+        .map(String::from)
+        .collect()
+}
+
+/// Text fields for an OpenAI-compatible multipart transcription request
+/// (OpenAI and Groq), by model family:
+/// - Whisper (`whisper-1`, Groq `whisper-large-v3*`) is the only family that
+///   accepts `verbose_json`, which carries the detected `language`.
+/// - `gpt-transcribe` takes `languages[]` (never alongside `language`; the
+///   provider's code-switching hint) and the vocabulary as `keywords[]`, and
+///   reports detection in plain `json`.
+/// - Other models take at most one `language`; a bilingual pair sends none so
+///   the model detects within it.
+/// - Diarization models do not accept `prompt`.
+pub(crate) fn openai_form_fields(
+    model: &str,
+    languages: &[String],
+    hints: &RequestHints,
+) -> Vec<(&'static str, String)> {
+    let mut fields = vec![("model", model.to_string())];
+    if model.starts_with("whisper") {
+        fields.push(("response_format", "verbose_json".to_string()));
+    }
+    if model.starts_with("gpt-transcribe") {
+        fields.extend(languages.iter().map(|l| ("languages[]", l.clone())));
+        fields.extend(
+            sanitize_vocabulary(&hints.vocabulary)
+                .into_iter()
+                .map(|k| ("keywords[]", k)),
+        );
+    } else if let [only] = languages {
+        fields.push(("language", only.clone()));
+    }
+    if !hints.prompt.is_empty() && !model.contains("diarize") {
+        fields.push(("prompt", hints.prompt.clone()));
+    }
+    fields
+}
+
+/// POST a multipart transcription request (audio as `file` plus `fields`)
+/// and parse the JSON response.
+async fn post_transcription(
+    url: &str,
+    api_key: &str,
+    audio_data: Vec<u8>,
+    fields: Vec<(&'static str, String)>,
+) -> Result<TranscriptionResponse> {
+    let file_part = multipart::Part::bytes(audio_data)
+        .file_name("audio.wav")
+        .mime_str("audio/wav")?;
+    let mut form = multipart::Form::new().part("file", file_part);
+    for (name, value) in fields {
+        form = form.text(name, value);
+    }
+    log::info!("[Whisperi] POST {}", url);
+    let response = crate::http::HTTP_CLIENT
+        .post(url)
+        .bearer_auth(api_key)
+        .multipart(form)
+        .send()
+        .await?;
+    let response = crate::http::check_response(response, "Transcription API error").await?;
+    Ok(response.json().await?)
+}
+
+/// Transcribe audio via an OpenAI-compatible `/audio/transcriptions`
+/// endpoint (OpenAI, Groq). Which fields each model family receives lives in
+/// [`openai_form_fields`].
 pub async fn transcribe_openai(
     audio_data: Vec<u8>,
     api_key: &str,
@@ -262,49 +359,16 @@ pub async fn transcribe_openai(
         "{}/audio/transcriptions",
         base_url.unwrap_or("https://api.openai.com/v1")
     );
-
-    let file_part = multipart::Part::bytes(audio_data)
-        .file_name("audio.wav")
-        .mime_str("audio/wav")?;
-
-    let mut form = multipart::Form::new()
-        .text("model", model.to_string())
-        .part("file", file_part);
-
-    // verbose_json gives us `language` (and `duration`/`segments` which we
-    // ignore). Only `whisper-1` and Groq's whisper variants support it; the
-    // newer GPT-4o transcription models do not.
-    let supports_verbose = !model.starts_with("gpt-4o");
-    if supports_verbose {
-        form = form.text("response_format", "verbose_json".to_string());
-    }
-
-    if let [only] = languages {
-        form = form.text("language", only.clone());
-    }
-
-    if !hints.prompt.is_empty() {
-        form = form.text("prompt", hints.prompt.clone());
-    }
-
-    log::info!("[Whisperi] POST {}", url);
-    let response = crate::http::HTTP_CLIENT
-        .post(&url)
-        .bearer_auth(api_key)
-        .multipart(form)
-        .send()
-        .await?;
-
-    let response = crate::http::check_response(response, "Transcription API error").await?;
-
-    let result: TranscriptionResponse = response.json().await?;
+    let fields = openai_form_fields(model, languages, hints);
+    let result = post_transcription(&url, api_key, audio_data, fields).await?;
     log_transcription_result("Cloud", &result.text, Some(hints.prompt.as_str()));
-    if let Some(ref code) = result.language {
+    let detected_language = result.detected_language();
+    if let Some(ref code) = detected_language {
         log::info!("[Whisperi] Cloud detected language: {}", code);
     }
     Ok(CloudTranscription {
         text: result.text,
-        detected_language: normalize_provider_language(result.language.as_deref()),
+        detected_language,
     })
 }
 
@@ -313,6 +377,7 @@ pub async fn transcribe_openai(
 /// that's what the rest of the pipeline expects.
 fn normalize_provider_language(lang: Option<&str>) -> Option<String> {
     let raw = lang?.trim();
+    let raw = raw.split(['-', '_']).next().unwrap_or(raw);
     if raw.is_empty() {
         return None;
     }
@@ -536,6 +601,92 @@ pub async fn transcribe_mistral(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn hints(prompt: &str, vocabulary: &[&str]) -> RequestHints {
+        RequestHints {
+            prompt: prompt.into(),
+            vocabulary: vocabulary.iter().map(|v| v.to_string()).collect(),
+        }
+    }
+
+    fn langs(codes: &[&str]) -> Vec<String> {
+        codes.iter().map(|c| c.to_string()).collect()
+    }
+
+    #[test]
+    fn only_whisper_models_request_verbose_json() {
+        for model in ["whisper-1", "whisper-large-v3", "whisper-large-v3-turbo"] {
+            let fields = openai_form_fields(model, &[], &hints("", &[]));
+            assert!(fields.contains(&("response_format", "verbose_json".into())), "{model}");
+        }
+        for model in ["gpt-transcribe", "gpt-4o-mini-transcribe", "gpt-4o-transcribe"] {
+            let fields = openai_form_fields(model, &[], &hints("", &[]));
+            assert!(fields.iter().all(|(k, _)| *k != "response_format"), "{model}");
+        }
+    }
+
+    #[test]
+    fn gpt_transcribe_gets_language_list_and_keywords_never_singular_language() {
+        let fields = openai_form_fields(
+            "gpt-transcribe",
+            &langs(&["en", "zh"]),
+            &hints("prompt text", &["CLAUDE", "Tauri"]),
+        );
+        assert!(fields.contains(&("languages[]", "en".into())));
+        assert!(fields.contains(&("languages[]", "zh".into())));
+        assert!(fields.contains(&("keywords[]", "CLAUDE".into())));
+        assert!(fields.contains(&("keywords[]", "Tauri".into())));
+        assert!(fields.contains(&("prompt", "prompt text".into())));
+        assert!(fields.iter().all(|(k, _)| *k != "language"));
+    }
+
+    #[test]
+    fn legacy_models_send_one_language_and_none_for_a_pair() {
+        let single = openai_form_fields("gpt-4o-mini-transcribe", &langs(&["zh"]), &hints("", &[]));
+        assert!(single.contains(&("language", "zh".into())));
+        let pair = openai_form_fields("whisper-large-v3", &langs(&["en", "zh"]), &hints("", &[]));
+        assert!(pair.iter().all(|(k, _)| *k != "language" && *k != "languages[]"));
+        assert!(pair.iter().all(|(k, _)| *k != "keywords[]"));
+    }
+
+    #[test]
+    fn diarize_model_never_gets_a_prompt_and_empty_prompts_are_omitted() {
+        let diarize = openai_form_fields("gpt-4o-transcribe-diarize", &[], &hints("ctx", &[]));
+        assert!(diarize.iter().all(|(k, _)| *k != "prompt"));
+        let empty = openai_form_fields("whisper-1", &[], &hints("", &[]));
+        assert!(empty.iter().all(|(k, _)| *k != "prompt"));
+    }
+
+    #[test]
+    fn vocabulary_drops_request_breaking_entries_and_duplicates() {
+        let vocab: Vec<String> = ["CLAUDE", " claude ", "a<b", "x>y", "line\nbreak", "cr\rx", "", "Tauri"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(sanitize_vocabulary(&vocab), vec!["CLAUDE".to_string(), "Tauri".to_string()]);
+        let many: Vec<String> = (0..150).map(|i| format!("term{i}")).collect();
+        assert_eq!(sanitize_vocabulary(&many).len(), 100);
+    }
+
+    #[test]
+    fn detected_language_reads_whisper_and_gpt_transcribe_shapes() {
+        let whisper: TranscriptionResponse =
+            serde_json::from_str(r#"{"text":"hi","language":"english"}"#).unwrap();
+        assert_eq!(whisper.detected_language().as_deref(), Some("en"));
+        let gpt: TranscriptionResponse =
+            serde_json::from_str(r#"{"text":"hi","languages":[{"code":"zh-cn"}]}"#).unwrap();
+        assert_eq!(gpt.detected_language().as_deref(), Some("zh"));
+        for body in [r#"{"text":"hi","languages":[]}"#, r#"{"text":"hi","languages":null}"#, r#"{"text":"hi"}"#] {
+            let r: TranscriptionResponse = serde_json::from_str(body).unwrap();
+            assert_eq!(r.detected_language(), None, "{body}");
+        }
+    }
+
+    #[test]
+    fn normalize_provider_language_strips_region() {
+        assert_eq!(normalize_provider_language(Some("zh-CN")), Some("zh".into()));
+        assert_eq!(normalize_provider_language(Some("en-us")), Some("en".into()));
+    }
 
     #[test]
     fn normalize_provider_language_iso_codes_pass_through() {
