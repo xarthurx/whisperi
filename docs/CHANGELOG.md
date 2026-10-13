@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Highlights
+
+- Chinese dictation in bilingual mode no longer comes back with English translations mixed in, or with each sentence written twice
+- AI cleanup keeps every word in the language you spoke it in when you mix two languages
+- GPT Transcribe now works for standard dictation, and Mistral now uses your custom dictionary
+
+### Fixes
+
+- Bilingual Whisper conditioning no longer sends a sentence in each language. The previous prompt — a Chinese sentence followed by its English translation — was imitated by Whisper, which wrote every spoken segment twice (as an interleaved English translation or a verbatim duplicate). Whisper now gets one language's conditioning sentence (the first of the pair that has one), with the dictionary after a Latin-script sentence and before a CJK one; on a 22-clip Groq `whisper-large-v3` test set, flagged outputs went from 10 to 0.
+- Bilingual enhancement uses a code-switch-preserving instruction instead of forcing the resolved language; bare base codes (`en`) map to the tailored registry instruction instead of the forced generic template that translated whole dictations into English.
+- OpenAI: `verbose_json` is sent only to Whisper models (`gpt-transcribe` rejected it with HTTP 400); `gpt-transcribe` gets `languages[]` (both languages in bilingual mode) and `keywords[]`, and its `languages[].code` detection is read; `gpt-4o-transcribe-diarize` no longer receives `prompt`.
+- Mistral: dictionary sent as `context_bias` (the endpoint has no `prompt`/`response_format`); detected `language` is read; `voxtral-small-latest` removed from transcription models and migrated to `voxtral-mini-latest`.
+- Normalization: CJK small-form marks (﹐﹑﹒﹔﹕﹖﹗) map to standard full-width marks; an English-resolved transcript keeps Chinese clauses' punctuation and Simplified characters; more Chinese silence-hallucination phrases are blanked.
+
 ## [0.8.9] - 2026-10-12
 
 ### Highlights

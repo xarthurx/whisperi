@@ -1,5 +1,16 @@
 # Progress
 
+## Bilingual prompt + provider request fixes (unreleased, 2026-10-13)
+
+Branch `fix/bilingual-prompt-and-provider-requests`; plan `docs/superpowers/plans/2026-10-13-bilingual-prompt-and-provider-requests.md`.
+
+- **Symptom:** Chinese dictation sometimes came back as Chinese, sometimes Chinese mixed with English (dev machine: Groq `whisper-large-v3`, bilingual en-US + zh).
+- **Root cause:** the bilingual Whisper `prompt` was a Chinese sentence followed by its English translation; Whisper imitated it and wrote every segment twice — as an interleaved translation (`那你就记得。 Then you remember.`) or a duplicate (`Thank you for the email. Thank you for the email.`). The history DB had 0 interleaved translations in ~1,000 Chinese dictations Feb–May 2026; the first appeared 2026-06-04, the day bilingual mode (v0.8.0) shipped. TTS + noise clips reproduced DB entries verbatim against Groq.
+- **Amplifier:** a sentence + its translation sits at ~50% of `script_language`'s weighted threshold, so the resolved language flipped between zh/en/None, and bare `en` fell into the forced generic enhancement template (whole dictation translated to English).
+- **Eval (22 clips, Groq whisper-large-v3):** current prompt 12/22 clean; en sentence + dict 22/22; zh sentence + dict 20/22 (dictionary echo on short clips); dict + en sentence 21/22 (one clip fully translated); dict + zh sentence 22/22; dict + one code-switched sentence 21/22; dict only 22/22 but 9/14 Chinese clips without punctuation. Shipped rule: one sentence, dictionary after Latin / before CJK.
+- **Provider audit:** `gpt-transcribe` rejects `verbose_json`; Mistral's endpoint has no `prompt`/`response_format` (uses `context_bias`); `voxtral-small-latest` is not a transcription model. All fixed on the branch.
+- **Not done:** switching the Standard default to `gpt-transcribe` — the live check returned HTTP 401 with the dev machine's stored OpenAI key, so the request shape is verified against docs only (see TODO).
+
 ## v0.8.9 release (2026-10-12)
 
 - [COMPUTED] Published [v0.8.9](https://github.com/xarthurx/whisperi/releases/tag/v0.8.9)
@@ -203,7 +214,7 @@ Landed on branch `feat/bilingual-language-mode`. Primary/secondary language sele
 ### Open items to verify in real use (from spec §14)
 
 - [ ] Whether Live realtime providers (OpenAI Realtime, Azure, etc.) surface a per-utterance detected language in their event stream — needed to implement snap-to-pair logic in Live mode without forcing the primary.
-- [ ] Empirically best bilingual prompt ordering for zh+en: current implementation places the primary language last (nearest the audio); validate this assumption with short Mandarin clips in a zh+en pair.
+- [x] Empirically best bilingual prompt ordering for zh+en — resolved 2026-10-13: two languages' sentences in one prompt caused translated/duplicated output; bilingual now conditions on one language (see the 2026-10-13 entry at the top).
 - [ ] Which cloud providers (Azure Cognitive Services, Google Speech-to-Text, AssemblyAI) return a usable detected-language field in their bilingual / multi-language response, and whether that field is reliable enough to feed `resolve_language`.
 
 ## Live polish-swap scoping (post-0.8.0)
