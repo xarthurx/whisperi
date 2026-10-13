@@ -159,6 +159,12 @@ describe("language instructions", () => {
     expect(text).not.toContain("regardless of what language the user spoke");
   });
 
+  test("bilingual rule gives Japanese its own comma, not the Chinese one", () => {
+    const text = getBilingualInstruction("ja", "en");
+    expect(text).toContain("Japanese sentences use Japanese punctuation (。、？！");
+    expect(text).not.toContain("Chinese and Japanese sentences use full-width punctuation");
+  });
+
   test("Standard bilingual cleanup uses the bilingual rule instead of a forced language", () => {
     const prompt = getSystemPrompt("Jasper", dictionary, "zh", undefined, "standard", ["en-US", "zh"]);
     expect(prompt).toContain("NEVER translate");

@@ -24,7 +24,7 @@ const BILINGUAL_INSTRUCTION =
   "The user dictates in {{languages}} and often switches between them, even within one sentence.\n" +
   "- Keep every word in the language it was transcribed in. NEVER translate any part of the text into the other language, and never add a translation of what was said.\n" +
   "- Preserve technical terms, product names, and proper nouns exactly as transcribed.\n" +
-  "- Punctuate each sentence in its own language's convention: Chinese and Japanese sentences use full-width punctuation (。，？！：；) with no spaces around it; English and other Latin-script sentences use ASCII punctuation.\n" +
+  "- Punctuate each sentence in its own language's convention, with no spaces around full-width marks: Chinese sentences use Chinese full-width punctuation (。，？！：；); Japanese sentences use Japanese punctuation (。、？！); English and other Latin-script sentences use ASCII punctuation.\n" +
   "- When outputting Chinese, use Simplified Chinese characters (简体中文), never Traditional (繁體中文).";
 
 const baseCode = (code: string) => code.split(/[-_]/)[0].toLowerCase();
