@@ -82,10 +82,13 @@
 - [x] Fetch the remote base and confirm the latest published release is v0.8.8; choose v0.8.9.
 - [x] Promote the changelog entry before synchronizing application version metadata.
 - [x] Verify the production frontend build and release-version metadata.
-- [ ] Commit task-owned files, fast-forward main, push main, and push the v0.8.9 tag to trigger the signed release workflow.
-- [ ] Wait for the release workflow; verify the public installer, signature, and updater metadata.
-- [ ] Check the WinGet fork, preview manifest generation, then submit once with cached authentication.
-- [ ] Attach and inspect the generated WinGet pull request; verify license, concise description, release date, asset URL/hash, and release-notes URL.
-- [ ] Update the WinGet progress record with the verified outcome, commit it, and push it.
+- [x] Commit task-owned files, fast-forward main, push main, and push the v0.8.9 tag to trigger the signed release workflow.
+- [x] Wait for the release workflow; verify the public installer, signature, and updater metadata.
+- [x] Check the WinGet fork, preview manifest generation, then submit once with cached authentication.
+- [x] Attach and inspect the generated WinGet pull request; verify license, concise description, release date, asset URL/hash, and release-notes URL.
+- [x] Update the WinGet progress record with the verified outcome, commit it, and push it.
 
 - [COMPUTED] Release preflight: application manifests and the root Cargo lock entry are 0.8.9; production frontend build and all 270 tests pass. The WinGet fork was safely fast-forwarded to upstream before submission.
+- [COMPUTED] Release commit `4d3b464` and tag `v0.8.9` are pushed to origin/main; Release run 38296736056 and CI run 38296724118 started. The WinGet fork matches upstream after synchronization.
+- [COMPUTED] Release and CI runs both completed successfully. The stable release is public with NSIS/MSI installers, signatures, and updater metadata; its notes were updated with the reviewed behavior and checks. The preferred NSIS installer digest and cryptographic updater signature match, and the configured latest-version endpoint serves 0.8.9.
+- [COMPUTED] WinGet preview and submission succeeded; PR 451265 was attached and inspected, with no manifest corrections required. It merged on 2026-10-12 at 20:13:29 UTC. All three manifests are present upstream, with validation/publication success confirmed on 2026-10-13.
