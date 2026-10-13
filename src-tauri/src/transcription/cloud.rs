@@ -21,6 +21,17 @@ pub struct CloudTranscription {
     pub detected_language: Option<String>,
 }
 
+/// What a transcription request may send besides audio: the free-text
+/// `prompt` (conditioning + vocabulary, for Whisper-style models) and the
+/// vocabulary as a list for providers with a dedicated biasing field
+/// (OpenAI `keywords[]`, Mistral `context_bias`). The dictionary-echo retry
+/// sends neither vocabulary form.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct RequestHints {
+    pub prompt: String,
+    pub vocabulary: Vec<String>,
+}
+
 /// Split text into lowercase word tokens (letters + numbers only).
 fn tokenize(s: &str) -> Vec<String> {
     s.to_lowercase()
@@ -243,8 +254,8 @@ pub async fn transcribe_openai(
     audio_data: Vec<u8>,
     api_key: &str,
     model: &str,
-    language: Option<&str>,
-    prompt: Option<&str>,
+    languages: &[String],
+    hints: &RequestHints,
     base_url: Option<&str>,
 ) -> Result<CloudTranscription> {
     let url = format!(
@@ -268,16 +279,12 @@ pub async fn transcribe_openai(
         form = form.text("response_format", "verbose_json".to_string());
     }
 
-    if let Some(lang) = language {
-        if lang != "auto" {
-            form = form.text("language", lang.to_string());
-        }
+    if let [only] = languages {
+        form = form.text("language", only.clone());
     }
 
-    if let Some(p) = prompt {
-        if !p.is_empty() {
-            form = form.text("prompt", p.to_string());
-        }
+    if !hints.prompt.is_empty() {
+        form = form.text("prompt", hints.prompt.clone());
     }
 
     log::info!("[Whisperi] POST {}", url);
@@ -291,7 +298,7 @@ pub async fn transcribe_openai(
     let response = crate::http::check_response(response, "Transcription API error").await?;
 
     let result: TranscriptionResponse = response.json().await?;
-    log_transcription_result("Cloud", &result.text, prompt);
+    log_transcription_result("Cloud", &result.text, Some(hints.prompt.as_str()));
     if let Some(ref code) = result.language {
         log::info!("[Whisperi] Cloud detected language: {}", code);
     }
@@ -344,15 +351,15 @@ pub async fn transcribe_groq(
     audio_data: Vec<u8>,
     api_key: &str,
     model: &str,
-    language: Option<&str>,
-    prompt: Option<&str>,
+    languages: &[String],
+    hints: &RequestHints,
 ) -> Result<CloudTranscription> {
     transcribe_openai(
         audio_data,
         api_key,
         model,
-        language,
-        prompt,
+        languages,
+        hints,
         Some("https://api.groq.com/openai/v1"),
     )
     .await
@@ -446,8 +453,8 @@ pub async fn transcribe_openrouter(
     audio_data: Vec<u8>,
     api_key: &str,
     model: &str,
-    language: Option<&str>,
-    prompt: Option<&str>,
+    languages: &[String],
+    hints: &RequestHints,
 ) -> Result<CloudTranscription> {
     log::info!(
         "[Whisperi] OpenRouter transcription: model={}, audio={} bytes ({:.1} KB base64)",
@@ -461,15 +468,11 @@ pub async fn transcribe_openrouter(
         "Transcribe this audio with proper punctuation and capitalization. \
          Output only the transcribed text, nothing else.",
     );
-    if let Some(lang) = language {
-        if lang != "auto" {
-            instruction.push_str(&format!(" Output language: {}.", lang));
-        }
+    if let [only] = languages {
+        instruction.push_str(&format!(" Output language: {}.", only));
     }
-    if let Some(p) = prompt {
-        if !p.is_empty() {
-            instruction.push_str(&format!(" Context/vocabulary hints: {}", p));
-        }
+    if !hints.prompt.is_empty() {
+        instruction.push_str(&format!(" Context/vocabulary hints: {}", hints.prompt));
     }
 
     let content = vec![
@@ -504,7 +507,7 @@ pub async fn transcribe_openrouter(
     let result: crate::http::ChatCompletionsResponse = response.json().await?;
     let text = result.text();
 
-    log_transcription_result("OpenRouter", &text, prompt);
+    log_transcription_result("OpenRouter", &text, Some(hints.prompt.as_str()));
     Ok(CloudTranscription {
         text,
         detected_language: None,
@@ -516,15 +519,15 @@ pub async fn transcribe_mistral(
     audio_data: Vec<u8>,
     api_key: &str,
     model: &str,
-    language: Option<&str>,
-    prompt: Option<&str>,
+    languages: &[String],
+    hints: &RequestHints,
 ) -> Result<CloudTranscription> {
     transcribe_openai(
         audio_data,
         api_key,
         model,
-        language,
-        prompt,
+        languages,
+        hints,
         Some("https://api.mistral.ai/v1"),
     )
     .await

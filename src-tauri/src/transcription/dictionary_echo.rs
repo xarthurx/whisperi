@@ -1,4 +1,4 @@
-use super::cloud::CloudTranscription;
+use super::cloud::{CloudTranscription, RequestHints};
 use anyhow::Result;
 use std::collections::HashSet;
 use std::future::Future;
@@ -91,16 +91,24 @@ pub(crate) async fn transcribe_with_recovery<F, Fut>(
     mut request: F,
 ) -> Result<CloudTranscription>
 where
-    F: FnMut(Vec<u8>, String) -> Fut,
+    F: FnMut(Vec<u8>, RequestHints) -> Fut,
     Fut: Future<Output = Result<CloudTranscription>>,
 {
-    let output = request(audio_data.clone(), prompt).await?;
+    let hints = RequestHints {
+        prompt,
+        vocabulary: dictionary.to_vec(),
+    };
+    let output = request(audio_data.clone(), hints).await?;
     if !has_dictionary_list_echo(&output.text, dictionary) {
         return Ok(output);
     }
 
     log::warn!("[Whisperi] Suspected dictionary list echo; retrying without vocabulary hints");
-    request(audio_data, retry_prompt)
+    let retry = RequestHints {
+        prompt: retry_prompt,
+        vocabulary: Vec::new(),
+    };
+    request(audio_data, retry)
         .await
         .map_err(|error| anyhow::anyhow!("Dictionary echo recovery failed: {error:#}"))
 }
@@ -108,7 +116,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transcription::cloud::CloudTranscription;
+    use crate::transcription::cloud::{CloudTranscription, RequestHints};
     use std::collections::VecDeque;
     use std::future::ready;
 
@@ -201,8 +209,8 @@ mod tests {
             &dictionary(),
             "CLAUDE Tauri cairo wezterm ultrathink Komodo Jasper".into(),
             String::new(),
-            |bytes, prompt| {
-                calls.push((bytes, prompt));
+            |bytes, hints| {
+                calls.push((bytes, hints));
                 ready(responses.pop_front().expect("at most one retry"))
             },
         )
@@ -215,9 +223,12 @@ mod tests {
             vec![
                 (
                     audio.clone(),
-                    "CLAUDE Tauri cairo wezterm ultrathink Komodo Jasper".into()
+                    RequestHints {
+                        prompt: "CLAUDE Tauri cairo wezterm ultrathink Komodo Jasper".into(),
+                        vocabulary: dictionary(),
+                    }
                 ),
-                (audio, String::new())
+                (audio, RequestHints::default())
             ]
         );
     }
