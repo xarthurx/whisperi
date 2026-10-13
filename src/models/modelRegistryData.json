@@ -77,12 +77,6 @@
           "params": "4B",
           "description": "Fast multilingual transcription, 13 languages, diarization",
           "streaming": false
-        },
-        {
-          "id": "voxtral-small-latest",
-          "name": "Voxtral Small",
-          "description": "Higher-accuracy offline transcription",
-          "streaming": false
         }
       ]
     },

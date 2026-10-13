@@ -36,7 +36,10 @@ describe("retired model migration", () => {
     );
   });
 
-  test("migrates retired OpenAI, Gemini and Qwen models", () => {
+  test("migrates retired OpenAI, Gemini, Qwen and Mistral models", () => {
+    expect(migrateRetiredModel("mistral", "voxtral-small-latest")).toBe(
+      "voxtral-mini-latest",
+    );
     expect(migrateRetiredModel("openai", "gpt-5.3-chat-latest")).toBe(
       "gpt-5.6-sol",
     );

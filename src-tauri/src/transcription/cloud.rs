@@ -318,6 +318,27 @@ pub(crate) fn openai_form_fields(
     fields
 }
 
+/// Text fields for Mistral's transcription endpoint. Its schema has no
+/// `prompt` or `response_format`: vocabulary goes in `context_bias` (a
+/// repeated field, as Mistral's own SDK encodes lists) and the detected
+/// `language` is always returned. A bilingual pair sends no `language`.
+pub(crate) fn mistral_form_fields(
+    model: &str,
+    languages: &[String],
+    hints: &RequestHints,
+) -> Vec<(&'static str, String)> {
+    let mut fields = vec![("model", model.to_string())];
+    if let [only] = languages {
+        fields.push(("language", only.clone()));
+    }
+    fields.extend(
+        sanitize_vocabulary(&hints.vocabulary)
+            .into_iter()
+            .map(|t| ("context_bias", t)),
+    );
+    fields
+}
+
 /// POST a multipart transcription request (audio as `file` plus `fields`)
 /// and parse the JSON response.
 async fn post_transcription(
@@ -579,7 +600,7 @@ pub async fn transcribe_openrouter(
     })
 }
 
-/// Transcribe audio via Mistral Voxtral API
+/// Transcribe audio via Mistral Voxtral (`/v1/audio/transcriptions`).
 pub async fn transcribe_mistral(
     audio_data: Vec<u8>,
     api_key: &str,
@@ -587,15 +608,18 @@ pub async fn transcribe_mistral(
     languages: &[String],
     hints: &RequestHints,
 ) -> Result<CloudTranscription> {
-    transcribe_openai(
-        audio_data,
+    let result = post_transcription(
+        "https://api.mistral.ai/v1/audio/transcriptions",
         api_key,
-        model,
-        languages,
-        hints,
-        Some("https://api.mistral.ai/v1"),
+        audio_data,
+        mistral_form_fields(model, languages, hints),
     )
-    .await
+    .await?;
+    log_transcription_result("Mistral", &result.text, None);
+    Ok(CloudTranscription {
+        detected_language: result.detected_language(),
+        text: result.text,
+    })
 }
 
 #[cfg(test)]
@@ -680,6 +704,21 @@ mod tests {
             let r: TranscriptionResponse = serde_json::from_str(body).unwrap();
             assert_eq!(r.detected_language(), None, "{body}");
         }
+    }
+
+    #[test]
+    fn mistral_gets_context_bias_and_never_prompt_or_response_format() {
+        let fields = mistral_form_fields(
+            "voxtral-mini-latest",
+            &langs(&["zh"]),
+            &hints("conditioning sentence CLAUDE", &["CLAUDE", "Tauri"]),
+        );
+        assert!(fields.contains(&("language", "zh".into())));
+        assert!(fields.contains(&("context_bias", "CLAUDE".into())));
+        assert!(fields.contains(&("context_bias", "Tauri".into())));
+        assert!(fields.iter().all(|(k, _)| *k != "prompt" && *k != "response_format"));
+        let pair = mistral_form_fields("voxtral-mini-latest", &langs(&["en", "zh"]), &hints("", &[]));
+        assert!(pair.iter().all(|(k, _)| *k != "language"));
     }
 
     #[test]
