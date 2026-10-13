@@ -269,6 +269,7 @@ export async function enhance(
     undefined,
     temperature,
     resolvedLanguage,
+    languagePair,
   );
   let finalText = stripAiPreamble(stripThinkTags(rawAiResponse));
 

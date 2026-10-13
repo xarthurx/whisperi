@@ -4,7 +4,7 @@ pub mod hallucination;
 pub mod normalize;
 pub mod streaming;
 mod t2s_table;
-pub use normalize::finalize_chinese_text;
+pub use normalize::{finalize_chinese_text, finalize_for_languages};
 
 /// Default (English) punctuation-conditioning initial prompt.
 pub(crate) const PUNCTUATION_PROMPT: &str =

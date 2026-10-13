@@ -342,7 +342,11 @@ where
         output.detected_language.as_deref(),
         &stripped,
     );
-    let text = transcription::finalize_chinese_text(&stripped, resolved.as_deref());
+    let pair: Vec<&str> = match (primary.as_deref(), secondary.as_deref()) {
+        (Some(p), Some(s)) => vec![p, s],
+        _ => Vec::new(),
+    };
+    let text = transcription::finalize_for_languages(&stripped, resolved.as_deref(), &pair);
     Ok(TranscriptionResult {
         text,
         detected_language: resolved,
@@ -559,6 +563,27 @@ mod tests {
         .unwrap_err();
         assert!(error.contains("provider unavailable"));
         assert!(responses.is_empty());
+    }
+
+    #[tokio::test]
+    async fn cloud_pipeline_keeps_chinese_clauses_chinese_when_a_zh_pair_resolves_english() {
+        let spoken = "我覺得可以。 I think this plan works well for everyone today.";
+        let result = transcribe_cloud_with_request(
+            vec![1],
+            Some("en-US".into()),
+            Some("zh".into()),
+            Vec::new(),
+            Vec::new(),
+            true,
+            |_, _| ready(Ok(cloud_output(spoken, None))),
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.detected_language.as_deref(), Some("en"));
+        assert_eq!(
+            result.text,
+            "我觉得可以。 I think this plan works well for everyone today."
+        );
     }
 
     #[test]
