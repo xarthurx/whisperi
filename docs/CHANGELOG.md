@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Highlights
+
+- Chinese dictation in bilingual mode no longer sometimes comes back translated into English — a problem introduced in 0.8.10
+
+### Fixes
+
+- Bilingual mode now sends Whisper the custom dictionary only, with no conditioning sentence. Groq's Whisper chooses the language it *writes* from the prompt, not only from the audio: the reported detection stayed `Chinese` while the text came out in English. 0.8.10's single-language conditioning gave en-first pairs an all-English prompt, and `whisper-large-v3-turbo` then returned a full English translation of Chinese speech (reproduced verbatim on a TTS clip matching a real failure) and sometimes an empty transcript. On 18 Chinese + 8 English clips with turbo, and 22 clips with `whisper-large-v3`, the dictionary-only prompt had no translated, duplicated, empty or echoed output; Chinese raw output now usually lacks punctuation, which AI cleanup restores.
+- Removed the unused one-language bilingual prompt builder.
+
 ## [0.8.10] - 2026-10-13
 
 ### Highlights
