@@ -189,8 +189,9 @@ fn prepare_language_params(
 ) -> (Option<String>, Option<String>, String, Option<String>) {
     let primary = normalize_language(language);
     let secondary = normalize_language(secondary_language);
-    // Bilingual: prime BOTH languages and let the model detect within the pair
-    // (no forced -l). Otherwise keep the single/auto prompt.
+    // Bilingual: condition on one language of the pair (see
+    // build_bilingual_prompt) and let the model detect within the pair (no
+    // forced -l). Otherwise keep the single/auto prompt.
     let prompt = match (primary.as_deref(), secondary.as_deref()) {
         (Some(p), Some(s)) => crate::transcription::build_bilingual_prompt(dictionary, p, s),
         _ => crate::transcription::build_prompt(dictionary, primary.as_deref()),
@@ -489,7 +490,7 @@ mod tests {
             (
                 "zh-CN",
                 Some("en-US"),
-                "Hello, how are you today? I'm fine, thank you! Let's begin. 你好，欢迎。今天过得怎么样？我很好，谢谢！让我们开始吧。",
+                "你好，欢迎。今天过得怎么样？我很好，谢谢！让我们开始吧。",
             ),
         ] {
             let mut prompts = Vec::new();
@@ -515,7 +516,7 @@ mod tests {
             .await
             .unwrap();
             assert_eq!(prompts.len(), 2);
-            assert!(prompts[0].ends_with("CLAUDE Tauri cairo wezterm Jasper"));
+            assert!(prompts[0].contains("CLAUDE Tauri cairo wezterm Jasper"));
             assert_eq!(prompts[1], expected);
         }
     }
