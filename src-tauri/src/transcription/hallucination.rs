@@ -22,6 +22,11 @@ const HALLUCINATION_PHRASES: &[&str] = &[
     // Chinese
     "谢谢观看",
     "感谢观看",
+    "感谢您的观看",
+    "谢谢您的观看",
+    "谢谢大家观看",
+    "感谢收看",
+    "谢谢收看",
     "字幕由amaraorg社区提供",
     "由amaraorg社区提供的字幕",
     "请不吝点赞订阅转发打赏支持明镜与点点栏目",
@@ -79,6 +84,8 @@ mod tests {
         assert!(is_known_hallucination("字幕由Amara.org社区提供"));
         assert!(is_known_hallucination("ご視聴ありがとうございました"));
         assert!(is_known_hallucination("시청해주셔서 감사합니다."));
+        assert!(is_known_hallucination("感谢您的观看。"));
+        assert!(is_known_hallucination("谢谢收看。谢谢收看。"));
     }
 
     #[test]

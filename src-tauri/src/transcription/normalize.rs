@@ -256,21 +256,48 @@ fn is_english_language(lang: &str) -> bool {
     base.eq_ignore_ascii_case("en")
 }
 
+/// Map CJK small form variants (U+FE50–U+FE57), which Whisper sometimes emits
+/// in Chinese output ("首尔那边﹗"), to the standard full-width marks.
+fn normalize_small_forms(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            '\u{FE50}' => '，',
+            '\u{FE51}' => '、',
+            '\u{FE52}' => '。',
+            '\u{FE54}' => '；',
+            '\u{FE55}' => '：',
+            '\u{FE56}' => '？',
+            '\u{FE57}' => '！',
+            _ => c,
+        })
+        .collect()
+}
+
 /// Apply the language-aware text post-processing pipeline. Explicit English
 /// output uses ASCII punctuation, while Chinese/auto output retains the CJK
 /// punctuation safety net; Traditional→Simplified conversion then runs when
 /// appropriate for the configured `language`. This is the single entry point
 /// all transcription and reasoning call sites should use.
 ///
+/// - CJK small-form marks are mapped to standard full-width marks first.
 /// - Explicit English converts accidental Chinese full-width marks to ASCII.
 /// - All other modes run Han-adjacent CJK punctuation normalization.
 /// - T→S conversion is gated by `should_convert_to_simplified`.
+///
+/// An English selection only owns Han-free text: Chinese clauses in a
+/// code-switched transcript keep CJK punctuation and Simplified conversion.
 pub fn finalize_chinese_text(text: &str, language: Option<&str>) -> String {
-    let punct = match language {
-        Some(lang) if is_english_language(lang) => normalize_english_punctuation(text),
-        _ => normalize_cjk_punctuation(text),
+    let text = normalize_small_forms(text);
+    let english = language.is_some_and(is_english_language);
+    let punct = if english && !text.chars().any(is_han) {
+        normalize_english_punctuation(&text)
+    } else {
+        normalize_cjk_punctuation(&text)
     };
-    if should_convert_to_simplified(&punct, language) {
+    // English says nothing about the script of embedded Han; let the
+    // auto heuristic (Han present, no kana) decide.
+    let script_language = if english { None } else { language };
+    if should_convert_to_simplified(&punct, script_language) {
         convert_to_simplified(&punct)
     } else {
         punct
@@ -799,6 +826,24 @@ mod tests {
         assert_eq!(
             finalize_chinese_text("Hello， world。 How are you？", Some("en-US")),
             "Hello, world. How are you?"
+        );
+    }
+
+    #[test]
+    fn finalize_maps_cjk_small_form_punctuation() {
+        assert_eq!(
+            finalize_chinese_text("首尔那边﹗呃﹐我﹑觉得﹖对﹔好﹕", Some("zh")),
+            "首尔那边！呃，我、觉得？对；好："
+        );
+    }
+
+    #[test]
+    fn finalize_english_keeps_chinese_clauses_chinese() {
+        // A bilingual transcript resolved to English can still carry Chinese
+        // clauses; they keep CJK punctuation and Simplified characters.
+        assert_eq!(
+            finalize_chinese_text("我覺得可以。 I think so.", Some("en")),
+            "我觉得可以。 I think so."
         );
     }
 
