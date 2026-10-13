@@ -4,6 +4,7 @@ import {
   getChatSystemPrompt,
   getSystemPrompt,
 } from "../src/config/prompts";
+import { getBilingualInstruction, getLanguageInstruction } from "../src/utils/languageSupport";
 
 const dictionary = ["CLAUDE"];
 
@@ -134,6 +135,41 @@ describe("cleanup prompt profiles", () => {
     expect(prompt).toContain("helpful AI assistant named \"Jasper\"");
     expect(prompt).toContain("Actively look for and correct");
     expect(prompt).not.toContain("literal speech-to-text cleanup tool");
+  });
+});
+
+describe("language instructions", () => {
+  test("bare base codes use the tailored registry instruction, never the forced generic one", () => {
+    // The backend reports ISO 639-1 ("en"), but the registry only has en-US/en-GB.
+    const en = getLanguageInstruction("en");
+    expect(en).toContain("American English");
+    expect(en).not.toContain("regardless of what language the user spoke");
+    expect(getLanguageInstruction("zh-CN")).toContain("Simplified Chinese");
+  });
+
+  test("bilingual instruction names both languages and forbids translation", () => {
+    const text = getBilingualInstruction("en-US", "zh");
+    expect(text).toContain("English (US) and Chinese");
+    expect(text).toContain("NEVER translate");
+    expect(text).not.toContain("regardless of what language the user spoke");
+  });
+
+  test("Standard bilingual cleanup uses the bilingual rule instead of a forced language", () => {
+    const prompt = getSystemPrompt("Jasper", dictionary, "zh", undefined, "standard", ["en-US", "zh"]);
+    expect(prompt).toContain("NEVER translate");
+    expect(prompt).not.toContain("You MUST respond entirely in Simplified Chinese");
+    expect(prompt).not.toContain("regardless of what language the user spoke");
+  });
+
+  test("Light bilingual cleanup keeps Light's own preserve-language rule", () => {
+    const prompt = getSystemPrompt("Jasper", dictionary, "zh", undefined, "light", ["en-US", "zh"]);
+    expect(prompt).toContain("LIGHT MODE LANGUAGE RULE");
+    expect(prompt).not.toContain("BILINGUAL DICTATION");
+  });
+
+  test("custom prompts in bilingual mode still get the bilingual rule", () => {
+    const prompt = getSystemPrompt("Jasper", dictionary, "en", "Only fix typos.", "light", ["en-US", "zh"]);
+    expect(prompt).toContain("BILINGUAL DICTATION");
   });
 });
 

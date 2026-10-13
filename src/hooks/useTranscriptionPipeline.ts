@@ -240,6 +240,11 @@ export async function enhance(
     settings.languageMode === "bilingual"
       ? (detectedLanguage ?? undefined)
       : effectiveLanguage(requestedLanguage(settings), detectedLanguage);
+  // Bilingual users code-switch; cleanup must keep each word's language.
+  const languagePair: readonly [string, string] | undefined =
+    settings.languageMode === "bilingual" && settings.language && settings.secondaryLanguage
+      ? [settings.language, settings.secondaryLanguage]
+      : undefined;
   const dictionaryHints = dictionaryPromptHints(settings.dictionary);
   const systemPrompt = isChatMode
     ? getChatSystemPrompt(settings.agentName, dictionaryHints, resolvedLanguage)
@@ -251,6 +256,7 @@ export async function enhance(
           ? settings.customSystemPrompt
           : undefined,
         intensity,
+        languagePair,
       );
   const userPrompt = getUserPrompt(rawText);
   const temperature = isChatMode ? undefined : TEMPERATURE_MAP[intensity];
