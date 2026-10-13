@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.8.11] - 2026-10-13
 
 ### Highlights
 
