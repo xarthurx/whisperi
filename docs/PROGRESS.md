@@ -1,8 +1,17 @@
 # Progress
 
-## Bilingual prompt + provider request fixes (unreleased, 2026-10-13)
+## v0.8.10 release (2026-10-13)
 
-Branch `fix/bilingual-prompt-and-provider-requests`; plan `docs/superpowers/plans/2026-10-13-bilingual-prompt-and-provider-requests.md`.
+- Published [v0.8.10](https://github.com/xarthurx/whisperi/releases/tag/v0.8.10) from `321ee2b` (release commit on top of squash-merged PR [#16](https://github.com/xarthurx/whisperi/pull/16), `69cef7f`). The release commit had to be cherry-picked onto `main` because its push to the PR branch had failed before the merge; the merged tree was verified identical to the tested PR head.
+- Local: 255 cargo + 30 bun tests, typecheck, build green. Hosted [CI](https://github.com/xarthurx/whisperi/actions/runs/38388801407) and [Release](https://github.com/xarthurx/whisperi/actions/runs/38388815391) succeeded.
+- Release is non-draft; x64 NSIS asset SHA-256 `59C229E7…1F51485` matches the WinGet `InstallerSha256`; `releases/latest/download/latest.json` serves 0.8.10 with the NSIS URL and a signature identical to the `.sig` asset.
+- Before the PR, the real Rust request path (`transcribe_groq` + new bilingual prompt) was run live against Groq `whisper-large-v3` on 4 TTS clips: fields accepted, detection returned, no translation/duplication.
+- WinGet: previewed, submitted once → [microsoft/winget-pkgs#451643](https://github.com/microsoft/winget-pkgs/pull/451643) (branch `xarthurx.Whisperi-0.8.10-d7f2987a-49c5-4849-892d-32aef9c80bdf`). Verified in the PR: `License: MIT`, `LicenseUrl` present, one-line `ShortDescription`, `ReleaseDate: 2026-10-13` in the installer manifest. Awaiting merge.
+- Still not live-verified: `gpt-transcribe` batch request shape and Mistral `context_bias` (see TODO).
+
+## Bilingual prompt + provider request fixes (v0.8.10, 2026-10-13)
+
+Branch `fix/bilingual-prompt-and-provider-requests` (merged as #16); plan `docs/superpowers/plans/2026-10-13-bilingual-prompt-and-provider-requests.md`.
 
 - **Symptom:** Chinese dictation sometimes came back as Chinese, sometimes Chinese mixed with English (dev machine: Groq `whisper-large-v3`, bilingual en-US + zh).
 - **Root cause:** the bilingual Whisper `prompt` was a Chinese sentence followed by its English translation; Whisper imitated it and wrote every segment twice — as an interleaved translation (`那你就记得。 Then you remember.`) or a duplicate (`Thank you for the email. Thank you for the email.`). The history DB had 0 interleaved translations in ~1,000 Chinese dictations Feb–May 2026; the first appeared 2026-06-04, the day bilingual mode (v0.8.0) shipped. TTS + noise clips reproduced DB entries verbatim against Groq.
