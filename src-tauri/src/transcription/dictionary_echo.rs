@@ -35,8 +35,12 @@ fn list_tokens(text: &str) -> Vec<String> {
 }
 
 /// A suspicion signal, never permission to delete words: three distinct,
-/// consecutive dictionary entries must appear in prompt order at either edge.
-/// Multiword entries count once, and the agent name has no special exemption.
+/// consecutive dictionary entries in prompt order anywhere in the output.
+/// Echoes are not confined to the edges: long audio is decoded in 30 s
+/// windows, and Whisper can emit the prompt's word list for a whole later
+/// window, which lands mid-text while that window's speech is silently
+/// dropped. Multiword entries count once, and the agent name has no special
+/// exemption.
 fn has_dictionary_list_echo(text: &str, dictionary: &[String]) -> bool {
     let mut seen = HashSet::new();
     let entries: Vec<Vec<String>> = dictionary
@@ -48,35 +52,24 @@ fn has_dictionary_list_echo(text: &str, dictionary: &[String]) -> bool {
         return false;
     }
     let tokens = list_tokens(text);
-    for index in 0..entries.len() {
-        let mut position = 0;
-        let mut matched = 0;
-        for entry in &entries[index..] {
-            let end = position + entry.len();
-            if end > tokens.len() || tokens[position..end] != *entry {
-                break;
+    (0..tokens.len()).any(|start| {
+        (0..entries.len()).any(|first| {
+            let mut position = start;
+            let mut matched = 0;
+            for entry in &entries[first..] {
+                let end = position + entry.len();
+                if end > tokens.len() || tokens[position..end] != *entry {
+                    break;
+                }
+                position = end;
+                matched += 1;
+                if matched >= MIN_LIST_ENTRIES {
+                    return true;
+                }
             }
-            position = end;
-            matched += 1;
-            if matched >= MIN_LIST_ENTRIES {
-                return true;
-            }
-        }
-
-        let mut position = tokens.len();
-        let mut matched = 0;
-        for entry in entries[..=index].iter().rev() {
-            if entry.len() > position || tokens[position - entry.len()..position] != *entry {
-                break;
-            }
-            position -= entry.len();
-            matched += 1;
-            if matched >= MIN_LIST_ENTRIES {
-                return true;
-            }
-        }
-    }
-    false
+            false
+        })
+    })
 }
 
 /// Verify suspected vocabulary echoes acoustically rather than trimming them.
@@ -158,13 +151,33 @@ mod tests {
     }
 
     #[test]
+    fn detects_interior_runs_where_an_echo_replaced_a_window() {
+        // Long dictations are decoded in 30 s windows; Whisper can emit the
+        // prompt's word list for a whole later window, which lands mid-text and
+        // silently drops that window's speech. Real outputs (2026-10-21) and a
+        // Groq reproduction, with the user's dictionary order.
+        let dict: Vec<String> = [
+            "CLAUDE", "whisperi", "tauri", "Zellij", "codex", "ultrathink", "repo",
+            "XelToFab", "Engibench", "Jasper",
+        ]
+        .map(String::from)
+        .to_vec();
+        for text in [
+            "additionally I want to unify the format of long notes like the one we had in the website XelToFab Engibench Jasper article before",
+            "but not specifically about the Zellij codex ultrathink repo XelToFab Engibench Jasper write a code for it and the code part",
+            "你先改完发给我看一下Zellij codex ultrathink repo XelToFab Engibench Jasper然后再跟现在的方法做对比",
+        ] {
+            assert!(has_dictionary_list_echo(text, &dict), "{text}");
+        }
+    }
+
+    #[test]
     fn ordinary_vocabulary_and_short_or_unordered_lists_are_not_echoes() {
         for text in [
             "CLAUDE",
             "CLAUDE Tauri",
             "please open Tauri",
             "Jasper, please open cairo and wezterm",
-            "I use Tauri cairo wezterm for development",
             "real speech cairo Tauri wezterm",
             "real speech Tauri and cairo and wezterm",
             "real speech pret auri cairo wezterm",
@@ -255,13 +268,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn interior_spoken_list_is_verified_by_one_retry_and_kept() {
+        // Three entries in prompt order mid-sentence now raise suspicion too;
+        // the hint-free retry is the check, and its unchanged text stands.
+        let spoken = "I use Tauri cairo wezterm daily";
+        let mut calls = 0;
+        let result = transcribe_with_recovery(
+            vec![1],
+            &dictionary(),
+            "hints".into(),
+            String::new(),
+            |_, _| {
+                calls += 1;
+                ready(Ok(output(spoken, None)))
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.text, spoken);
+        assert_eq!(calls, 2);
+    }
+
+    #[tokio::test]
     async fn ordinary_dictionary_speech_uses_one_request() {
-        for spoken in [
-            "CLAUDE",
-            "CLAUDE Tauri",
-            "please open Tauri",
-            "I use Tauri cairo wezterm daily",
-        ] {
+        for spoken in ["CLAUDE", "CLAUDE Tauri", "please open Tauri"] {
             let mut calls = 0;
             let result = transcribe_with_recovery(
                 vec![1],

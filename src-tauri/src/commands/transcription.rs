@@ -570,6 +570,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn cloud_pipeline_recovers_a_window_lost_to_an_interior_echo() {
+        // A later 30 s window decoded as the dictionary list: the echo lands
+        // mid-text and that window's speech is gone. The hint-free retry
+        // transcribes it.
+        let first = "你先改完发给我看一下 Tauri cairo wezterm Jasper 然后再跟现在的方法做对比";
+        let full = "你先改完发给我看一下。Section 8 这块其实可以做。然后再跟现在的方法做对比。";
+        let mut prompts = Vec::new();
+        let result = transcribe_cloud_with_request(
+            vec![1],
+            Some("en-US".into()),
+            Some("zh".into()),
+            vocabulary(),
+            vocabulary(),
+            true,
+            |_, hints: RequestHints| {
+                prompts.push(hints.prompt);
+                ready(Ok(cloud_output(if prompts.len() == 1 { first } else { full }, None)))
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(prompts.len(), 2);
+        assert_eq!(result.text, full);
+    }
+
+    #[tokio::test]
     async fn cloud_pipeline_keeps_chinese_clauses_chinese_when_a_zh_pair_resolves_english() {
         let spoken = "我覺得可以。 I think this plan works well for everyone today.";
         let result = transcribe_cloud_with_request(
