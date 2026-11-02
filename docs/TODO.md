@@ -1,5 +1,11 @@
 # TODO
 
+## Long-dictation follow-ups (from 2026-11-02 lost-sentences investigation)
+
+- [ ] **Language carried across windows:** Groq Whisper fixes the language from the first 30 s window; in a probe, Chinese spoken after an English first window came back translated into English (with and without a prompt). Consider splitting long audio at pauses into < 30 s chunks transcribed independently (also bounds any single window's failure).
+- [ ] **Trailing credit hallucinations after real speech** (e.g. "…简化一点谢谢观看", #6198) are not stripped — the blocklist only blanks whole outputs. Unverified whether they also drop speech.
+- [ ] **Diagnostics for lost-text reports:** log the Groq segment timeline (start/end/no_speech_prob) and audio duration per dictation; the app log resets per launch and audio is not kept, so the 2026-11-02 report could only be diagnosed from history + reproduction.
+
 ## Live mode stabilization
 
 - [ ] **Verify `gpt-live-transcribe` end-to-end** with a valid OpenAI key: server-VAD `.completed` events, the `languages` array in single-language mode, and the vocabulary `prompt`. The 2026-09-05 switch was made from the docs only — the machine's stored OpenAI key was revoked (HTTP 401 `invalid_api_key`), which was also the root cause of Live mode "starting then immediately stopping".

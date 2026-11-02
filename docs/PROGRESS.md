@@ -1,5 +1,15 @@
 # Progress
 
+## Interior dictionary-echo recovery (unreleased, 2026-11-02)
+
+- **Symptom:** long dictations sometimes kept only the first sentences; intermittent, more often when long.
+- **Evidence from history:** raw transcripts (before AI cleanup) were already short — e.g. #6008 56 s → one sentence, #6198 33 s → one sentence + "谢谢观看", #6081 73 s with a mid-text echo "Zellij codex ultrathink repo XelToFab Engibench Jasper" followed by "write a code for it", which cleanup executed as an agent command (pasted Python). No app-side truncation exists: no recording cap, no auto-stop, post-processing never shortens.
+- **Echo rate by prompt shape** (dictionary unchanged throughout): Feb–Jun 4 Auto mode, bare list: 21/4271 (6 mid-text); Jun 4 – v0.8.10 sentence-framed: 2/1607 (0 mid-text); v0.8.11 bare list: 2/379 (2 mid-text).
+- **Reproduction (Groq whisper-large-v3, TTS + quiet speech + pauses):** a quiet ~53 s mixed clip came back as one echo segment for the whole first window (48 % coverage, both noise seeds); with a clean first half prepended, the echo moved mid-text (segment 52.1–82.1 s) — the exact real pattern, missed by v0.8.9's edge-only check. No-prompt decoding was complete in every case.
+- **Fix (branch `fix/interior-dictionary-echo-recovery`):** `has_dictionary_list_echo` scans the whole output. Verified live through `transcribe_cloud_with_request` + real Groq: request 1 (dictionary prompt) → mid-text echo detected → request 2 (no prompt, no vocabulary) → the lost window is back.
+- **Why not drop the dictionary prompt:** without it whisper-large-v3 recognized 13/32 dictionary-term instances vs 23/32 with it.
+- **Separate findings (not fixed, see TODO):** a long dictation that starts in English keeps English for later windows (Chinese spoken after ~30 s came back translated, with or without a prompt); trailing credit hallucinations after real speech (#6198) are not caught by the whole-output blocklist.
+
 ## v0.8.11 release (2026-10-13)
 
 - Published [v0.8.11](https://github.com/xarthurx/whisperi/releases/tag/v0.8.11) from `27952eb` (release commit on top of squash-merged PR [#17](https://github.com/xarthurx/whisperi/pull/17), `a8fd93f`, whose tree was verified identical to the tested PR head). Local: 250 cargo + 30 bun tests and typecheck green; [Release](https://github.com/xarthurx/whisperi/actions/runs/38420553346) workflow succeeded.

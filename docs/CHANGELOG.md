@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Highlights
+
+- Long dictations no longer lose a chunk of what you said in the middle or at the end
+- A long dictation no longer occasionally turns into an unrelated answer, such as a block of code
+
+### Fixes
+
+- Dictionary-echo recovery now checks the whole transcript, not only its edges. Groq Whisper decodes long audio in 30 s windows and can emit the prompt's dictionary list in place of an entire later window; the echo then sits mid-text and that window's speech is silently dropped. History: #6008 (56 s → one sentence, echo "XelToFab Engibench Jasper" mid-text) and #6081 (73 s; the echo ended in the agent name, so AI cleanup read "Jasper write a code for it" as a command and pasted Python code). Reproduced on `whisper-large-v3` with a quiet mixed-language clip: one echo segment spanning 52.1–82.1 s replaced ~27 s of speech; through the real pipeline the first request now triggers a hint-free retry that returns the missing window. From history, a bare dictionary-list prompt (Auto mode; bilingual since 0.8.11) echoes in 0.49–0.53 % of dictations vs 0.12 % for sentence-framed prompts — the dictionary stays in the prompt because it recognizes custom terms much better (23/32 vs 13/32 terms in a probe).
+- A genuinely spoken run of three dictionary terms in prompt order mid-sentence now costs one verifying retry and is kept, as edge runs already were.
+
 ## [0.8.11] - 2026-10-13
 
 ### Highlights
