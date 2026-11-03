@@ -1,12 +1,18 @@
 # Progress
 
-## Interior dictionary-echo recovery (unreleased, 2026-11-02)
+## v0.9.0 release (2026-11-03)
+
+- Published [v0.9.0](https://github.com/xarthurx/whisperi/releases/tag/v0.9.0) from `ff074c1` (release commit on top of squash-merged PR [#18](https://github.com/xarthurx/whisperi/pull/18), `50f1985`, whose tree was verified identical to the tested PR head). Minor bump (not 0.8.12) at the user's request. Local: 253 cargo + 30 bun tests and typecheck green; [Release](https://github.com/xarthurx/whisperi/actions/runs/41666337019) workflow succeeded.
+- Release is non-draft; x64 NSIS SHA-256 `5E817DE1…C2EE5BD` matches the WinGet `InstallerSha256`; `latest.json` serves 0.9.0 with the NSIS URL and a signature identical to the `.sig` asset.
+- WinGet: previewed, submitted once → [microsoft/winget-pkgs#469771](https://github.com/microsoft/winget-pkgs/pull/469771) (branch `xarthurx.Whisperi-0.9.0-676ae990-36c1-44a6-9640-70483fb6c9b7`). Verified in the PR: `License: MIT`, `LicenseUrl`, one-line `ShortDescription`, `ReleaseDate: 2026-11-03` in the installer manifest. Awaiting merge.
+
+## Interior dictionary-echo recovery (v0.9.0, 2026-11-02)
 
 - **Symptom:** long dictations sometimes kept only the first sentences; intermittent, more often when long.
 - **Evidence from history:** raw transcripts (before AI cleanup) were already short — e.g. #6008 56 s → one sentence, #6198 33 s → one sentence + "谢谢观看", #6081 73 s with a mid-text echo "Zellij codex ultrathink repo XelToFab Engibench Jasper" followed by "write a code for it", which cleanup executed as an agent command (pasted Python). No app-side truncation exists: no recording cap, no auto-stop, post-processing never shortens.
 - **Echo rate by prompt shape** (dictionary unchanged throughout): Feb–Jun 4 Auto mode, bare list: 21/4271 (6 mid-text); Jun 4 – v0.8.10 sentence-framed: 2/1607 (0 mid-text); v0.8.11 bare list: 2/379 (2 mid-text).
 - **Reproduction (Groq whisper-large-v3, TTS + quiet speech + pauses):** a quiet ~53 s mixed clip came back as one echo segment for the whole first window (48 % coverage, both noise seeds); with a clean first half prepended, the echo moved mid-text (segment 52.1–82.1 s) — the exact real pattern, missed by v0.8.9's edge-only check. No-prompt decoding was complete in every case.
-- **Fix (branch `fix/interior-dictionary-echo-recovery`):** `has_dictionary_list_echo` scans the whole output. Verified live through `transcribe_cloud_with_request` + real Groq: request 1 (dictionary prompt) → mid-text echo detected → request 2 (no prompt, no vocabulary) → the lost window is back.
+- **Fix (PR #18, released in v0.9.0):** `has_dictionary_list_echo` scans the whole output. Verified live through `transcribe_cloud_with_request` + real Groq: request 1 (dictionary prompt) → mid-text echo detected → request 2 (no prompt, no vocabulary) → the lost window is back.
 - **Why not drop the dictionary prompt:** without it whisper-large-v3 recognized 13/32 dictionary-term instances vs 23/32 with it.
 - **Separate findings (not fixed, see TODO):** a long dictation that starts in English keeps English for later windows (Chinese spoken after ~30 s came back translated, with or without a prompt); trailing credit hallucinations after real speech (#6198) are not caught by the whole-output blocklist.
 
@@ -14,7 +20,7 @@
 
 - Published [v0.8.11](https://github.com/xarthurx/whisperi/releases/tag/v0.8.11) from `27952eb` (release commit on top of squash-merged PR [#17](https://github.com/xarthurx/whisperi/pull/17), `a8fd93f`, whose tree was verified identical to the tested PR head). Local: 250 cargo + 30 bun tests and typecheck green; [Release](https://github.com/xarthurx/whisperi/actions/runs/38420553346) workflow succeeded.
 - Release is non-draft; x64 NSIS SHA-256 `F5666E86…465AC42E` matches the WinGet `InstallerSha256`; `latest.json` serves 0.8.11 with the NSIS URL and a signature identical to the `.sig` asset.
-- WinGet: previewed, submitted once → [microsoft/winget-pkgs#451778](https://github.com/microsoft/winget-pkgs/pull/451778) (branch `xarthurx.Whisperi-0.8.11-66a84e74-873f-485c-b880-6f81192cbc74`). Verified in the PR: `License: MIT`, `LicenseUrl`, one-line `ShortDescription`, `ReleaseDate: 2026-10-13` in the installer manifest. Awaiting merge.
+- WinGet: previewed, submitted once → [microsoft/winget-pkgs#451778](https://github.com/microsoft/winget-pkgs/pull/451778) (branch `xarthurx.Whisperi-0.8.11-66a84e74-873f-485c-b880-6f81192cbc74`). Verified in the PR: `License: MIT`, `LicenseUrl`, one-line `ShortDescription`, `ReleaseDate: 2026-10-13` in the installer manifest. Merged 2026-10-13 16:31 UTC.
 - The v0.8.10 WinGet PR [#451643](https://github.com/microsoft/winget-pkgs/pull/451643) merged 2026-10-13 12:31 UTC.
 
 ## Bilingual dictionary-only prompt (v0.8.11, 2026-10-13)
