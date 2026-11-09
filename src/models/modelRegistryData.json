@@ -75,7 +75,7 @@
           "id": "voxtral-mini-latest",
           "name": "Voxtral Mini Transcribe 2",
           "params": "4B",
-          "description": "Fast multilingual transcription, 13 languages, diarization",
+          "description": "Deprecated by Mistral, retired 2027-04-30. Fast multilingual transcription, diarization",
           "streaming": false
         }
       ]
@@ -112,29 +112,49 @@
       "name": "OpenAI",
       "models": [
         {
+          "id": "gpt-6-astra",
+          "name": "GPT-6 Astra",
+          "description": "Highest intelligence"
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "name": "GPT-6.1 Sol",
+          "description": "Near-Astra performance at a lower cost"
+        },
+        {
+          "id": "gpt-6.1-terra",
+          "name": "GPT-6.1 Terra",
+          "description": "Fast and efficient"
+        },
+        {
+          "id": "gpt-6-luna",
+          "name": "GPT-6 Luna",
+          "description": "Fastest and most cost-effective"
+        },
+        {
           "id": "gpt-5.6-sol",
           "name": "GPT-5.6 Sol",
-          "description": "Frontier model for complex professional work"
+          "description": "Previous-generation flagship"
         },
         {
           "id": "gpt-5.6-terra",
           "name": "GPT-5.6 Terra",
-          "description": "Balances intelligence and cost"
+          "description": "Previous generation, balances intelligence and cost"
         },
         {
           "id": "gpt-5.6-luna",
           "name": "GPT-5.6 Luna",
-          "description": "Optimized for cost-sensitive workloads"
+          "description": "Previous generation, for cost-sensitive workloads"
         },
         {
           "id": "gpt-5.2",
           "name": "GPT-5.2",
-          "description": "Previous-generation reasoning model"
+          "description": "Older reasoning model"
         },
         {
           "id": "gpt-5.2-pro",
           "name": "GPT-5.2 Pro",
-          "description": "Harder thinking, best answers"
+          "description": "Older Pro model, harder thinking"
         }
       ]
     },
@@ -143,19 +163,29 @@
       "name": "Anthropic",
       "models": [
         {
+          "id": "claude-opus-5-5",
+          "name": "Claude Opus 5.5",
+          "description": "Anthropic's recommended default, coding and agents"
+        },
+        {
+          "id": "claude-sonnet-5-5",
+          "name": "Claude Sonnet 5.5",
+          "description": "Best speed-intelligence balance"
+        },
+        {
+          "id": "claude-haiku-5-5",
+          "name": "Claude Haiku 5.5",
+          "description": "Fastest and cheapest"
+        },
+        {
           "id": "claude-opus-5",
           "name": "Claude Opus 5",
-          "description": "Most intelligent, coding and agents"
+          "description": "Previous-generation flagship"
         },
         {
           "id": "claude-sonnet-5",
           "name": "Claude Sonnet 5",
-          "description": "Best speed-intelligence balance"
-        },
-        {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "description": "Fastest, near-frontier intelligence"
+          "description": "Previous-generation balanced model"
         }
       ]
     },
@@ -164,35 +194,24 @@
       "name": "Google Gemini",
       "models": [
         {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
-          "description": "Latest stable flagship, fast and capable"
+          "id": "gemini-3.8-flash",
+          "name": "Gemini 3.8 Flash",
+          "description": "Google's most intelligent Flash model"
+        },
+        {
+          "id": "gemini-3.6-flash",
+          "name": "Gemini 3.6 Flash",
+          "description": "Stable Flash model, fast and capable"
         },
         {
           "id": "gemini-3.1-pro-preview",
           "name": "Gemini 3.1 Pro",
-          "description": "Deepest reasoning for complex tasks"
+          "description": "Deepest reasoning for complex tasks (preview)"
         },
         {
-          "id": "gemini-3.1-flash-lite",
-          "name": "Gemini 3.1 Flash Lite",
-          "description": "Fastest and cheapest next-gen model"
-        },
-        {
-          "id": "gemini-2.5-pro",
-          "name": "Gemini 2.5 Pro",
-          "description": "Stable flagship with deep thinking"
-        },
-        {
-          "id": "gemini-2.5-flash",
-          "name": "Gemini 2.5 Flash",
-          "description": "Stable fast model, 1M context"
-        },
-        {
-          "id": "gemini-2.5-flash-lite",
-          "name": "Gemini 2.5 Flash Lite",
-          "params": "0.8B",
-          "description": "Lowest latency and cost"
+          "id": "gemini-3.5-flash-lite",
+          "name": "Gemini 3.5 Flash Lite",
+          "description": "Fastest and cheapest"
         }
       ]
     },
@@ -213,10 +232,10 @@
           "description": "Fast open-source model, 1000 T/sec"
         },
         {
-          "id": "qwen/qwen3.6-27b",
-          "name": "Qwen3.6 27B",
+          "id": "qwen/qwen3.8-27b",
+          "name": "Qwen3.8 27B",
           "params": "27B",
-          "description": "Preview model, strong reasoning, 131K context"
+          "description": "Preview model; Groq may discontinue it at short notice"
         }
       ]
     },

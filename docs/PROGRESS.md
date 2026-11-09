@@ -1,5 +1,12 @@
 # Progress
 
+## Model registry refresh (unreleased, 2026-11-09)
+
+- **Trigger:** "the OpenAI model doesn't work". On the dev machine the stored OpenAI key returns 401 `invalid_api_key` on `GET /v1/models` (same as history row 6961, 2026-08-25) — every OpenAI model fails regardless of the list. No Anthropic, Gemini, Mistral or Qwen key is stored there.
+- **Method:** live `GET /models` with the working Groq key; OpenRouter's public catalogue (ids and `supported_parameters`); official model and deprecation pages researched by three parallel agents, with the Gemini deprecations and models pages re-fetched and quoted directly; live Groq cleanup replays for `qwen/qwen3.6-27b` vs `qwen/qwen3.8-27b`.
+- **Findings and changes:** see the `[Unreleased]` CHANGELOG entry. Retired: Gemini 2.5 Pro/Flash/Flash-Lite, 3.7 Flash, 3.1 Flash-Lite; bare `claude-haiku-4-5`; Groq `qwen/qwen3.6-27b`. Added: GPT-6 lineup, Claude 5.5 family, Gemini 3.8/3.6 Flash and 3.5 Flash-Lite, Groq `qwen/qwen3.8-27b`. OpenAI GPT-5/GPT-6 requests no longer carry `temperature`; `claude-haiku-5*` gets the Claude 5 treatment (`effort: low`, no sampling parameters).
+- **Not verified live:** every new OpenAI, Anthropic and Gemini id and the OpenAI `temperature` change (no working key on this machine); Groq ids and `qwen/qwen3.8-27b` behavior are verified. Not adopted: `claude-fable-5-1` (top tier, $10/$50 per MTok), Mistral Transcribe 3 (public preview), Qwen `qwen3.8-flash` and the `qwen-audio-3.0-asr-*` family (no key to test).
+
 ## Empty / cut-off AI cleanup on Groq gpt-oss (unreleased, 2026-11-09)
 
 - **Symptom:** longer dictations — mostly Chinese — sometimes pasted nothing; the user re-dictated (2026-10-22 18:49–18:50: the same question three times, #8329/#8330/#8333).

@@ -28,6 +28,14 @@ export const RETIRED_MODELS: Record<string, Record<string, string>> = {
     "moonshotai/kimi-k2-instruct": "openai/gpt-oss-120b",
     "deepseek-r1-distill-llama-70b": "openai/gpt-oss-120b",
     "gemma2-9b-it": "openai/gpt-oss-20b",
+    // Deprecated with a 2026-09-14 shutdown in favor of qwen/qwen3.8-27b
+    // (still answering on 2026-11-09, so it may stop at any time)
+    "qwen/qwen3.6-27b": "qwen/qwen3.8-27b",
+  },
+  anthropic: {
+    // The bare alias is no longer documented; the dated snapshot it pointed
+    // to (claude-haiku-4-5-20251001) is past its "not sooner than" date
+    "claude-haiku-4-5": "claude-haiku-5-5",
   },
   openai: {
     // Shut down 2026-08-10
@@ -43,10 +51,19 @@ export const RETIRED_MODELS: Record<string, Record<string, string>> = {
   },
   gemini: {
     // Shut down
-    "gemini-3.1-flash-lite-preview": "gemini-3.1-flash-lite",
+    "gemini-3.1-flash-lite-preview": "gemini-3.5-flash-lite",
     "gemini-3-pro-preview": "gemini-3.1-pro-preview",
-    "gemini-2.0-flash": "gemini-3.7-flash",
-    "gemini-2.0-flash-lite": "gemini-3.1-flash-lite",
+    "gemini-2.0-flash": "gemini-3.8-flash",
+    "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+    // Shut down 2026-12-01; Google then routes them to these replacements
+    "gemini-2.5-pro": "gemini-3.8-flash",
+    "gemini-2.5-flash": "gemini-3.5-flash-lite",
+    // Not deprecated, but 2.5 access is limited to accounts that used it before
+    "gemini-2.5-flash-lite": "gemini-3.5-flash-lite",
+    // Deprecated 2026-08-13; Google already routes it to gemini-3.8-flash
+    "gemini-3.7-flash": "gemini-3.8-flash",
+    // Shutting down 2027-05-07
+    "gemini-3.1-flash-lite": "gemini-3.5-flash-lite",
   },
   qwen: {
     // Retiring 2026-10-10

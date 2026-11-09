@@ -73,7 +73,7 @@ export default function ProviderModelSelector({
                   ?.models.filter((m) => !("realtimeOnly" in m && m.realtimeOnly))
                   .map((m) => ({
                     value: m.id,
-                    label: `${m.name}${m.params ? ` (${m.params})` : ""}`,
+                    label: `${m.name}${"params" in m && m.params ? ` (${m.params})` : ""}`,
                   })) ?? []
               }
               className="w-72"

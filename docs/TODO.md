@@ -1,5 +1,12 @@
 # TODO
 
+## Model registry follow-ups (from the 2026-11-09 refresh)
+
+- [ ] **Live-check OpenAI cleanup once a working key is stored** (the dev machine's key returns 401): confirm GPT-5.6/GPT-6 accept the request without `temperature`, that the four GPT-6 ids resolve, and consider `reasoning.effort: "none"`/`"low"` for speed; then decide whether the default `gpt-5.6-terra` should move to a GPT-6 model.
+- [ ] **Mistral Voxtral Mini Transcribe 2 retires 2027-04-30.** Move to `voxtral-mini-transcribe-latest` (Transcribe 3) once it leaves public preview, after checking with a key that it accepts the same fields (`context_bias`, `language`).
+- [ ] **Groq `qwen/qwen3.8-27b` is a preview model** that Groq may discontinue at short notice; check the deprecations page at the next refresh.
+- [ ] **Qwen International** now also offers `qwen3.8-flash` and the `qwen-audio-3.0-asr-flash` / `-streaming` family; evaluate with a key.
+
 ## AI cleanup follow-ups (from 2026-11-09 empty-cleanup investigation)
 
 - [ ] **`gpt-oss-20b` drops content at low effort** (one long Chinese dictation lost its last sentence in both replays, 2/112; `gpt-oss-120b` low: 0/56). Options: steer Groq users to 120b (registry description or default), or a Light-only completeness check — Light may delete only listed fillers, so filler-adjusted coverage should stay near 1.0 there (Standard/Full rewrite legitimately).
