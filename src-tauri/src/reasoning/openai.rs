@@ -40,6 +40,9 @@ struct ContentBlock {
 
 // --- Chat Completions API types ---
 
+/// OpenAI's own endpoint (the default when no base URL is given).
+pub const OPENAI_BASE_URL: &str = "https://api.openai.com/v1";
+
 /// Groq's OpenAI-compatible endpoint.
 pub const GROQ_BASE_URL: &str = "https://api.groq.com/openai/v1";
 
@@ -84,7 +87,7 @@ pub async fn complete(
     base_url: Option<&str>,
 ) -> Result<String> {
     let client = &*crate::http::HTTP_CLIENT;
-    let base = base_url.unwrap_or("https://api.openai.com/v1");
+    let base = base_url.unwrap_or(OPENAI_BASE_URL);
 
     // Try Responses API first (newer models) — only for OpenAI
     if base_url.is_none() {
@@ -110,21 +113,7 @@ async fn complete_responses(
     temperature: Option<f64>,
     base_url: &str,
 ) -> Result<String> {
-    let request = ResponsesRequest {
-        model: model.to_string(),
-        input: vec![
-            InputItem {
-                role: "system".to_string(),
-                content: system_prompt.to_string(),
-            },
-            InputItem {
-                role: "user".to_string(),
-                content: user_text.to_string(),
-            },
-        ],
-        max_output_tokens: max_tokens,
-        temperature,
-    };
+    let request = build_responses_request(model, system_prompt, user_text, max_tokens, temperature);
 
     let response = client
         .post(format!("{}/responses", base_url))
@@ -188,6 +177,39 @@ async fn complete_chat(
     result.complete_text()
 }
 
+/// OpenAI's GPT-5 and GPT-6 models reason by default, and OpenAI documents
+/// that `temperature` must be removed unless reasoning effort is `none`
+/// (GPT-6 Astra and GPT-6.1 Sol do not offer `none`); OpenRouter lists no
+/// `temperature` support for any of them. Sending it would fail the request,
+/// while omitting it only falls back to the model's default sampling.
+fn openai_rejects_temperature(model: &str) -> bool {
+    model.starts_with("gpt-5") || model.starts_with("gpt-6")
+}
+
+fn build_responses_request(
+    model: &str,
+    system_prompt: &str,
+    user_text: &str,
+    max_tokens: Option<u32>,
+    temperature: Option<f64>,
+) -> ResponsesRequest {
+    ResponsesRequest {
+        model: model.to_string(),
+        input: vec![
+            InputItem {
+                role: "system".to_string(),
+                content: system_prompt.to_string(),
+            },
+            InputItem {
+                role: "user".to_string(),
+                content: user_text.to_string(),
+            },
+        ],
+        max_output_tokens: max_tokens,
+        temperature: if openai_rejects_temperature(model) { None } else { temperature },
+    }
+}
+
 /// gpt-oss on Groq gets low reasoning effort and an explicit budget (see
 /// [`GPT_OSS_MAX_COMPLETION_TOKENS`]); dictation cleanup does not need deep
 /// reasoning. Other providers and models keep their defaults — only this
@@ -217,7 +239,11 @@ fn build_chat_request(
         max_completion_tokens: (groq_gpt_oss && max_tokens.is_none())
             .then_some(GPT_OSS_MAX_COMPLETION_TOKENS),
         reasoning_effort: groq_gpt_oss.then_some("low"),
-        temperature,
+        temperature: if base_url == OPENAI_BASE_URL && openai_rejects_temperature(model) {
+            None
+        } else {
+            temperature
+        },
     }
 }
 
@@ -256,6 +282,33 @@ mod tests {
         assert_eq!(body["max_tokens"], 1000);
         assert!(body.get("max_completion_tokens").is_none());
         assert_eq!(body["reasoning_effort"], "low");
+    }
+
+    #[test]
+    fn openai_gpt_5_and_6_requests_carry_no_temperature() {
+        for model in ["gpt-6-astra", "gpt-6.1-terra", "gpt-6-luna", "gpt-5.6-terra", "gpt-5.2"] {
+            assert!(body(model, None, OPENAI_BASE_URL).get("temperature").is_none(), "{model}");
+            let responses = serde_json::to_value(build_responses_request(
+                model,
+                "system",
+                "[TRANSCRIBED_SPEECH]: text",
+                None,
+                Some(0.1),
+            ))
+            .unwrap();
+            assert!(responses.get("temperature").is_none(), "{model}");
+        }
+    }
+
+    #[test]
+    fn other_providers_keep_temperature() {
+        for (model, base_url) in [
+            ("openai/gpt-oss-20b", GROQ_BASE_URL),
+            ("openai/gpt-5.6-terra", "https://openrouter.ai/api/v1"),
+            ("qwen3.7-plus", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"),
+        ] {
+            assert_eq!(body(model, None, base_url)["temperature"], 0.1, "{model} @ {base_url}");
+        }
     }
 
     /// Only the Groq + gpt-oss combination was verified live; other providers

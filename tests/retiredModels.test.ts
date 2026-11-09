@@ -46,15 +46,39 @@ describe("retired model migration", () => {
     expect(migrateRetiredModel("openai", "gpt-5-mini")).toBe("gpt-5.6-terra");
     expect(migrateRetiredModel("openai", "gpt-5-nano")).toBe("gpt-5.6-luna");
     expect(migrateRetiredModel("gemini", "gemini-3.1-flash-lite-preview")).toBe(
-      "gemini-3.1-flash-lite",
+      "gemini-3.5-flash-lite",
     );
     expect(migrateRetiredModel("qwen", "qwen3-235b-a22b")).toBe("qwen3.7-plus");
+  });
+
+  test("migrates the Gemini 2.5 models Google shuts down on 2026-12-01 to its routing targets", () => {
+    expect(migrateRetiredModel("gemini", "gemini-2.5-pro")).toBe("gemini-3.8-flash");
+    expect(migrateRetiredModel("gemini", "gemini-2.5-flash")).toBe(
+      "gemini-3.5-flash-lite",
+    );
+    expect(migrateRetiredModel("gemini", "gemini-2.5-flash-lite")).toBe(
+      "gemini-3.5-flash-lite",
+    );
+  });
+
+  test("migrates models deprecated or rerouted by 2026-11-09", () => {
+    expect(migrateRetiredModel("gemini", "gemini-3.7-flash")).toBe("gemini-3.8-flash");
+    expect(migrateRetiredModel("gemini", "gemini-3.1-flash-lite")).toBe(
+      "gemini-3.5-flash-lite",
+    );
+    expect(migrateRetiredModel("groq", "qwen/qwen3.6-27b")).toBe("qwen/qwen3.8-27b");
+    expect(migrateRetiredModel("anthropic", "claude-haiku-4-5")).toBe(
+      "claude-haiku-5-5",
+    );
   });
 
   test("leaves current models untouched", () => {
     expect(migrateRetiredModel("groq", "openai/gpt-oss-120b")).toBeNull();
     expect(migrateRetiredModel("openai", "gpt-5.6-sol")).toBeNull();
+    expect(migrateRetiredModel("openai", "gpt-6.1-terra")).toBeNull();
     expect(migrateRetiredModel("anthropic", "claude-opus-5")).toBeNull();
+    expect(migrateRetiredModel("anthropic", "claude-opus-5-5")).toBeNull();
+    expect(migrateRetiredModel("gemini", "gemini-3.1-pro-preview")).toBeNull();
   });
 
   test("leaves unknown providers and free-form OpenRouter ids untouched", () => {

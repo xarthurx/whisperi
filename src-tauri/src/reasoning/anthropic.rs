@@ -36,15 +36,16 @@ struct ContentBlock {
     text: Option<String>,
 }
 
-/// Claude Opus 5 / Sonnet 5 and the Opus 4.7+ family removed the sampling
-/// parameters (`temperature`, `top_p`, `top_k`) from the Messages API —
-/// sending one returns a 400. They also always reason, so we pin the cheapest
-/// effort level: dictation cleanup does not need deep thinking, and thinking
-/// tokens count against `max_tokens`.
+/// The Claude 5 family (Opus/Sonnet 5 and 5.5, Haiku 5.5, Fable 5.x) and the
+/// Opus 4.7+ family removed the sampling parameters (`temperature`, `top_p`,
+/// `top_k`) from the Messages API — sending one returns a 400. They also
+/// always reason, so we pin the cheapest effort level: dictation cleanup does
+/// not need deep thinking, and thinking tokens count against `max_tokens`.
 fn is_adaptive_thinking_model(model: &str) -> bool {
     const PREFIXES: &[&str] = &[
         "claude-opus-5",
         "claude-sonnet-5",
+        "claude-haiku-5",
         "claude-fable-5",
         "claude-mythos-5",
         "claude-opus-4-8",
@@ -109,6 +110,13 @@ mod tests {
         assert!(is_adaptive_thinking_model("claude-sonnet-5"));
         assert!(is_adaptive_thinking_model("claude-fable-5"));
         assert!(is_adaptive_thinking_model("claude-opus-4-8"));
+    }
+
+    #[test]
+    fn claude_5_5_family_and_fable_5_1_reject_sampling_params() {
+        for model in ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-1"] {
+            assert!(is_adaptive_thinking_model(model), "{model}");
+        }
     }
 
     #[test]
