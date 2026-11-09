@@ -1,13 +1,19 @@
 # Progress
 
-## Model registry refresh (unreleased, 2026-11-09)
+## v0.9.1 release (2026-11-09)
+
+- Published [v0.9.1](https://github.com/xarthurx/whisperi/releases/tag/v0.9.1) from `8d13bf0` (release commit on top of squash-merged PRs [#19](https://github.com/xarthurx/whisperi/pull/19), `6c6310f`, and [#20](https://github.com/xarthurx/whisperi/pull/20), `5b13fa7`, whose tree was verified identical to the tested PR head `b71791d`). Patch bump. Both PRs were merged at the user's request before their CI finished; every CI run on them and on `main` (`6c6310f`, `5b13fa7`, `8d13bf0`) later succeeded. Local on the release tree: 263 + 7 cargo + 35 bun tests and typecheck green; [Release](https://github.com/xarthurx/whisperi/actions/runs/42681397671) workflow succeeded.
+- Release is non-draft; x64 NSIS SHA-256 `04C4BEC3…ADF16` matches GitHub's asset digest and the WinGet `InstallerSha256`; `latest.json` serves 0.9.1 with the NSIS URL and a signature identical to the `.sig` asset.
+- WinGet: previewed (manifest validation passed; `License: MIT`, `LicenseUrl`, one-line `ShortDescription`, `ReleaseDate: 2026-11-09` in the installer manifest). **Not submitted yet** — the submission was held for the user's explicit go-ahead; run `scripts/submit-winget.ps1 v0.9.1` once. The inherited `Documentations` Wiki link redirects to the repository page (the repo has no wiki); harmless, left as is.
+
+## Model registry refresh (v0.9.1, 2026-11-09)
 
 - **Trigger:** "the OpenAI model doesn't work". On the dev machine the stored OpenAI key returns 401 `invalid_api_key` on `GET /v1/models` (same as history row 6961, 2026-08-25) — every OpenAI model fails regardless of the list. No Anthropic, Gemini, Mistral or Qwen key is stored there.
 - **Method:** live `GET /models` with the working Groq key; OpenRouter's public catalogue (ids and `supported_parameters`); official model and deprecation pages researched by three parallel agents, with the Gemini deprecations and models pages re-fetched and quoted directly; live Groq cleanup replays for `qwen/qwen3.6-27b` vs `qwen/qwen3.8-27b`.
-- **Findings and changes:** see the `[Unreleased]` CHANGELOG entry. Retired: Gemini 2.5 Pro/Flash/Flash-Lite, 3.7 Flash, 3.1 Flash-Lite; bare `claude-haiku-4-5`; Groq `qwen/qwen3.6-27b`. Added: GPT-6 lineup, Claude 5.5 family, Gemini 3.8/3.6 Flash and 3.5 Flash-Lite, Groq `qwen/qwen3.8-27b`. OpenAI GPT-5/GPT-6 requests no longer carry `temperature`; `claude-haiku-5*` gets the Claude 5 treatment (`effort: low`, no sampling parameters).
+- **Findings and changes:** see the 0.9.1 CHANGELOG entry. Retired: Gemini 2.5 Pro/Flash/Flash-Lite, 3.7 Flash, 3.1 Flash-Lite; bare `claude-haiku-4-5`; Groq `qwen/qwen3.6-27b`. Added: GPT-6 lineup, Claude 5.5 family, Gemini 3.8/3.6 Flash and 3.5 Flash-Lite, Groq `qwen/qwen3.8-27b`. OpenAI GPT-5/GPT-6 requests no longer carry `temperature`; `claude-haiku-5*` gets the Claude 5 treatment (`effort: low`, no sampling parameters).
 - **Not verified live:** every new OpenAI, Anthropic and Gemini id and the OpenAI `temperature` change (no working key on this machine); Groq ids and `qwen/qwen3.8-27b` behavior are verified. Not adopted: `claude-fable-5-1` (top tier, $10/$50 per MTok), Mistral Transcribe 3 (public preview), Qwen `qwen3.8-flash` and the `qwen-audio-3.0-asr-*` family (no key to test).
 
-## Empty / cut-off AI cleanup on Groq gpt-oss (unreleased, 2026-11-09)
+## Empty / cut-off AI cleanup on Groq gpt-oss (v0.9.1, 2026-11-09)
 
 - **Symptom:** longer dictations — mostly Chinese — sometimes pasted nothing; the user re-dictated (2026-10-22 18:49–18:50: the same question three times, #8329/#8330/#8333).
 - **Evidence:** history rows with `processed_text = ''` (empty string, not NULL) are cleanups that returned no text — 14 of 230 since 2026-10-22, 0 of 2,935 before. App log: `Enhancement complete (0 chars)` after a 328-byte Chinese transcript (#8532). Rate since then: Chinese 100–199 chars 4/5 empty, ≥ 45 s 2/2, < 20 chars 0/47. Two more delivered a cleanup that stops mid-sentence (#8406 ends "…The upper part should"; #8497 286 of 548 chars). Replayed with the old request, #8497 hits the cap 2/2 (empty); #8406 finished normally 2/2, so its cut is inferred, not reproduced. Settings: Groq `openai/gpt-oss-20b`, Light, Auto. Daily coverage shows Standard-style rewrites ending on 2026-10-22, i.e. the switch to Light — the onset.
