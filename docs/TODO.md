@@ -1,5 +1,13 @@
 # TODO
 
+## AI cleanup follow-ups (from 2026-11-09 empty-cleanup investigation)
+
+- [ ] **`gpt-oss-20b` drops content at low effort** (one long Chinese dictation lost its last sentence in both replays, 2/112; `gpt-oss-120b` low: 0/56). Options: steer Groq users to 120b (registry description or default), or a Light-only completeness check — Light may delete only listed fillers, so filler-adjusted coverage should stay near 1.0 there (Standard/Full rewrite legitimately).
+- [ ] **Stop reasons on the other cleanup paths:** OpenAI Responses (`status: incomplete`), Anthropic (`stop_reason: max_tokens`) and Gemini (`finishReason: MAX_TOKENS`) still return truncated text as if complete; only an empty reply is caught there (by `enhance()`).
+- [ ] **Groq `qwen/qwen3.6-27b`** is also a reasoning model and gets no effort/budget control; check its default output cap and reasoning format before adding one.
+- [ ] **OpenRouter gpt-oss:** check whether OpenRouter honors `reasoning_effort` / `max_completion_tokens` before extending the Groq controls to it.
+- [ ] **Chat-based transcription** (`cloud.rs` multimodal chat paths) still uses `ChatCompletionsResponse::text()`, which ignores `finish_reason: length`.
+
 ## Long-dictation follow-ups (from 2026-11-02 lost-sentences investigation)
 
 - [ ] **Language carried across windows:** Groq Whisper fixes the language from the first 30 s window; in a probe, Chinese spoken after an English first window came back translated into English (with and without a prompt). Consider splitting long audio at pauses into < 30 s chunks transcribed independently (also bounds any single window's failure).

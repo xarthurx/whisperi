@@ -32,7 +32,7 @@ pub async fn process(req: &ReasoningRequest) -> Result<ReasoningResponse> {
         "groq" => {
             openai::complete(
                 &req.api_key, &req.model, &req.system_prompt, &req.text,
-                req.max_tokens, req.temperature, Some("https://api.groq.com/openai/v1"),
+                req.max_tokens, req.temperature, Some(openai::GROQ_BASE_URL),
             ).await?
         }
         "qwen" => {

@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Highlights
+
+- Long dictations no longer vanish after AI cleanup — if cleanup fails or comes back empty, what you said is pasted instead of nothing
+- AI cleanup with Groq's GPT-OSS models no longer cuts long dictations off mid-sentence, and it is faster
+
+### Fixes
+
+- AI cleanup on Groq gpt-oss (`openai/gpt-oss-20b`, `openai/gpt-oss-120b`) now sends `reasoning_effort: "low"` and `max_completion_tokens: 8192`. Groq caps a request that names no limit at 2,048 completion tokens, and gpt-oss counts its hidden reasoning against that cap; under the Light prompt it reasons word by word through the filler list ("X is not filler"), so a long dictation hit the cap before any answer was written. History since the switch to Light on 2026-10-22: 14 of 230 dictations pasted nothing (e.g. #8532 43 s, #8524 46 s, #8409 48 s — 12 of the 14 Chinese, including 4 of 5 Chinese dictations of 100–199 characters), against none in the 2,935 cleanups before; 2 more pasted a cleanup that stops mid-sentence (#8406, #8497 — replaying #8497 with the old request hits the cap in 2 of 2 runs). Replayed against Groq with the app's exact Light prompt on 56 dictations (24 long Chinese, 20 mid-length Chinese, 12 English): `gpt-oss-20b` with the old request returned no text for 26; with low effort and the budget, 0, and all 14 lost dictations came back through the real Rust client (0.2–2.2 s each). A larger budget alone does not help: at the default effort 20b looped to 8,190 reasoning tokens on 8 of 24 long Chinese dictations. The Standard prompt rarely triggers this (1 of 24 at the old defaults).
+- A Chat Completions cleanup reply that ends with `finish_reason: "length"` is now an error carrying the completion and reasoning token counts, instead of being used as the cleaned text — for every OpenAI-compatible provider.
+- An empty cleanup reply, including one that is only a `<think>` block, now throws, so the dictation pastes the transcript and records "AI cleanup returned no text" in history and the AI Models panel. Previously the empty string was pasted (the transcript survived only in History), and Live mode would have replaced the live-typed text with nothing.
+- Known limit: `gpt-oss-20b` at low effort occasionally drops content — one long Chinese dictation lost its last sentence in both of its replays (2 of 112; filler-adjusted coverage 0.72), and a few cleanups trimmed non-filler words such as 所以其实. `gpt-oss-120b` at low effort kept 0.966+ of every dictation (0 drops in 56) with a 0.8–1.8 s median, so it is the better choice for long dictation.
+
 ## [0.9.0] - 2026-11-03
 
 ### Highlights

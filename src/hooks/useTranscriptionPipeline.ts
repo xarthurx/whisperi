@@ -196,7 +196,8 @@ function effectiveLanguage(
   return requested;
 }
 
-/** Enhance raw transcription with AI reasoning. Returns original text if enhancement is disabled or fails.
+/** Enhance raw transcription with AI reasoning. Returns the original text when enhancement is
+ *  disabled; throws when it fails — including an empty reply — so the caller pastes the transcript.
  *  Pass `detectedLanguage` from the transcription step so auto-mode users still get
  *  language-specific behavior (Simplified Chinese enforcement, language-aware prompts). */
 export async function enhance(
@@ -272,6 +273,14 @@ export async function enhance(
     languagePair,
   );
   let finalText = stripAiPreamble(stripThinkTags(rawAiResponse));
+
+  // An empty reply is a failed cleanup, not an empty dictation: callers paste
+  // finalText, so returning "" would paste nothing and lose what was said.
+  // Throwing routes it through the callers' failure path, which pastes the
+  // transcript and records the reason.
+  if (!finalText && rawText.trim()) {
+    throw new Error("AI cleanup returned no text");
+  }
 
   // Guard: if the model generated far more text than the input, it likely answered
   // as a chatbot instead of cleaning up. Fall back to raw transcription.
