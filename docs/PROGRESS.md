@@ -1,5 +1,24 @@
 # Progress
 
+## Empty / cut-off AI cleanup on Groq gpt-oss (unreleased, 2026-11-09)
+
+- **Symptom:** longer dictations — mostly Chinese — sometimes pasted nothing; the user re-dictated (2026-10-22 18:49–18:50: the same question three times, #8329/#8330/#8333).
+- **Evidence:** history rows with `processed_text = ''` (empty string, not NULL) are cleanups that returned no text — 14 of 230 since 2026-10-22, 0 of 2,935 before. App log: `Enhancement complete (0 chars)` after a 328-byte Chinese transcript (#8532). Rate since then: Chinese 100–199 chars 4/5 empty, ≥ 45 s 2/2, < 20 chars 0/47. Two more delivered a cleanup that stops mid-sentence (#8406 ends "…The upper part should"; #8497 286 of 548 chars). Replayed with the old request, #8497 hits the cap 2/2 (empty); #8406 finished normally 2/2, so its cut is inferred, not reproduced. Settings: Groq `openai/gpt-oss-20b`, Light, Auto. Daily coverage shows Standard-style rewrites ending on 2026-10-22, i.e. the switch to Light — the onset.
+- **Mechanism (replayed with the app's exact Light prompt, built by `prompts.ts`):** Groq returns `finish_reason: "length"`, `content: ""`, `completion_tokens: 2048` with 2,046 reasoning tokens. 2,048 is Groq's cap when the request names none (an explicit 8,192 let #8524 finish at 4,632). gpt-oss at its default effort reasons through Light's filler list word by word and sometimes loops ("到底" not filler ×N). The app sent no budget or effort, ignored `finish_reason`, and `enhance()` had no empty-output fallback, so `pasteText("")` ran.
+- **Benchmark (Groq, Light prompt, 56 dictations — 24 long zh, 20 mid zh, 12 en; filler-adjusted LCS coverage):**
+
+  | Config | Empty | Coverage < 0.9 | Median latency |
+  |---|---|---|---|
+  | 20b default (old request) | 26/56 | 0 | 1.9–3.0 s |
+  | 20b low + 8k (2 runs) | 0/112 | 4/112 (min 0.718) | 1.2–2.2 s |
+  | 120b low + 8k | 0/56 | 0 (min 0.966) | 0.8–1.8 s |
+  | 120b default + 8k | 0/56 | 0 (min 0.976) | 1.4–3.6 s |
+
+  20b default + 8k (24 long zh): 8 empty, reasoning up to 8,190 — a budget alone is not enough. Standard prompt, 20b default: 1/24 empty (median reasoning 714 vs 2,046 for Light).
+- **Fix:** gpt-oss on Groq gets `reasoning_effort: "low"` + `max_completion_tokens: 8192` (`build_chat_request`); a `finish_reason: "length"` reply is an error (`ChatCompletionsResponse::complete_text`) for all OpenAI-compatible reasoning providers; an empty cleanup throws in `enhance()`, so callers paste the transcript and record the reason. Verified live: all 14 lost dictations replayed through `openai::complete` + real Groq returned text (coverage 0.906–1.0).
+- **Not verified:** the full app flow (record → paste) was not exercised by hand; the fallback path is covered by `tests/enhance.test.ts` with a mocked backend. OpenRouter gpt-oss is unchanged (its parameter support was not checked) and is covered only by the `length` check.
+- **Rejected:** a general content-coverage guard. Cleanups in history from Jul–Nov fall below 0.8 coverage legitimately (57 of 851 Chinese) — Standard rewrites, and Whisper repetition loops ("the damage to the damage…") condensed — so a threshold would revert good cleanups.
+
 ## v0.9.0 release (2026-11-03)
 
 - Published [v0.9.0](https://github.com/xarthurx/whisperi/releases/tag/v0.9.0) from `ff074c1` (release commit on top of squash-merged PR [#18](https://github.com/xarthurx/whisperi/pull/18), `50f1985`, whose tree was verified identical to the tested PR head). Minor bump (not 0.8.12) at the user's request. Local: 253 cargo + 30 bun tests and typecheck green; [Release](https://github.com/xarthurx/whisperi/actions/runs/41666337019) workflow succeeded.

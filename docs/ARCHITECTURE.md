@@ -98,7 +98,7 @@ Whisperi is Windows-first. Clipboard read/write, terminal detection, and keystro
 | **conditioning prompts** | `transcription/mod.rs`, `commands/transcription.rs` | Whisper `prompt` builders. Single: the language's punctuation sentence + dictionary (with a forced `language`). Auto and Bilingual: dictionary only, no forced `language` — Groq Whisper picks its *output* language from the prompt, so any conditioning sentence in bilingual mode leaked into the output language (two sentences → doubled segments ≤ v0.8.9; one English sentence → whole English translations on whisper-large-v3-turbo in v0.8.10) |
 | **dictionary echo recovery** | `transcription/dictionary_echo.rs` | [COMPUTED] Standard transcription detects distinct ordered vocabulary runs anywhere in the output (Whisper can emit the prompt list in place of a whole later 30 s window, mid-text) and verifies them by retrying identical audio once without dictionary hints; successful retry text/language are authoritative, and retry failures are surfaced. |
 | **transcription/streaming** | `transcription/streaming/{mod.rs, audio_pump.rs, providers.rs, realtime_openai_compatible.rs}` | Live mode: WebSocket streaming ASR over the OpenAI Realtime API wire protocol (OpenAI `gpt-live-transcribe` / `gpt-transcribe`, Qwen3-ASR-Flash-Realtime). Online resampler + PCM16 encoder feeds 100ms audio chunks; `.completed` utterance events emit Tauri events for the frontend to type into the focused window. `ProviderConfig` carries the per-provider `session.update` template, vocabulary field (`prompt` vs `corpus.text`) and end-of-audio event (`input_audio_buffer.commit` vs `session.finish`). |
-| **reasoning** | `reasoning/openai.rs`, `anthropic.rs`, `gemini.rs` | AI text enhancement. OpenAI-compatible (OpenAI, Groq, Qwen, OpenRouter) via Chat Completions; Anthropic via Messages API; Gemini via Generative API |
+| **reasoning** | `reasoning/openai.rs`, `anthropic.rs`, `gemini.rs` | AI text enhancement. OpenAI-compatible (OpenAI, Groq, Qwen, OpenRouter) via Chat Completions; Anthropic via Messages API; Gemini via Generative API. Reasoning models get a bounded reasoning budget: Claude 5 / Opus 4.7+ `effort: low`; gpt-oss on Groq `reasoning_effort: low` + `max_completion_tokens: 8192` (Groq's unnamed-limit default of 2,048 tokens is shared with hidden reasoning). A Chat Completions reply with `finish_reason: length` is an error, never a cleanup result |
 | **clipboard** | `clipboard/mod.rs` | Win32 clipboard get/set, foreground-window terminal detection, paste via `SendInput` with terminal-aware key combos |
 | **database** | `database/mod.rs`, `migrations.rs` | SQLite via rusqlite. Single `transcriptions` table. Auto-migrates on startup. `Mutex<Connection>` for thread safety |
 | **settings** | `commands/settings.rs` | Thin wrapper over `tauri-plugin-store` — get/set/get-all |
@@ -184,6 +184,9 @@ Language codes from `languageRegistry.json` use locale format (`en-US`, `en-GB`)
       is normalized to full-width marks (`finalize_for_languages`: in a pair that
       includes Chinese, Han text under an English resolution is treated as Chinese)
     → Strip <think>...</think> tags from output (reasoning model artifacts)
+    → A failed cleanup — provider error, output cut off at the token limit, or an
+      empty reply — throws; the transcript is pasted and the reason is saved to
+      history's `error` column and the AI Models panel banner
         ↓
 9.  invoke("save_transcription", { original, processed, method, agent })
         ↓
