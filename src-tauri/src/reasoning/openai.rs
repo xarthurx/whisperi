@@ -46,6 +46,9 @@ pub const OPENAI_BASE_URL: &str = "https://api.openai.com/v1";
 /// Groq's OpenAI-compatible endpoint.
 pub const GROQ_BASE_URL: &str = "https://api.groq.com/openai/v1";
 
+/// DeepSeek's OpenAI-compatible endpoint.
+pub const DEEPSEEK_BASE_URL: &str = "https://api.deepseek.com";
+
 /// Completion budget (reasoning + answer) for gpt-oss cleanup on Groq.
 ///
 /// Groq caps a request that names no limit at 2,048 completion tokens, and
@@ -68,7 +71,15 @@ struct ChatRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     reasoning_effort: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    thinking: Option<ThinkingConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f64>,
+}
+
+#[derive(Serialize)]
+struct ThinkingConfig {
+    #[serde(rename = "type")]
+    mode: &'static str,
 }
 
 #[derive(Serialize)]
@@ -213,7 +224,8 @@ fn build_responses_request(
 /// gpt-oss on Groq gets low reasoning effort and an explicit budget (see
 /// [`GPT_OSS_MAX_COMPLETION_TOKENS`]); dictation cleanup does not need deep
 /// reasoning. Other providers and models keep their defaults — only this
-/// combination was verified against the live API.
+/// combination was verified against the live API. DeepSeek defaults to
+/// thinking mode, so disable it explicitly for text refinement.
 fn build_chat_request(
     model: &str,
     system_prompt: &str,
@@ -239,6 +251,8 @@ fn build_chat_request(
         max_completion_tokens: (groq_gpt_oss && max_tokens.is_none())
             .then_some(GPT_OSS_MAX_COMPLETION_TOKENS),
         reasoning_effort: groq_gpt_oss.then_some("low"),
+        thinking: (base_url == DEEPSEEK_BASE_URL)
+            .then_some(ThinkingConfig { mode: "disabled" }),
         temperature: if base_url == OPENAI_BASE_URL && openai_rejects_temperature(model) {
             None
         } else {
@@ -282,6 +296,31 @@ mod tests {
         assert_eq!(body["max_tokens"], 1000);
         assert!(body.get("max_completion_tokens").is_none());
         assert_eq!(body["reasoning_effort"], "low");
+    }
+
+    #[test]
+    fn deepseek_refinement_disables_thinking_and_preserves_request_options() {
+        for model in ["deepseek-flash", "deepseek-v4-pro"] {
+            let body = body(model, Some(1000), DEEPSEEK_BASE_URL);
+
+            assert_eq!(body["model"], model);
+            assert_eq!(body["thinking"]["type"], "disabled", "{model}");
+            assert_eq!(body["max_tokens"], 1000, "{model}");
+            assert_eq!(body["temperature"], 0.1, "{model}");
+            assert_eq!(body["messages"][0]["role"], "system");
+            assert_eq!(body["messages"][1]["content"], "[TRANSCRIBED_SPEECH]: text");
+            assert!(body.get("reasoning_effort").is_none(), "{model}");
+            assert!(body.get("max_completion_tokens").is_none(), "{model}");
+        }
+    }
+
+    #[test]
+    fn deepseek_thinking_control_is_not_sent_to_other_providers() {
+        for base_url in [OPENAI_BASE_URL, GROQ_BASE_URL, "https://openrouter.ai/api/v1"] {
+            let body = body("deepseek-flash", None, base_url);
+
+            assert!(body.get("thinking").is_none(), "{base_url}");
+        }
     }
 
     #[test]

@@ -1,5 +1,46 @@
 # Progress
 
+## v0.9.2 release preparation (2026-11-16)
+
+- User requested a new release using the existing tag-triggered workflow.
+  Updated the changelog first, then synchronized version `0.9.2` in
+  `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the
+  `whisperi` entry in `src-tauri/Cargo.lock`.
+- Publication is proceeding through the connected GitHub integration. Local
+  Git metadata writes and command-line DNS remain restricted. The remote
+  `main` head matches the local source base `fef6d94`.
+- No release tag has been created or pushed, no release has been published,
+  and no WinGet submission has been attempted. Preserve the unrelated WinGet
+  script edits while completing the DeepSeek release.
+- Release-tree verification: all four version values equal `0.9.2`;
+  `bun run build`, `bun test` (39 passed), `cargo test --lib --quiet`
+  (265 passed), and `git diff --check` passed after the version bump.
+  `git ls-remote` also failed to resolve `github.com`, confirming the CLI
+  publication path is unavailable in this environment. The GitHub connection
+  can read and publish repository changes; wait for full hosted CI before
+  creating the release tag.
+
+## DeepSeek text enhancement (2026-11-16, v0.9.2)
+
+- Added the enhancement-only `deepseek` provider with its own `deepseekApiKey`
+  setting, provider tab, icon, and model selection. The first model is
+  `deepseek-flash`; `deepseek-v4-pro` is also available. Standard and Live final
+  enhancement use the existing shared pipeline.
+- Verified the current endpoint, model ids, and thinking toggle against
+  DeepSeek's official first-call, pricing/model, and thinking-mode documentation.
+  Requests use `https://api.deepseek.com/chat/completions` with
+  `thinking: {"type": "disabled"}`. Other providers do not receive that field.
+- Validation: typecheck and frontend production build passed; 39 Bun tests
+  passed; 265 Rust library unit tests passed; `git diff --check` passed.
+  The seven existing WebSocket integration tests could not connect to their
+  local mock server because this execution environment denied socket access
+  (`os error 10013`). No real DeepSeek API call or record-to-paste manual test
+  was performed.
+- Lint: the project's `cargo clippy -- -W clippy::all` command passed with
+  eight existing warnings. The stricter `--all-targets -- -D warnings` check
+  failed on nine existing warnings in recording, live/transcription commands,
+  request helper argument counts, and streaming code; these were left unchanged.
+
 ## v0.9.1 release (2026-11-09)
 
 - Published [v0.9.1](https://github.com/xarthurx/whisperi/releases/tag/v0.9.1) from `8d13bf0` (release commit on top of squash-merged PRs [#19](https://github.com/xarthurx/whisperi/pull/19), `6c6310f`, and [#20](https://github.com/xarthurx/whisperi/pull/20), `5b13fa7`, whose tree was verified identical to the tested PR head `b71791d`). Patch bump. Both PRs were merged at the user's request before their CI finished; every CI run on them and on `main` (`6c6310f`, `5b13fa7`, `8d13bf0`) later succeeded. Local on the release tree: 263 + 7 cargo + 35 bun tests and typecheck green; [Release](https://github.com/xarthurx/whisperi/actions/runs/42681397671) workflow succeeded.

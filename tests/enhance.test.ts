@@ -2,9 +2,17 @@ import { describe, expect, mock, test } from "bun:test";
 import type { TranscriptionSettings } from "../src/hooks/useTranscriptionPipeline";
 
 let reply = "";
+let requestedKeyProvider = "";
+let reasoningRequest: unknown[] = [];
 mock.module("../src/services/tauriApi", () => ({
-  getApiKey: async () => "test-key",
-  processReasoning: async () => reply,
+  getApiKey: async (provider: string) => {
+    requestedKeyProvider = provider;
+    return provider === "deepseek" ? "deepseek-test-key" : "test-key";
+  },
+  processReasoning: async (...args: unknown[]) => {
+    reasoningRequest = args;
+    return reply;
+  },
   transcribeCloud: async () => {
     throw new Error("transcription is not used by these tests");
   },
@@ -55,4 +63,22 @@ describe("enhance", () => {
     const result = await enhance(transcript, settings, "zh");
     expect(result.finalText).toBe(reply);
   });
+
+  test.each(["deepseek-flash", "deepseek-v4-pro"])(
+    "DeepSeek refinement uses its own key and selected model %s",
+    async (model) => {
+      reply = "Please review the updated design.";
+      const result = await enhance("please review the updated design", {
+        ...settings,
+        reasoningProvider: "deepseek",
+        reasoningModel: model,
+      }, "en");
+
+      expect(requestedKeyProvider).toBe("deepseek");
+      expect(reasoningRequest[1]).toBe(model);
+      expect(reasoningRequest[2]).toBe("deepseek");
+      expect(reasoningRequest[4]).toBe("deepseek-test-key");
+      expect(result.finalText).toBe(reply);
+    },
+  );
 });

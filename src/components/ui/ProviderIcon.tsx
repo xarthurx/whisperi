@@ -13,6 +13,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   gemini: "G",
   groq: "Q",
   mistral: "M",
+  deepseek: "D",
 };
 
 export function ProviderIcon({ provider, className = "w-5 h-5" }: ProviderIconProps) {

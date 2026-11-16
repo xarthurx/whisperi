@@ -35,6 +35,12 @@ pub async fn process(req: &ReasoningRequest) -> Result<ReasoningResponse> {
                 req.max_tokens, req.temperature, Some(openai::GROQ_BASE_URL),
             ).await?
         }
+        "deepseek" => {
+            openai::complete(
+                &req.api_key, &req.model, &req.system_prompt, &req.text,
+                req.max_tokens, req.temperature, Some(openai::DEEPSEEK_BASE_URL),
+            ).await?
+        }
         "qwen" => {
             openai::complete(
                 &req.api_key, &req.model, &req.system_prompt, &req.text,

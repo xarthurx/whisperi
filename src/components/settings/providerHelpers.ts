@@ -8,6 +8,7 @@ export const API_KEY_MAP: Record<string, keyof Settings> = {
   groq: "groqApiKey",
   mistral: "mistralApiKey",
   qwen: "qwenApiKey",
+  deepseek: "deepseekApiKey",
   openrouter: "openrouterApiKey",
 };
 
@@ -30,6 +31,7 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   groq: "Groq",
   mistral: "Mistral",
   qwen: "Qwen",
+  deepseek: "DeepSeek",
   openrouter: "OpenRouter",
 };
 
@@ -54,6 +56,7 @@ export function getReasoningProviders(settings: Settings): ProviderTabItem[] {
     { id: "gemini", name: "Gemini", hasKey: !!settings.geminiApiKey },
     { id: "groq", name: "Groq", recommended: true, hasKey: !!settings.groqApiKey },
     { id: "qwen", name: "Qwen", hasKey: !!settings.qwenApiKey },
+    { id: "deepseek", name: "DeepSeek", hasKey: !!settings.deepseekApiKey },
     { id: "openrouter", name: "OpenRouter", hasKey: !!settings.openrouterApiKey },
   ];
 }
