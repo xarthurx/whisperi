@@ -1,24 +1,27 @@
 # Progress
 
-## v0.9.2 release preparation (2026-11-16)
+## v0.9.2 release (2026-11-16, tag pending)
 
-- User requested a new release using the existing tag-triggered workflow.
-  Updated the changelog first, then synchronized version `0.9.2` in
-  `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and the
-  `whisperi` entry in `src-tauri/Cargo.lock`.
-- Publication is proceeding through the connected GitHub integration. Local
-  Git metadata writes and command-line DNS remain restricted. The remote
-  `main` head matches the local source base `fef6d94`.
-- No release tag has been created or pushed, no release has been published,
-  and no WinGet submission has been attempted. Preserve the unrelated WinGet
-  script edits while completing the DeepSeek release.
-- Release-tree verification: all four version values equal `0.9.2`;
-  `bun run build`, `bun test` (39 passed), `cargo test --lib --quiet`
-  (265 passed), and `git diff --check` passed after the version bump.
-  `git ls-remote` also failed to resolve `github.com`, confirming the CLI
-  publication path is unavailable in this environment. The GitHub connection
-  can read and publish repository changes; wait for full hosted CI before
-  creating the release tag.
+- Added direct DeepSeek text enhancement and synchronized all four app version
+  fields to `0.9.2`; the dated changelog includes end-user Highlights.
+- [PR #21](https://github.com/xarthurx/whisperi/pull/21) was squash-merged into
+  `main` as `ebc7fe1b0bf0a6e8c6cd9e90f1227a09e105adb2` after the complete
+  [CI run](https://github.com/xarthurx/whisperi/actions/runs/43912419792)
+  succeeded: typecheck, 39 Bun tests, frontend build, full Rust tests (including
+  the 7 WebSocket integration tests), Clippy, Tauri build, and artifact upload.
+  The merged Git tree is identical to the tested PR tree
+  `9279879f89a61f73442303e219b50a5771e41e6b`.
+- Published changes through the connected GitHub integration because local
+  Git metadata writes and command-line networking are restricted. Exported
+  source/version/test blobs match local Git hashes; unrelated WinGet script
+  changes and older local progress-document edits were excluded.
+- Release tag `v0.9.2` is still absent. No public release or WinGet submission
+  has been created. The connection exposes no tag-creation action; desktop
+  browser access timed out and the in-app release tab failed to open.
+- Remaining action in an unrestricted terminal: fetch `origin main`, then
+  push `ebc7fe1b0bf0a6e8c6cd9e90f1227a09e105adb2:refs/tags/v0.9.2` to `origin`.
+  This triggers the existing signed Release workflow. After it succeeds,
+  verify assets/updater metadata, then preview and submit WinGet once.
 
 ## DeepSeek text enhancement (2026-11-16, v0.9.2)
 
