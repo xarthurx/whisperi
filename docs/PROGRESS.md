@@ -1,6 +1,6 @@
 # Progress
 
-## v0.9.2 release (2026-11-16, tag pending)
+## v0.9.2 release (2026-11-16)
 
 - Added direct DeepSeek text enhancement and synchronized all four app version
   fields to `0.9.2`; the dated changelog includes end-user Highlights.
@@ -11,17 +11,32 @@
   the 7 WebSocket integration tests), Clippy, Tauri build, and artifact upload.
   The merged Git tree is identical to the tested PR tree
   `9279879f89a61f73442303e219b50a5771e41e6b`.
-- Published changes through the connected GitHub integration because local
-  Git metadata writes and command-line networking are restricted. Exported
-  source/version/test blobs match local Git hashes; unrelated WinGet script
-  changes and older local progress-document edits were excluded.
-- Release tag `v0.9.2` is still absent. No public release or WinGet submission
-  has been created. The connection exposes no tag-creation action; desktop
-  browser access timed out and the in-app release tab failed to open.
-- Remaining action in an unrestricted terminal: fetch `origin main`, then
-  push `ebc7fe1b0bf0a6e8c6cd9e90f1227a09e105adb2:refs/tags/v0.9.2` to `origin`.
-  This triggers the existing signed Release workflow. After it succeeds,
-  verify assets/updater metadata, then preview and submit WinGet once.
+- Published [v0.9.2](https://github.com/xarthurx/whisperi/releases/tag/v0.9.2)
+  from `ebc7fe1` at 17:42 UTC. The signed
+  [Release workflow](https://github.com/xarthurx/whisperi/actions/runs/43920056307)
+  succeeded; the release is public, non-draft, and non-prerelease.
+- Downloaded all five release assets and verified their SHA-256 hashes against
+  the published asset digests. The x64 NSIS installer hash is
+  `BFB1FE34ECD6C98E780EA1C5739DA62A9006C5F37875377F65A0803610B0E555`.
+  `latest.json` serves `0.9.2`; all three platform entries point to the correct
+  published installers with signatures matching their `.sig` assets. The
+  default Windows updater entry selects NSIS.
+- Reconciled the local checkout with `origin/main`. The initial PR had been
+  published through the connected GitHub integration while local Git writes
+  were restricted, leaving the checkout on `fix/winget-submit-failure-hint`.
+  Of 21 dirty/untracked files, 19 already matched the merged main branch;
+  the remaining WinGet script and progress-note edits were explicitly
+  discarded at the user's request. Removed the obsolete local branch.
+- Fresh validation after synchronization: 39 Bun tests, 272 Rust tests
+  (including all 7 WebSocket integration tests), and TypeScript typecheck passed.
+- WinGet: previewed successfully, then submitted using the cached OAuth login
+  to [microsoft/winget-pkgs#481729](https://github.com/microsoft/winget-pkgs/pull/481729)
+  (branch `xarthurx.Whisperi-0.9.2-68329b0a-eb56-46de-a3e5-74e85b910b2c`).
+  Verified all three submitted manifests: `License: MIT`, the correct
+  `LicenseUrl`, one-line `ShortDescription`, `ReleaseDate: 2026-11-16` in the
+  installer manifest, and the published x64 NSIS URL and SHA-256 above.
+  Awaiting upstream merge. Earlier DNS failures occurred before submission;
+  the successful submission created one PR.
 
 ## DeepSeek text enhancement (2026-11-16, v0.9.2)
 
@@ -33,10 +48,10 @@
   DeepSeek's official first-call, pricing/model, and thinking-mode documentation.
   Requests use `https://api.deepseek.com/chat/completions` with
   `thinking: {"type": "disabled"}`. Other providers do not receive that field.
-- Validation: typecheck and frontend production build passed; 39 Bun tests
+- Initial implementation validation: typecheck and frontend production build passed; 39 Bun tests
   passed; 265 Rust library unit tests passed; `git diff --check` passed.
   The seven existing WebSocket integration tests could not connect to their
-  local mock server because this execution environment denied socket access
+  local mock server because the initial execution environment denied socket access
   (`os error 10013`). No real DeepSeek API call or record-to-paste manual test
   was performed.
 - Lint: the project's `cargo clippy -- -W clippy::all` command passed with
