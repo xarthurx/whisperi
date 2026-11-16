@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.2] - 2026-11-16
+
+### Highlights
+
+- Choose DeepSeek to refine dictated text with your own API key.
+
+### Added
+
+- Direct DeepSeek text enhancement through `https://api.deepseek.com/chat/completions`, with `deepseek-flash` as the first model and `deepseek-v4-pro` as an alternative. Requests explicitly disable thinking mode and retain the selected enhancement intensity, prompts, language rules, and existing error fallback.
+- Independent DeepSeek API key storage and settings synchronization. DeepSeek is available for Standard enhancement and Live final polish; transcription providers are unchanged.
+
 ## [0.9.1] - 2026-11-09
 
 ### Highlights

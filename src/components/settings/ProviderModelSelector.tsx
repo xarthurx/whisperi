@@ -5,7 +5,7 @@ import StyledSelect from "@/components/ui/StyledSelect";
 import { SettingsRow } from "@/components/ui/SettingsSection";
 import { ProviderTabs, type ProviderTabItem } from "@/components/ui/ProviderTabs";
 import type { Settings } from "@/hooks/useSettings";
-import { getApiKey, getApiKeyField } from "./providerHelpers";
+import { getApiKey, getApiKeyField, providerDisplayName } from "./providerHelpers";
 
 interface ProviderModelSelectorProps {
   providers: ProviderTabItem[];
@@ -99,15 +99,18 @@ export default function ProviderModelSelector({
           const selectedModelData = registry
             .find((p) => p.id === selectedProvider)
             ?.models.find((m) => m.id === selectedModel);
-          return selectedModelData?.description ? (
+          return selectedModelData &&
+            "description" in selectedModelData &&
+            typeof selectedModelData.description === "string" &&
+            selectedModelData.description ? (
             <p className="text-xs text-muted-foreground -mt-1 text-right">{selectedModelData.description}</p>
           ) : null;
         })()}
         <ApiKeyInput
           apiKey={getApiKey(settings, selectedProvider)}
           setApiKey={(key) => update(getApiKeyField(selectedProvider), key)}
-          label={t("providerModel.apiKeyLabel", { provider: selectedProvider })}
-          helpText={t("providerModel.apiKeyHelp", { provider: selectedProvider })}
+          label={t("providerModel.apiKeyLabel", { provider: providerDisplayName(selectedProvider) })}
+          helpText={t("providerModel.apiKeyHelp", { provider: providerDisplayName(selectedProvider) })}
         />
       </div>
     </>

@@ -231,6 +231,7 @@ const API_KEY_MAP: Record<string, string> = {
   groq: "groqApiKey",
   mistral: "mistralApiKey",
   qwen: "qwenApiKey",
+  deepseek: "deepseekApiKey",
   openrouter: "openrouterApiKey",
 };
 

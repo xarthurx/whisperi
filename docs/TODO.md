@@ -1,5 +1,12 @@
 # TODO
 
+## DeepSeek enhancement validation
+
+- [ ] Verify `deepseek-flash` and `deepseek-v4-pro` with a real API key in
+  Standard dictation and Live final polish; check punctuation, mixed-language
+  preservation, and latency with thinking disabled. Request serialization and
+  frontend provider/key routing have automated coverage.
+
 ## Model registry follow-ups (from the 2026-11-09 refresh)
 
 - [ ] **Live-check OpenAI cleanup once a working key is stored** (the dev machine's key returns 401): confirm GPT-5.6/GPT-6 accept the request without `temperature`, that the four GPT-6 ids resolve, and consider `reasoning.effort: "none"`/`"low"` for speed; then decide whether the default `gpt-5.6-terra` should move to a GPT-6 model.

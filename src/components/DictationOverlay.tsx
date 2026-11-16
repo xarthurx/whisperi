@@ -34,7 +34,7 @@ function DictationOverlayInner() {
     const hasAnyKey =
       settings.openaiApiKey || settings.anthropicApiKey || settings.geminiApiKey ||
       settings.groqApiKey || settings.mistralApiKey || settings.qwenApiKey ||
-      settings.openrouterApiKey;
+      settings.deepseekApiKey || settings.openrouterApiKey;
     if (!hasAnyKey) {
       showSettings();
       return;

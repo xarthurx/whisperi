@@ -78,6 +78,7 @@ export interface Settings {
   groqApiKey: string;
   mistralApiKey: string;
   qwenApiKey: string;
+  deepseekApiKey: string;
   openrouterApiKey: string;
 }
 
@@ -115,6 +116,7 @@ const DEFAULTS: Settings = {
   groqApiKey: "",
   mistralApiKey: "",
   qwenApiKey: "",
+  deepseekApiKey: "",
   openrouterApiKey: "",
 };
 
@@ -129,7 +131,7 @@ const STORE_KEYS = [
   "selectedMicDeviceId", "debugMode", "uiLanguage",
 ] as const satisfies readonly (keyof Settings)[];
 
-const API_PROVIDERS = ["openai", "anthropic", "gemini", "groq", "mistral", "qwen", "openrouter"] as const;
+const API_PROVIDERS = ["openai", "anthropic", "gemini", "groq", "mistral", "qwen", "deepseek", "openrouter"] as const;
 
 export function useSettings() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
